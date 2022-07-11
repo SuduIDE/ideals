@@ -3,7 +3,7 @@ import org.jetbrains.intellij.tasks.RunIdeTask
 plugins {
   id("java")
   // id("org.jetbrains.kotlin.jvm") version "1.7.0"
-  id("org.jetbrains.intellij") version "1.6.0"
+  id("org.jetbrains.intellij") version "1.7.0"
 }
 
 group = "org.rri"
@@ -32,7 +32,11 @@ tasks.register<PlainIdeTask>("plainIdea")
 
 tasks {
   test {
-    this.
+    dependencies {
+      testImplementation("org.junit.jupiter:junit-jupiter:5.8.2")
+      testRuntimeOnly("org.junit.vintage:junit-vintage-engine:5.8.2")
+    }
+
     jvmArgs = listOf(
       "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED",
       "--add-opens=java.base/java.lang=ALL-UNNAMED",
@@ -42,6 +46,10 @@ tasks {
 
       "-Djdk.module.illegalAccess.silent=true"
     )
+
+    useJUnitPlatform {
+      includeEngines("junit-jupiter", "junit-vintage")
+    }
   }
 
   getByName("runIde") {
