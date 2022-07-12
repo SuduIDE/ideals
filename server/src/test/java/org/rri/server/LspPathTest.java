@@ -15,9 +15,9 @@ public class LspPathTest {
 
     assertAll(
             Stream.of(
-                    LspPath.fromLspUri("file:/e:/Program Files/test.txt2"),
-                    LspPath.fromLspUri("file://e:\\Program Files\\test.txt2"),
-                    LspPath.fromLspUri("file:///e:/Program Files/test.txt2")
+                    LspPath.fromLspUri("file:/e:/Program Files/test.txt"),
+                    LspPath.fromLspUri("file://e:\\Program Files\\test.txt"),
+                    LspPath.fromLspUri("file:///e:/Program Files/test.txt")
             ).map(it -> () -> assertEquals(expected, it))
     );
   }
