@@ -47,7 +47,7 @@ public class LspPath {
   }
 
   @NotNull
-  public Path getPath() {
+  public Path toPath() {
     try {
       return Paths.get(new URI(normalizedUri));
     } catch (URISyntaxException e) {

@@ -31,7 +31,7 @@ public class ProjectService {
     // TODO: in-memory virtual files for testing have temp:/// prefix, figure out how to resolve the document from them
     // otherwise it gets confusing to have to look up the line and column being tested in the test document
 
-    if (!Files.isDirectory(root.getPath())) {
+    if (!Files.isDirectory(root.toPath())) {
       throw new IllegalArgumentException("Isn't a directory: " + root);
     }
 
@@ -73,7 +73,7 @@ public class ProjectService {
       }
     }
 
-    if (!Files.exists(projectPath.getPath())) {  // todo VirtualFile?
+    if (!Files.exists(projectPath.toPath())) {  // todo VirtualFile?
       LOG.warn("Project path doesn't exist: " + projectPath);
       return null;
     }
@@ -98,7 +98,7 @@ public class ProjectService {
 
       return alreadyOpenProject != null ?
               alreadyOpenProject :
-              mgr.loadAndOpenProject(projectPath.getPath().toString());
+              mgr.loadAndOpenProject(projectPath.toPath().toString());
 
     } catch (IOException | JDOMException e) {
       LOG.warn("Exception occurred trying to find document for path " + projectPath, e);

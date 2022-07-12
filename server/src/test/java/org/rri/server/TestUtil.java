@@ -10,9 +10,11 @@ public class TestUtil {
   private TestUtil() {
   }
 
+  @SuppressWarnings("UnusedReturnValue")
   public static <T> T edtSafeGet(@NotNull CompletableFuture<T> future) {
     if(ApplicationManager.getApplication().isDispatchThread()) {
       while (!future.isDone()) {
+        //noinspection UnstableApiUsage
         IdeEventQueue.getInstance().flushQueue();
         Thread.yield();
       }
