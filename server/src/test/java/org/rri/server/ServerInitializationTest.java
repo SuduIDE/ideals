@@ -3,13 +3,10 @@ package org.rri.server;
 import org.eclipse.lsp4j.InitializeParams;
 import org.junit.Assert;
 import org.junit.Test;
-import org.junit.runner.RunWith;
-import org.junit.runners.JUnit4;
 
 import java.nio.file.Paths;
 import java.util.Objects;
 
-@RunWith(JUnit4.class)
 public class ServerInitializationTest extends LspServerTestBase {
 
   @Override
@@ -32,10 +29,8 @@ public class ServerInitializationTest extends LspServerTestBase {
 
     TestUtil.edtSafeGet(initializeResult);
 
-    var expectedLocation = LspPath.fromLspUri(initializeParams.getWorkspaceFolders().get(0).getUri());
-
     Assert.assertEquals("project has unexpected location",
-            expectedLocation.toPath(),
+            getProjectPath(),
             Paths.get(Objects.requireNonNull(server().getProject().getBasePath())));
   }
 }

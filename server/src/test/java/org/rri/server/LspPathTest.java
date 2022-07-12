@@ -17,9 +17,15 @@ public class LspPathTest {
             Stream.of(
                     LspPath.fromLspUri("file:/e:/Program Files/test.txt"),
                     LspPath.fromLspUri("file://e:\\Program Files\\test.txt"),
-                    LspPath.fromLspUri("file:///e:/Program Files/test.txt")
+                    LspPath.fromLspUri("file:///e:/Program Files/test.txt"),
+                    LspPath.fromLspUri("file:///E:/Program Files/test.txt")
             ).map(it -> () -> assertEquals(expected, it))
     );
+  }
+
+  @Test
+  public void driveLetterInLowerCase() {
+    assertEquals("file:///e:/Program Files/test.txt", LspPath.fromLocalPath(Paths.get("E:/Program Files/test.txt")).toLspUri());
   }
 
   @Test

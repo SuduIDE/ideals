@@ -8,16 +8,20 @@ import org.eclipse.lsp4j.WorkspaceFolder;
 import org.jetbrains.annotations.NotNull;
 import org.junit.After;
 import org.junit.Before;
+import org.junit.runner.RunWith;
+import org.junit.runners.JUnit4;
 import org.rri.server.mocks.MockLanguageClient;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
-import java.util.Objects;
 
+@RunWith(JUnit4.class)
 public abstract class LspServerTestBase extends HeavyPlatformTestCase {
 
   private LspServer server;
+
+  private MockLanguageClient client;
 
   @NotNull
   protected Path getTestDataRoot() {
@@ -25,7 +29,7 @@ public abstract class LspServerTestBase extends HeavyPlatformTestCase {
   }
 
   @NotNull
-  private Path getProjectPath() {
+  protected Path getProjectPath() {
     return getTestDataRoot().resolve(getProjectRelativePath());
   }
 
@@ -34,16 +38,16 @@ public abstract class LspServerTestBase extends HeavyPlatformTestCase {
 
   @NotNull
   protected final LspServer server() {
-    return Objects.requireNonNull(server);
+    return server;
+  }
+
+  @NotNull
+  protected final MockLanguageClient client() {
+    return client;
   }
 
   @Override
   protected void setUpProject() { } // no IDEA project is created by default
-
-  @NotNull
-  protected MyLanguageClient getClient() {
-    return new MockLanguageClient();
-  }
 
   protected void setupInitializeParams(@NotNull InitializeParams params) {
     Path projectPath = getProjectPath();
@@ -69,7 +73,8 @@ public abstract class LspServerTestBase extends HeavyPlatformTestCase {
   @Before
   public void setupServer() {
     server = new LspServer();
-    server.connect(getClient());
+    client = new MockLanguageClient();
+    server.connect(client);
     initializeServer();
   }
 

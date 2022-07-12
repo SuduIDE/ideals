@@ -20,8 +20,8 @@ public class LspPath {
   @NotNull
   private final String normalizedUri;
 
-  private LspPath(@NotNull String normalizedUri) {
-    this.normalizedUri = normalizedUri;
+  private LspPath(@NotNull String uri) {
+    this.normalizedUri = normalizeUri(uri);
   }
 
   @NotNull
@@ -31,14 +31,7 @@ public class LspPath {
 
   @NotNull
   public static LspPath fromLspUri(@NotNull String uri) {
-    try {
-      final var normalizedUri = normalizeUri(uri);
-
-      // LSP URI comes without spaces encoded
-      return fromLocalPath(Paths.get(new URI(normalizedUri.replace(" ", "%20"))));
-    } catch (URISyntaxException e) {
-      throw new RuntimeException(e);
-    }
+      return new LspPath(uri);
   }
 
   @NotNull
@@ -49,7 +42,7 @@ public class LspPath {
   @NotNull
   public Path toPath() {
     try {
-      return Paths.get(new URI(normalizedUri));
+      return Paths.get(new URI(normalizedUri.replace(" ", "%20")));
     } catch (URISyntaxException e) {
       throw new RuntimeException(e);
     }
