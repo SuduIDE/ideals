@@ -101,7 +101,6 @@ public class MyTextDocumentService implements TextDocumentService {
   public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams params) {
     var app = ApplicationManager.getApplication();
     final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
-    final var context = LspContext.getContext(session.getProject());
 
     final var virtualFile = path.findVirtualFile();
     if (virtualFile == null) {
@@ -110,13 +109,7 @@ public class MyTextDocumentService implements TextDocumentService {
       return null;
     }
 
-//    final var psiFile = PsiManager.getInstance(session.getProject()).findFile(virtualFile);
-//    if (psiFile == null) {
-//      LOG.info("Unable to get PSI for virtual file: " + virtualFile);
-//      return null;
-//    }
     LOG.info("Completion call");
-//    return CompletableFuture.completedFuture(Either.forLeft(new ArrayList<>()));
     return CompletableFutures.computeAsync((cancelChecker) -> {
               final AtomicReference<Either<List<CompletionItem>, CompletionList>> ref = new AtomicReference<>();
               app.invokeAndWait(() -> {
@@ -125,10 +118,6 @@ public class MyTextDocumentService implements TextDocumentService {
                         path,
                         (psiFile) -> ref.set(completions().launchCompletions(psiFile, cancelChecker))
                 );
-//                        final var tempDir = context.config["temporaryDirectory"];
-//                        final var tempDir = // <- todo ????
-//                                context.getConfigValue("temporaryDirectory");
-//
 //                        todo: detect completion work time in ref solution
 //                        final var profiler = if (context.client != null) startProfiler(context.client !!) else DUMMY
 //                        profiler.mark("Start ${command.javaClass.canonicalName}");
