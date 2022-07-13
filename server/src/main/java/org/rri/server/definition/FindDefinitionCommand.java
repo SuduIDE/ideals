@@ -22,10 +22,8 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiReference;
 import org.codehaus.plexus.util.ExceptionUtils;
-import org.eclipse.lsp4j.DefinitionParams;
-import org.eclipse.lsp4j.Location;
-import org.eclipse.lsp4j.Position;
-import org.eclipse.lsp4j.Range;
+import org.eclipse.lsp4j.*;
+import org.jaxen.util.SingletonList;
 import org.rri.server.LspPath;
 import org.rri.server.MyTextDocumentService;
 import org.rri.server.util.EditorUtil;
@@ -37,7 +35,7 @@ import java.util.*;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
-public class FindDefinitionCommand implements Function<ExecutorContext, List<? extends Location>>, Disposable {
+public class FindDefinitionCommand implements Function<ExecutorContext, List<LocationLink>>, Disposable {
     private static final Logger LOG = Logger.getInstance(MyTextDocumentService.class);
     private final Position pos;
 
@@ -51,16 +49,28 @@ public class FindDefinitionCommand implements Function<ExecutorContext, List<? e
     }
 
     @Override
-    public List<? extends Location> apply(ExecutorContext ctx) {
-        PsiFile file = MiscUtil.resolvePsiFile(ctx.getProject(), ctx.getLspPath());
+    public List<LocationLink> apply(ExecutorContext ctx) {
+        LspPath path = ctx.getLspPath();
+        PsiFile file = MiscUtil.resolvePsiFile(ctx.getProject(), path);
         // TODO check Nullable case
         assert file != null;
         Document doc = MiscUtil.getDocument(file);
         assert doc != null;
+
         int offset = MiscUtil.positionToOffset(pos, doc);
+        PsiElement originalElem = file.findElementAt(offset);
+        Range originalRange = MiscUtil.psiElementRange(originalElem, doc);
+
         PsiReference ref = file.findReferenceAt(offset);
         assert ref != null;
-        PsiElement elem = ref.resolve();
+        PsiElement targetElem = ref.resolve();
+        assert targetElem != null;
+        Range targetRange = MiscUtil.psiElementRange(targetElem, doc);
+
+        LocationLink loc = new LocationLink(targetElem.getContainingFile().getVirtualFile().getUrl(), targetRange, targetRange, originalRange);
+        List<LocationLink> lst = new ArrayList<>();
+        lst.add(loc);
+        return lst;
 
         // TODO Code from reference solution
         /*Document doc = MiscUtil.getDocument(ctx.getFile());
@@ -82,7 +92,7 @@ public class FindDefinitionCommand implements Function<ExecutorContext, List<? e
 
     private List<? extends Location> findDefinitionByReference(ExecutorContext ctx, int offset) {
         List<Location> loc = new ArrayList<>();
-        EditorUtil.withEditor(this, ctx.getFile(), offset, editor -> {
+        EditorUtil.withEditor(this, MiscUtil.resolvePsiFile(ctx.getProject(), ctx.getLspPath()), offset, editor -> {
 //            val targetElements = GotoDeclarationAction.findTargetElementsNoVS(ctx.getProject(), editor, offset, false);
             PsiElement[] targetElements = GotoDeclarationAction.findAllTargetElements(ctx.getProject(), editor, offset);
             Collection<Location> results = Arrays.stream(targetElements)
