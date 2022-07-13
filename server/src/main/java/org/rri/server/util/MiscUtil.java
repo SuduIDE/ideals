@@ -143,15 +143,30 @@ public class MiscUtil {
   }
 
   public static Location psiElementLocation(PsiElement elem, String uri, Document doc) {
+    Range range = psiElementRange(elem, doc);
+    return new Location(uri, range);
+  }
+
+  public static Range psiElementRange(PsiElement elem, Document doc) {
+    TextRange range = null;
     if (elem instanceof PsiNameIdentifierOwner) {
+      PsiElement identifier = ((PsiNameIdentifierOwner) elem).getNameIdentifier();
+      if (identifier != null) {
+        range = identifier.getTextRange();
+      }
+    }
+    if (range == null) {
+      range = elem.getTextRange();
+    }
+    return new Range(offsetToPosition(doc, range.getStartOffset()), offsetToPosition(doc, range.getEndOffset()));
+    /*if (elem instanceof PsiNameIdentifierOwner) {
       PsiElement identifier = ((PsiNameIdentifierOwner) elem).getNameIdentifier();
       if (identifier == null) { return null; }
       TextRange range = identifier.getTextRange();
-      return new Location(uri,
-              new Range(offsetToPosition(doc, range.getStartOffset()), offsetToPosition(doc, range.getEndOffset())));
+      return new Range(offsetToPosition(doc, range.getStartOffset()), offsetToPosition(doc, range.getEndOffset()));
     } else {
       return null;
-    }
+    }*/
   }
 
   public static int positionToOffset(Position pos, Document doc) {
