@@ -26,6 +26,7 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
   @Nullable
   private Project project = null;
 
+  @Override
   public CompletableFuture<InitializeResult> initialize(@NotNull InitializeParams params) {
     final var workspaceFolders = params.getWorkspaceFolders();
     if(workspaceFolders == null) {

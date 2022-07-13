@@ -1,21 +1,33 @@
 package org.rri.server.util;
 
+import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
+import com.intellij.openapi.editor.EditorFactory;
+import com.intellij.openapi.editor.ex.EditorEx;
 import com.intellij.openapi.editor.impl.DocumentImpl;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.fileEditor.impl.FileDocumentManagerImpl;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.Ref;
+import com.intellij.openapi.util.TextRange;
+import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
+import com.intellij.psi.PsiNameIdentifierOwner;
+import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.Range;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.server.LspPath;
 
 import java.util.concurrent.Callable;
+import javax.print.Doc;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.util.function.Consumer;
 
 public class MiscUtil {
@@ -114,5 +126,34 @@ public class MiscUtil {
     } catch (Exception e) {
       throw wrap(e);
     }
+  }
+
+  public static EditorEx createEditor(Disposable context, PsiFile file, int offset) {
+    Document doc = getDocument(file);
+    EditorFactory editorFactory = EditorFactory.getInstance();
+
+    assert doc != null;
+    EditorEx created = (EditorEx) editorFactory.createEditor(doc, file.getProject());
+    created.getCaretModel().moveToOffset(offset);
+
+    Disposer.register(context, () -> editorFactory.releaseEditor(created));
+
+    return created;
+  }
+
+  public static Location psiElementLocation(PsiElement elem, String uri, Document doc) {
+    if (elem instanceof PsiNameIdentifierOwner) {
+      PsiElement identifier = ((PsiNameIdentifierOwner) elem).getNameIdentifier();
+      if (identifier == null) { return null; }
+      TextRange range = identifier.getTextRange();
+      return new Location(uri,
+              new Range(offsetToPosition(doc, range.getStartOffset()), offsetToPosition(doc, range.getEndOffset())));
+    } else {
+      return null;
+    }
+  }
+
+  public static int positionToOffset(Position pos, Document doc) {
+    return doc.getLineStartOffset(pos.getLine()) + pos.getCharacter();
   }
 }

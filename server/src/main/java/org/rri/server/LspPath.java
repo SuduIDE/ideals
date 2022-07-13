@@ -3,6 +3,7 @@ package org.rri.server;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
+import com.intellij.psi.PsiFile;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -104,4 +105,8 @@ public class LspPath {
 
     return decodedUri;
   }
+
+  public static String getURIForFile(PsiFile file) { return normalizeUri(file.getVirtualFile().getUrl()); }
+
+  public static String getURIForFile(VirtualFile file) { return normalizeUri(file.getUrl()); }
 }
