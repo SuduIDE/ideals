@@ -12,7 +12,9 @@ import org.jetbrains.annotations.NotNull;
 import org.rri.server.completions.MyCompletionsService;
 import org.rri.server.diagnostics.DiagnosticsService;
 import org.rri.server.util.Metrics;
+import org.rri.server.util.MiscUtil;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
@@ -108,15 +110,21 @@ public class MyTextDocumentService implements TextDocumentService {
       return null;
     }
 
-    final var psiFile = PsiManager.getInstance(session.getProject()).findFile(virtualFile);
-    if (psiFile == null) {
-      LOG.info("Unable to get PSI for virtual file: " + virtualFile);
-      return null;
-    }
-
+//    final var psiFile = PsiManager.getInstance(session.getProject()).findFile(virtualFile);
+//    if (psiFile == null) {
+//      LOG.info("Unable to get PSI for virtual file: " + virtualFile);
+//      return null;
+//    }
+    LOG.info("Completion call");
+//    return CompletableFuture.completedFuture(Either.forLeft(new ArrayList<>()));
     return CompletableFutures.computeAsync((cancelChecker) -> {
               final AtomicReference<Either<List<CompletionItem>, CompletionList>> ref = new AtomicReference<>();
               app.invokeAndWait(() -> {
+                MiscUtil.withPsiFileInReadAction(
+                        session.getProject(),
+                        path,
+                        (psiFile) -> ref.set(completions().launchCompletions(psiFile, cancelChecker))
+                );
 //                        final var tempDir = context.config["temporaryDirectory"];
 //                        final var tempDir = // <- todo ????
 //                                context.getConfigValue("temporaryDirectory");
@@ -124,10 +132,6 @@ public class MyTextDocumentService implements TextDocumentService {
 //                        todo: detect completion work time in ref solution
 //                        final var profiler = if (context.client != null) startProfiler(context.client !!) else DUMMY
 //                        profiler.mark("Start ${command.javaClass.canonicalName}");
-
-                final Either<List<CompletionItem>, CompletionList> result
-                        = completions().launchCompletions(psiFile, cancelChecker);
-                ref.set(result);
               }, app.getDefaultModalityState());
               return ref.get();
             }
