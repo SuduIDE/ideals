@@ -88,6 +88,14 @@ public class MyTextDocumentService implements TextDocumentService {
             .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
   }
 
+  @Override
+  public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> definition(DefinitionParams params) {
+    /*return CompletableFuture.supplyAsync(() -> {
+
+    });*/
+    return null;
+  }
+
   public void refreshDiagnostics() {
     LOG.info("Start refreshing diagnostics for all opened documents");
     documents().forEach(diagnostics()::launchDiagnostics);
