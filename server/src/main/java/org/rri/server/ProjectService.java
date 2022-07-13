@@ -16,7 +16,8 @@ import java.util.HashMap;
 import java.util.Map;
 import java.util.Objects;
 
-public class ProjectService {
+public class
+ProjectService {
   private final static Logger LOG = Logger.getInstance(ProjectService.class);
 
   private final Map<LspPath, String> projectHashes = new HashMap<>();
