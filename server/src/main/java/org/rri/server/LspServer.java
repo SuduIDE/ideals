@@ -11,6 +11,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.server.util.Metrics;
 
+import java.util.Arrays;
 import java.util.concurrent.CompletableFuture;
 
 import static org.rri.server.util.MiscUtil.with;
@@ -61,10 +62,10 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
       }));
 
 //      it.setHoverProvider(true);
-//      it.setCompletionProvider(new CompletionOptions(true, Arrays.asList(".", "@", "#")));
+      it.setCompletionProvider(new CompletionOptions(true, Arrays.asList(".", "@", "#")));
 //      it.setSignatureHelpProvider(null);
 //      it.setDefinitionProvider(true);
-//      it.setTypeDefinitionProvider(false);
+//      it.setTypeDefinitionP rovider(false);
 //      it.setImplementationProvider(true);
 //      it.setReferencesProvider(true);
 //      it.setDocumentHighlightProvider(true);
@@ -101,14 +102,17 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
     }
   }
 
+  @Override
   public MyTextDocumentService getTextDocumentService() {
     return myTextDocumentService;
   }
 
+  @Override
   public MyWorkspaceService getWorkspaceService() {
     return myWorkspaceService;
   }
 
+  @Override
   public void connect(@NotNull LanguageClient client) {
     assert client instanceof MyLanguageClient;
     this.client = (MyLanguageClient) client;
@@ -121,17 +125,20 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
   }
 
   @NotNull
+  @Override
   public Project getProject() {
     if(project == null)
       throw new IllegalStateException("LSP session is not yet initialized");
     return project;
   }
 
+  @Override
   public void enteredDumbMode() {
     LOG.info("Entered dumb mode. Notifying client...");
     getClient().notifyIndexStarted();
   }
 
+  @Override
   public void exitDumbMode() {
     LOG.info("Exited dumb mode. Refreshing diagnostics...");
     getClient().notifyIndexFinished();

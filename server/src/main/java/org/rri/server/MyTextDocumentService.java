@@ -1,15 +1,21 @@
 package org.rri.server;
 
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.DumbService;
+import com.intellij.psi.PsiManager;
 import org.eclipse.lsp4j.*;
+import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
+import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import org.jetbrains.annotations.NotNull;
+import org.rri.server.completions.MyCompletionsService;
 import org.rri.server.diagnostics.DiagnosticsService;
 import org.rri.server.util.Metrics;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.atomic.AtomicReference;
 
 public class MyTextDocumentService implements TextDocumentService {
 
@@ -73,7 +79,7 @@ public class MyTextDocumentService implements TextDocumentService {
     LOG.info("Start refreshing diagnostics for all opened documents");
     documents().forEach(diagnostics()::launchDiagnostics);
   }
-  
+
   @NotNull
   private ManagedDocuments documents() {
     return session.getProject().getService(ManagedDocuments.class);
@@ -82,5 +88,49 @@ public class MyTextDocumentService implements TextDocumentService {
   @NotNull
   private DiagnosticsService diagnostics() {
     return session.getProject().getService(DiagnosticsService.class);
+  }
+
+  @NotNull
+  private MyCompletionsService completions() {
+    return session.getProject().getService(MyCompletionsService.class);
+  }
+
+  @Override
+  public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams params) {
+    var app = ApplicationManager.getApplication();
+    final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
+    final var context = LspContext.getContext(session.getProject());
+
+    final var virtualFile = path.findVirtualFile();
+    if (virtualFile == null) {
+      LOG.info("File not found: " + path);
+      // todo mb need to throw excep
+      return null;
+    }
+
+    final var psiFile = PsiManager.getInstance(session.getProject()).findFile(virtualFile);
+    if (psiFile == null) {
+      LOG.info("Unable to get PSI for virtual file: " + virtualFile);
+      return null;
+    }
+
+    return CompletableFutures.computeAsync((cancelChecker) -> {
+              final AtomicReference<Either<List<CompletionItem>, CompletionList>> ref = new AtomicReference<>();
+              app.invokeAndWait(() -> {
+//                        final var tempDir = context.config["temporaryDirectory"];
+//                        final var tempDir = // <- todo ????
+//                                context.getConfigValue("temporaryDirectory");
+//
+//                        todo: detect completion work time in ref solution
+//                        final var profiler = if (context.client != null) startProfiler(context.client !!) else DUMMY
+//                        profiler.mark("Start ${command.javaClass.canonicalName}");
+
+                final Either<List<CompletionItem>, CompletionList> result
+                        = completions().launchCompletions(psiFile, cancelChecker);
+                ref.set(result);
+              }, app.getDefaultModalityState());
+              return ref.get();
+            }
+    );
   }
 }
