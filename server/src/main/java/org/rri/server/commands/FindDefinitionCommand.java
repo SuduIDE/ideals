@@ -25,27 +25,26 @@ public class FindDefinitionCommand extends MyCommand<Either<List<? extends Locat
 
     @Override
     public Either<List<? extends Location>, List<? extends LocationLink>> apply(ExecutorContext ctx) {
-        LspPath path = ctx.getLspPath();
-        PsiFile file = MiscUtil.resolvePsiFile(ctx.getProject(), path);
-        // TODO check Nullable case
-        assert file != null;
-        Document doc = MiscUtil.getDocument(file);
-        assert doc != null;
+        try {
+            LspPath path = ctx.getLspPath();
+            PsiFile file = MiscUtil.resolvePsiFile(ctx.getProject(), path);
+            Document doc = MiscUtil.getDocument(file);
 
-        int offset = MiscUtil.positionToOffset(pos, doc);
-        PsiElement originalElem = file.findElementAt(offset);
-        Range originalRange = MiscUtil.psiElementRange(originalElem, doc);
+            int offset = MiscUtil.positionToOffset(pos, doc);
+            PsiElement originalElem = file.findElementAt(offset);
+            Range originalRange = MiscUtil.psiElementRange(originalElem, doc);
 
-        PsiReference ref = file.findReferenceAt(offset);
-        assert ref != null;
-        PsiElement targetElem = ref.resolve();
-        assert targetElem != null;
-        Range targetRange = MiscUtil.psiElementRange(targetElem, doc);
+            PsiReference ref = file.findReferenceAt(offset);
+            PsiElement targetElem = ref.resolve();
+            Range targetRange = MiscUtil.psiElementRange(targetElem, doc);
 
-        String uri = LspPath.fromVirtualFile(targetElem.getContainingFile().getVirtualFile()).toLspUri();
-        LocationLink loc = new LocationLink(uri, targetRange, targetRange, originalRange);
-        List<LocationLink> lst = new ArrayList<>();
-        lst.add(loc);
-        return Either.forRight(lst);
+            String uri = LspPath.fromVirtualFile(targetElem.getContainingFile().getVirtualFile()).toLspUri();
+            LocationLink loc = new LocationLink(uri, targetRange, targetRange, originalRange);
+            List<LocationLink> lst = new ArrayList<>();
+            lst.add(loc);
+            return Either.forRight(lst);
+        } catch (NullPointerException e) {
+            return Either.forRight(new ArrayList<>());
+        }
     }
 }
