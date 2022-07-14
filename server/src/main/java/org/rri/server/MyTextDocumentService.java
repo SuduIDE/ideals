@@ -165,14 +165,14 @@ public class MyTextDocumentService implements TextDocumentService {
     LOG.info(message.get());
     return CompletableFuture.supplyAsync(() -> {
               final AtomicReference<R> ref = new AtomicReference<>();
-              app.invokeAndWait(() -> {
-                final var execCtx = new ExecutorContext(session.getProject(), path, context);
-                MiscUtil.withPsiFileInReadAction(
-                        session.getProject(),
-                        path,
-                        (psiFile) -> ref.set(command.apply(execCtx))
-                );
-              }, app.getDefaultModalityState());
+              app.invokeAndWait(() -> MiscUtil.withPsiFileInReadAction(
+                      session.getProject(),
+                      path,
+                      (psiFile) -> {
+                        final var execCtx = new ExecutorContext(psiFile, session.getProject(), path, context);
+                        ref.set(command.apply(execCtx));
+                      }
+              ), app.getDefaultModalityState());
               return ref.get();
             }
     );
