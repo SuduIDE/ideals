@@ -1,8 +1,6 @@
-package org.rri.server.definition;
+package org.rri.server.commands;
 
 import com.intellij.openapi.project.Project;
-import com.intellij.psi.PsiFile;
-import org.eclipse.lsp4j.Position;
 import org.rri.server.LspContext;
 import org.rri.server.LspPath;
 

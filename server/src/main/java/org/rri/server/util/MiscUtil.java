@@ -1,16 +1,12 @@
 package org.rri.server.util;
 
-import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
-import com.intellij.openapi.editor.EditorFactory;
-import com.intellij.openapi.editor.ex.EditorEx;
 import com.intellij.openapi.editor.impl.DocumentImpl;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.fileEditor.impl.FileDocumentManagerImpl;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.Ref;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiElement;
@@ -18,6 +14,7 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.PsiNameIdentifierOwner;
 import org.eclipse.lsp4j.Location;
+import org.eclipse.lsp4j.LocationLink;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.jetbrains.annotations.NotNull;
@@ -140,6 +137,11 @@ public class MiscUtil {
     Disposer.register(context, () -> editorFactory.releaseEditor(created));
 
     return created;
+  }
+
+  public static LocationLink psiElementLocationWithOrig(PsiElement elem, String uri, Document doc, Range originalRange) {
+    Range range = psiElementRange(elem, doc);
+    return new LocationLink(uri, range, range, originalRange);
   }
 
   public static Location psiElementLocation(PsiElement elem, String uri, Document doc) {
