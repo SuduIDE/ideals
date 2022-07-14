@@ -55,7 +55,7 @@ class DiagnosticsTask implements Runnable {
             .map((it) -> toDiagnostic(it, document))
             .filter(Objects::nonNull)
             .collect(Collectors.toList());
-    client.publishDiagnostics(new PublishDiagnosticsParams(LspPath.fromLspUri(file.getVirtualFile().getUrl()).toLspUri(), diags));
+    client.publishDiagnostics(new PublishDiagnosticsParams(LspPath.fromVirtualFile(file.getVirtualFile()).toLspUri(), diags));
   }
 
   @NotNull

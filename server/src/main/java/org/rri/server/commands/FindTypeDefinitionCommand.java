@@ -13,12 +13,13 @@ import org.rri.server.LspPath;
 import org.rri.server.util.EditorUtil;
 import org.rri.server.util.MiscUtil;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-public class FindTypeDefinitionCommand extends MyCommand<Either<List<? extends Location>, List<? extends LocationLink>>>{
+public class FindTypeDefinitionCommand extends MyCommand<Either<List<? extends Location>, List<? extends LocationLink>>> {
     private final Position pos;
 
     public FindTypeDefinitionCommand(Position pos) {
@@ -27,12 +28,9 @@ public class FindTypeDefinitionCommand extends MyCommand<Either<List<? extends L
 
     @Override
     public Either<List<? extends Location>, List<? extends LocationLink>> apply(ExecutorContext ctx) {
-        LspPath path = ctx.getLspPath();
-        PsiFile file = MiscUtil.resolvePsiFile(ctx.getProject(), path);
-        // TODO check Nullable case
-        assert file != null;
-        Document doc = MiscUtil.getDocument(file);
-        assert doc != null;
+        PsiFile file = ctx.getPsiFile();
+        Document doc = MiscUtil.getDocument(ctx.getPsiFile());
+        if (doc == null) { return Either.forRight(new ArrayList<>()); }
 
         int offset = MiscUtil.positionToOffset(pos, doc);
         PsiElement originalElem = file.findElementAt(offset);
@@ -45,9 +43,11 @@ public class FindTypeDefinitionCommand extends MyCommand<Either<List<? extends L
         });
         var result = ref.get();
 
-        var uri = path.toLspUri();
         var locLst = Arrays.stream(result)
-                .map(elem -> MiscUtil.psiElementLocationWithOrig(elem, uri, doc, originalRange))
+                .map(elem -> {
+                    var uri = LspPath.fromVirtualFile(elem.getContainingFile().getVirtualFile()).toLspUri();
+                    return MiscUtil.psiElementLocationWithOrig(elem, uri, doc, originalRange);
+                })
                 .collect(Collectors.toList());
 
         return Either.forRight(locLst);

@@ -16,7 +16,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 
-public class FindDefinitionCommand extends MyCommand<Either<List<? extends Location>, List<? extends LocationLink>>>{
+public class FindDefinitionCommand extends MyCommand<Either<List<? extends Location>, List<? extends LocationLink>>> {
     private final Position pos;
 
     public FindDefinitionCommand(Position pos) {
@@ -25,26 +25,25 @@ public class FindDefinitionCommand extends MyCommand<Either<List<? extends Locat
 
     @Override
     public Either<List<? extends Location>, List<? extends LocationLink>> apply(ExecutorContext ctx) {
-        try {
-            LspPath path = ctx.getLspPath();
-            PsiFile file = MiscUtil.resolvePsiFile(ctx.getProject(), path);
-            Document doc = MiscUtil.getDocument(file);
+        PsiFile file = ctx.getPsiFile();
+        Document doc = MiscUtil.getDocument(file);
+        if (doc == null) { return Either.forRight(new ArrayList<>()); }
 
-            int offset = MiscUtil.positionToOffset(pos, doc);
-            PsiElement originalElem = file.findElementAt(offset);
-            Range originalRange = MiscUtil.psiElementRange(originalElem, doc);
+        int offset = MiscUtil.positionToOffset(pos, doc);
+        PsiElement originalElem = file.findElementAt(offset);
+        Range originalRange = MiscUtil.psiElementRange(originalElem, doc);
 
-            PsiReference ref = file.findReferenceAt(offset);
-            PsiElement targetElem = ref.resolve();
-            Range targetRange = MiscUtil.psiElementRange(targetElem, doc);
+        PsiReference ref = file.findReferenceAt(offset);
+        if (ref == null) { return Either.forRight(new ArrayList<>()); }
 
-            String uri = LspPath.fromVirtualFile(targetElem.getContainingFile().getVirtualFile()).toLspUri();
-            LocationLink loc = new LocationLink(uri, targetRange, targetRange, originalRange);
-            List<LocationLink> lst = new ArrayList<>();
-            lst.add(loc);
-            return Either.forRight(lst);
-        } catch (NullPointerException e) {
-            return Either.forRight(new ArrayList<>());
-        }
+        PsiElement targetElem = ref.resolve();
+        if (targetElem == null) { return Either.forRight(new ArrayList<>()); }
+
+        Range targetRange = MiscUtil.psiElementRange(targetElem, doc);
+        String uri = LspPath.fromVirtualFile(targetElem.getContainingFile().getVirtualFile()).toLspUri();
+        LocationLink loc = new LocationLink(uri, targetRange, targetRange, originalRange);
+        List<LocationLink> lst = new ArrayList<>();
+        lst.add(loc);
+        return Either.forRight(lst);
     }
 }

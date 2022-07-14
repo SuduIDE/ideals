@@ -13,7 +13,6 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.PsiNameIdentifierOwner;
-import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.LocationLink;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
@@ -139,16 +138,13 @@ public class MiscUtil {
     return created;
   }
 
+  @Nullable
   public static LocationLink psiElementLocationWithOrig(PsiElement elem, String uri, Document doc, Range originalRange) {
     Range range = psiElementRange(elem, doc);
-    return new LocationLink(uri, range, range, originalRange);
+    return range != null ? new LocationLink(uri, range, range, originalRange) : null;
   }
 
-  public static Location psiElementLocation(PsiElement elem, String uri, Document doc) {
-    Range range = psiElementRange(elem, doc);
-    return new Location(uri, range);
-  }
-
+  @Nullable
   public static Range psiElementRange(PsiElement elem, Document doc) {
     TextRange range = null;
     if (elem instanceof PsiNameIdentifierOwner) {
@@ -160,15 +156,7 @@ public class MiscUtil {
     if (range == null) {
       range = elem.getTextRange();
     }
-    return new Range(offsetToPosition(doc, range.getStartOffset()), offsetToPosition(doc, range.getEndOffset()));
-    /*if (elem instanceof PsiNameIdentifierOwner) {
-      PsiElement identifier = ((PsiNameIdentifierOwner) elem).getNameIdentifier();
-      if (identifier == null) { return null; }
-      TextRange range = identifier.getTextRange();
-      return new Range(offsetToPosition(doc, range.getStartOffset()), offsetToPosition(doc, range.getEndOffset()));
-    } else {
-      return null;
-    }*/
+    return range != null ? new Range(offsetToPosition(doc, range.getStartOffset()), offsetToPosition(doc, range.getEndOffset())) : null;
   }
 
   public static int positionToOffset(Position pos, Document doc) {
