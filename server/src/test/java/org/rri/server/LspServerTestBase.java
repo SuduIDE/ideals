@@ -67,7 +67,7 @@ public abstract class LspServerTestBase extends HeavyPlatformTestCase {
   protected void initializeServer() {
     final var initializeParams = new InitializeParams();
     setupInitializeParams(initializeParams);
-    TestUtil.edtSafeGet(server.initialize(initializeParams));
+    TestUtil.getNonBlockingEdt(server.initialize(initializeParams));
   }
 
   @Before

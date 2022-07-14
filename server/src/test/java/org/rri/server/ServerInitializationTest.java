@@ -27,7 +27,7 @@ public class ServerInitializationTest extends LspServerTestBase {
 
     final var initializeResult = server().initialize(initializeParams);
 
-    TestUtil.edtSafeGet(initializeResult);
+    TestUtil.getNonBlockingEdt(initializeResult);
 
     Assert.assertEquals("project has unexpected location",
             getProjectPath(),

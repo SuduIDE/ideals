@@ -24,7 +24,7 @@ intellij {
   pluginsRepositories {
     marketplace()
   }
-  plugins.set(listOf("PythonCore:221.5080.216"))
+  plugins.set(listOf("Kotlin", "java", "PythonCore:221.5080.216"))
 }
 
 open class PlainIdeTask : RunIdeTask()

@@ -1,5 +1,6 @@
 class Test {
-  public static void main(String[] args) {
-    System.out.println("Hello, world!")
+  public Test() {
+    int x;
+    x = 1 + 2   // error: no semicolon
   }
 }

@@ -15,6 +15,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.server.LspPath;
 
+import java.util.concurrent.Callable;
 import java.util.function.Consumer;
 
 public class MiscUtil {
@@ -105,5 +106,13 @@ public class MiscUtil {
         throw wrap(e);
       }
     };
+  }
+
+  public static <T> T unexceptionize(@NotNull Callable<T> block) {
+    try {
+      return block.call();
+    } catch (Exception e) {
+      throw wrap(e);
+    }
   }
 }

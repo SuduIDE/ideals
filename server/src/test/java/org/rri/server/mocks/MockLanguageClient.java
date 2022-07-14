@@ -7,6 +7,7 @@ import org.eclipse.lsp4j.ShowMessageRequestParams;
 import org.rri.server.MyLanguageClient;
 import org.rri.server.TestUtil;
 
+import java.util.Optional;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
@@ -31,9 +32,7 @@ public class MockLanguageClient implements MyLanguageClient {
 
   @Override
   public void publishDiagnostics(PublishDiagnosticsParams diagnostics) {
-    diagnosticsFuture
-            .accumulateAndGet(null, (current, given) -> (current == null) ? new CompletableFuture<>() : current)
-            .complete(diagnostics);
+    Optional.of(diagnosticsFuture.get()).ifPresent(it -> it.complete(diagnostics));
   }
 
   public void resetDiagnosticsResult() {
@@ -41,8 +40,11 @@ public class MockLanguageClient implements MyLanguageClient {
   }
 
   public PublishDiagnosticsParams waitAndGetDiagnosticsPublished() {
-    return TestUtil.edtSafeGet(    diagnosticsFuture
-            .accumulateAndGet(null, (current, given) -> (current == null) ? new CompletableFuture<>() : current)
+    return TestUtil.getNonBlockingEdt(
+            diagnosticsFuture.accumulateAndGet(null, (current, given) -> (current == null) ?
+                    new CompletableFuture<>() :
+                    current
+            )
     );
   }
 
