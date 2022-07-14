@@ -3,7 +3,6 @@ package org.rri.server;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.DumbService;
-import com.intellij.psi.PsiManager;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -14,7 +13,6 @@ import org.rri.server.diagnostics.DiagnosticsService;
 import org.rri.server.util.Metrics;
 import org.rri.server.util.MiscUtil;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
@@ -124,7 +122,9 @@ public class MyTextDocumentService implements TextDocumentService {
                 MiscUtil.withPsiFileInReadAction(
                         session.getProject(),
                         path,
-                        (psiFile) -> ref.set(completions().launchCompletions(psiFile, cancelChecker))
+                        (psiFile) -> {
+                          ref.set(completions().launchCompletions(psiFile, params.getPosition(), cancelChecker));
+                        }
                 );
 //                        todo: detect completion work time in ref solution
 //                        final var profiler = if (context.client != null) startProfiler(context.client !!) else DUMMY

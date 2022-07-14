@@ -4,8 +4,9 @@ import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
+import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.EditorFactory;
-import com.intellij.openapi.editor.ex.EditorEx;
+import com.intellij.openapi.editor.LogicalPosition;
 import com.intellij.openapi.editor.impl.DocumentImpl;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.fileEditor.impl.FileDocumentManagerImpl;
@@ -128,13 +129,13 @@ public class MiscUtil {
     }
   }
 
-  public static EditorEx createEditor(Disposable context, PsiFile file, int offset) {
+  public static Editor createEditor(Disposable context, PsiFile file, Position position) {
     Document doc = getDocument(file);
     EditorFactory editorFactory = EditorFactory.getInstance();
 
     assert doc != null;
-    EditorEx created = (EditorEx) editorFactory.createEditor(doc, file.getProject());
-    created.getCaretModel().moveToOffset(offset);
+    Editor created = editorFactory.createEditor(doc, file.getProject());
+    created.getCaretModel().moveToLogicalPosition(new LogicalPosition(position.getLine(), position.getCharacter()));
 
     Disposer.register(context, () -> editorFactory.releaseEditor(created));
 

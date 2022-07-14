@@ -1,41 +1,33 @@
 package org.rri.server.definition;
 
-import com.intellij.codeInsight.navigation.actions.GotoDeclarationAction;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
-import com.intellij.openapi.editor.ScrollType;
-import com.intellij.openapi.extensions.Extensions;
 import com.intellij.openapi.fileEditor.FileEditor;
 import com.intellij.openapi.fileEditor.FileEditorProvider;
 import com.intellij.openapi.fileEditor.FileEditorState;
 import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx;
 import com.intellij.openapi.fileEditor.ex.FileEditorProviderManager;
-import com.intellij.openapi.fileEditor.impl.EditorFileSwapper;
 import com.intellij.openapi.fileEditor.impl.EditorHistoryManager;
 import com.intellij.openapi.fileEditor.impl.EditorWithProviderComposite;
-import com.intellij.openapi.fileEditor.impl.text.TextEditorImpl;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.util.Pair;
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiReference;
 import org.codehaus.plexus.util.ExceptionUtils;
-import org.eclipse.lsp4j.DefinitionParams;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.rri.server.LspPath;
 import org.rri.server.MyTextDocumentService;
-import org.rri.server.util.EditorUtil;
 import org.rri.server.util.MiscUtil;
 
 import java.lang.reflect.Constructor;
-import java.nio.file.Paths;
-import java.util.*;
+import java.util.Arrays;
+import java.util.List;
 import java.util.function.Function;
-import java.util.stream.Collectors;
 
 public class FindDefinitionCommand implements Function<ExecutorContext, List<? extends Location>>, Disposable {
     private static final Logger LOG = Logger.getInstance(MyTextDocumentService.class);
@@ -78,27 +70,28 @@ public class FindDefinitionCommand implements Function<ExecutorContext, List<? e
             throw new RuntimeException("Can't find var location");
         }
         return list;*/
+        return null;
     }
 
     private List<? extends Location> findDefinitionByReference(ExecutorContext ctx, int offset) {
-        List<Location> loc = new ArrayList<>();
-        EditorUtil.withEditor(this, ctx.getFile(), offset, editor -> {
-//            val targetElements = GotoDeclarationAction.findTargetElementsNoVS(ctx.getProject(), editor, offset, false);
-            PsiElement[] targetElements = GotoDeclarationAction.findAllTargetElements(ctx.getProject(), editor, offset);
-            Collection<Location> results = Arrays.stream(targetElements)
-                    .map(this::sourceLocationIfPossible)
-                    .filter(Objects::nonNull)
-                    .collect(Collectors.toList());
-            loc.addAll(results);
-        });
-        return loc;
+//        List<Location> loc = new ArrayList<>();
+//        EditorUtil.withEditor(this, MiscUtil.resolvePsiFile(ctx.getProject(), ctx.getLspPath()), offset, editor -> {
+////            val targetElements = GotoDeclarationAction.findTargetElementsNoVS(ctx.getProject(), editor, offset, false);
+//            PsiElement[] targetElements = GotoDeclarationAction.findAllTargetElements(ctx.getProject(), editor, offset);
+//            Collection<Location> results = Arrays.stream(targetElements)
+//                    .map(this::sourceLocationIfPossible)
+//                    .filter(Objects::nonNull)
+//                    .collect(Collectors.toList());
+//            loc.addAll(results);
+//        });
+//        return loc;
+        return null;
     }
 
     private Location sourceLocationIfPossible(PsiElement pe) {
         Document doc = MiscUtil.getDocument(pe.getContainingFile());
         String uri = LspPath.getURIForFile(pe.getContainingFile());
-        Location location = MiscUtil.psiElementLocation(pe, uri, doc);
-        return location;
+        return MiscUtil.psiElementLocation(pe, uri, doc);
 
         // TODO What this code do!?
         /*EditorWithProviderComposite editor = newEditorComposite(pe.getContainingFile().getVirtualFile(), pe.getProject());
