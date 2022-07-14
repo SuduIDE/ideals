@@ -48,9 +48,4 @@ public class FindDefinitionCommand extends MyCommand<Either<List<? extends Locat
         lst.add(loc);
         return Either.forRight(lst);
     }
-
-    @Override
-    public void dispose() {
-        // Do nothing
-    }
 }
