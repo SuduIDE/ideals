@@ -3,14 +3,14 @@ package org.rri.server;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.DumbService;
-import com.intellij.openapi.vfs.VirtualFile;
 import org.eclipse.lsp4j.*;
-import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import org.jetbrains.annotations.NotNull;
-import org.rri.server.definition.ExecutorContext;
-import org.rri.server.definition.FindDefinitionCommand;
+import org.rri.server.commands.ExecutorContext;
+import org.rri.server.commands.FindDefinitionCommand;
+import org.rri.server.commands.FindTypeDefinitionCommand;
+import org.rri.server.commands.MyCommand;
 import org.rri.server.completions.CompletionsService;
 import org.rri.server.diagnostics.DiagnosticsService;
 import org.rri.server.references.FindDefinitionCommand;
@@ -23,6 +23,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 
 public class MyTextDocumentService implements TextDocumentService {
 
@@ -97,32 +98,16 @@ public class MyTextDocumentService implements TextDocumentService {
 
   @Override
   public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> definition(DefinitionParams params) {
-    final var app = ApplicationManager.getApplication();
     final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
-    final var context = LspContext.getContext(session.getProject());
     final var command = new FindDefinitionCommand(params.getPosition());
+    return invokeAndGetFuture(path, command, () -> "Definition call");
+  }
 
-    final var virtualFile = path.findVirtualFile();
-    if (virtualFile == null) {
-      LOG.info("File not found: " + path);
-      // todo mb need to throw excep
-      return null;
-    }
-
-    LOG.info("Definition call");
-    return CompletableFuture.supplyAsync(() -> {
-              final AtomicReference<List<LocationLink>> ref = new AtomicReference<>();
-              app.invokeAndWait(() -> {
-                final var execCtx = new ExecutorContext(session.getProject(), path, context);
-                MiscUtil.withPsiFileInReadAction(
-                        session.getProject(),
-                        path,
-                        (psiFile) -> ref.set(command.apply(execCtx))
-                );
-              }, app.getDefaultModalityState());
-              return Either.forRight(ref.get());
-            }
-    );
+  @Override
+  public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> typeDefinition(TypeDefinitionParams params) {
+    final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
+    final var command = new FindTypeDefinitionCommand(params.getPosition());
+    return invokeAndGetFuture(path, command, () -> "TypeDefinition call");
   }
 
   public void refreshDiagnostics() {
@@ -164,5 +149,32 @@ public class MyTextDocumentService implements TextDocumentService {
       return CompletableFuture.completedFuture(Either.forLeft(new ArrayList<>()));
     }
     return completions().startCompletionCalculation(path, params.getPosition());
+  }
+
+  private <R> CompletableFuture<R> invokeAndGetFuture(LspPath path, MyCommand<R> command, Supplier<String> message){
+    final var app = ApplicationManager.getApplication();
+    final var context = LspContext.getContext(session.getProject());
+
+    final var virtualFile = path.findVirtualFile();
+    if (virtualFile == null) {
+      LOG.info("File not found: " + path);
+      // todo mb need to throw excep
+      return null;
+    }
+
+    LOG.info(message.get());
+    return CompletableFuture.supplyAsync(() -> {
+              final AtomicReference<R> ref = new AtomicReference<>();
+              app.invokeAndWait(() -> {
+                final var execCtx = new ExecutorContext(session.getProject(), path, context);
+                MiscUtil.withPsiFileInReadAction(
+                        session.getProject(),
+                        path,
+                        (psiFile) -> ref.set(command.apply(execCtx))
+                );
+              }, app.getDefaultModalityState());
+              return ref.get();
+            }
+    );
   }
 }
