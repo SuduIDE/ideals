@@ -42,6 +42,7 @@ public class FindTypeDefinitionCommand extends MyCommand<Either<List<? extends L
             ref.set(symbolTypes);
         });
         var result = ref.get();
+        if (result == null) { return Either.forRight(new ArrayList<>()); }
 
         var locLst = Arrays.stream(result)
                 .map(elem -> {

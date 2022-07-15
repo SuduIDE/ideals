@@ -13,6 +13,7 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.PsiNameIdentifierOwner;
+import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.LocationLink;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
@@ -142,6 +143,15 @@ public class MiscUtil {
   public static LocationLink psiElementLocationWithOrig(PsiElement elem, String uri, Document doc, Range originalRange) {
     Range range = psiElementRange(elem, doc);
     return range != null ? new LocationLink(uri, range, range, originalRange) : null;
+  }
+
+  @Nullable
+  public static Location psiElementLocation(PsiElement elem) {
+    var file = elem.getContainingFile();
+    var doc = getDocument(file);
+    var uri = LspPath.fromVirtualFile(file.getVirtualFile()).toLspUri();
+    Range range = psiElementRange(elem, doc);
+    return range != null ? new Location(uri, range) : null;
   }
 
   @Nullable
