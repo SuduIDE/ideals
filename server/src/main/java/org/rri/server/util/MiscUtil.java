@@ -129,7 +129,9 @@ public class MiscUtil {
     }
   }
 
-  public static Editor createEditor(Disposable context, PsiFile file, Position position) {
+  public static Editor createEditor(@NotNull Disposable context,
+                                    @NotNull PsiFile file,
+                                    @NotNull Position position) {
     Document doc = getDocument(file);
     EditorFactory editorFactory = EditorFactory.getInstance();
 

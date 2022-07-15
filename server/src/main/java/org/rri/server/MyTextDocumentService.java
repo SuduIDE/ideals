@@ -13,6 +13,7 @@ import org.rri.server.diagnostics.DiagnosticsService;
 import org.rri.server.util.Metrics;
 import org.rri.server.util.MiscUtil;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
@@ -104,6 +105,12 @@ public class MyTextDocumentService implements TextDocumentService {
   }
 
   @Override
+  public CompletableFuture<CompletionItem> resolveCompletionItem(CompletionItem unresolved) {
+    // while without addition completion info
+    return CompletableFuture.completedFuture(unresolved);
+  }
+
+  @Override
   public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams params) {
     var app = ApplicationManager.getApplication();
     final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
@@ -112,24 +119,21 @@ public class MyTextDocumentService implements TextDocumentService {
     if (virtualFile == null) {
       LOG.info("File not found: " + path);
       // todo mb need to throw excep
-      return null;
+      return CompletableFuture.completedFuture(Either.forLeft(new ArrayList<>()));
     }
 
-    LOG.info("Completion call");
-    return CompletableFutures.computeAsync((cancelChecker) -> {
+    return CompletableFutures.computeAsync(
+            (cancelChecker) -> {
               final AtomicReference<Either<List<CompletionItem>, CompletionList>> ref = new AtomicReference<>();
-              app.invokeAndWait(() -> {
-                MiscUtil.withPsiFileInReadAction(
-                        session.getProject(),
-                        path,
-                        (psiFile) -> {
-                          ref.set(completions().launchCompletions(psiFile, params.getPosition(), cancelChecker));
-                        }
-                );
-//                        todo: detect completion work time in ref solution
-//                        final var profiler = if (context.client != null) startProfiler(context.client !!) else DUMMY
-//                        profiler.mark("Start ${command.javaClass.canonicalName}");
-              }, app.getDefaultModalityState());
+              app.invokeAndWait(
+                      () -> MiscUtil.withPsiFileInReadAction(
+                              session.getProject(),
+                              path,
+                              (psiFile) ->
+                                      ref.set(completions().launchCompletions(psiFile, params.getPosition(), cancelChecker))
+                      ),
+                      app.getDefaultModalityState()
+              );
               return ref.get();
             }
     );
