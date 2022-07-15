@@ -95,7 +95,6 @@ final public class MyCompletionsService implements Disposable {
       if (ApplicationManager.getApplication().isUnitTestMode()) {
         completionResults.forEach((it) -> {
           try {
-            System.out.println();
             arranger.addElement(it);
           } catch (Exception e) {
             throw new RuntimeException(e);
