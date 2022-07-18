@@ -28,5 +28,9 @@
     <appStarter implementation="org.rri.server.bootstrap.LspServerApplicationStarter"/>
     <applicationService serviceImplementation="org.rri.server.ProjectService"/>
 
+    <applicationService overrides="true"
+                        serviceInterface="com.intellij.openapi.fileEditor.FileDocumentManager"
+                        testServiceImplementation="org.rri.server.components.TestDocumentManager"/>
+
   </extensions>
 </idea-plugin>

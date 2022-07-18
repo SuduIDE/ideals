@@ -28,6 +28,7 @@ import org.rri.server.util.MiscUtil;
 
 import java.util.Collections;
 import java.util.List;
+import java.util.Map;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
@@ -97,14 +98,14 @@ class DiagnosticsTask implements Runnable {
           HighlightingSessionImpl.runInsideHighlightingSession(psiFile, progress, null, range, false, () -> {});
 
           final var result = analyzer.runMainPasses(psiFile, doc, progress);
-          LOG.trace("Analyzing file: produced items: " + result.size());
+          if(LOG.isTraceEnabled()) LOG.trace("Analyzing file: produced items: " + result.size());
           return result;
         } catch (IndexNotReadyException e) {
           LOG.warn("Analyzing file: index not ready");
           return Collections.emptyList();
         }
         catch (ProcessCanceledException e) {
-          LOG.trace("Highlighting has been cancelled: " + file.getVirtualFile());
+          if(LOG.isTraceEnabled()) LOG.trace("Analyzing file: highlighting has been cancelled: " + file.getVirtualFile());
           throw e;
         }
       }).executeSynchronously();
@@ -124,15 +125,14 @@ class DiagnosticsTask implements Runnable {
     return new Diagnostic(new Range(start, end), description, diagnosticSeverity(info.getSeverity()), "rriij");
   }
 
+  private static final Map<HighlightSeverity, DiagnosticSeverity> severityMap = Map.of(
+    HighlightSeverity.INFORMATION, DiagnosticSeverity.Information,
+    HighlightSeverity.WARNING, DiagnosticSeverity.Warning,
+    HighlightSeverity.ERROR, DiagnosticSeverity.Error
+  );
   @NotNull
   private static DiagnosticSeverity diagnosticSeverity(@NotNull HighlightSeverity severity) {
-    if (severity == HighlightSeverity.INFORMATION)
-      return DiagnosticSeverity.Information;
-    if (severity == HighlightSeverity.WARNING)
-      return DiagnosticSeverity.Warning;
-    if (severity == HighlightSeverity.ERROR)
-      return DiagnosticSeverity.Error;
-
-    return DiagnosticSeverity.Hint;
+    var result = severityMap.get(severity);
+    return result != null ? result : DiagnosticSeverity.Hint;
   }
 }

@@ -20,9 +20,9 @@ public class TestUtil {
     return future.join();
   }
 
-  public static void waitInEdt(long time) {
+  public static void waitInEdt(long timeInMs) {
     final var mark = System.nanoTime();
-    waitInEdtFor (() -> (System.nanoTime() - mark)/1_000_000 >= time);
+    waitInEdtFor (() -> (System.nanoTime() - mark)/1_000_000 >= timeInMs);
   }
 
 

@@ -1,5 +1,6 @@
 package org.rri.server.mocks;
 
+import com.intellij.openapi.diagnostic.Logger;
 import org.eclipse.lsp4j.MessageActionItem;
 import org.eclipse.lsp4j.MessageParams;
 import org.eclipse.lsp4j.PublishDiagnosticsParams;
@@ -12,6 +13,8 @@ import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.atomic.AtomicReference;
 
 public class MockLanguageClient implements MyLanguageClient {
+  @SuppressWarnings("unused")
+  private static final Logger LOG = Logger.getInstance(MockLanguageClient.class);
   @Override
   public void notifyIndexStarted() {
 
@@ -35,6 +38,7 @@ public class MockLanguageClient implements MyLanguageClient {
     Optional.of(diagnosticsFuture.get()).ifPresent(it -> it.complete(diagnostics));
   }
 
+  @SuppressWarnings("unused")
   public void resetDiagnosticsResult() {
     diagnosticsFuture.set(new CompletableFuture<>());
   }
