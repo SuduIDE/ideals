@@ -8,12 +8,11 @@ import com.intellij.psi.PsiFile;
 import org.codehaus.plexus.util.ExceptionUtils;
 import org.eclipse.lsp4j.Position;
 import org.jetbrains.annotations.NotNull;
-import org.rri.server.MyTextDocumentService;
 
 import java.util.function.Consumer;
 
 public class EditorUtil {
-    private static final Logger LOG = Logger.getInstance(MyTextDocumentService.class);
+    private static final Logger LOG = Logger.getInstance(EditorUtil.class);
 
     public static void withEditor(@NotNull Disposable context,
                                   @NotNull PsiFile file,

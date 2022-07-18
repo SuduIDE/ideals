@@ -1,7 +1,6 @@
 package org.rri.server.completions;
 
 import com.intellij.codeInsight.completion.*;
-import com.intellij.codeInsight.completion.impl.CamelHumpMatcher;
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.impl.LookupImpl;
 import com.intellij.openapi.Disposable;
@@ -22,17 +21,23 @@ import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.impl.source.tree.injected.InjectedLanguageEditorUtil;
 import com.intellij.reference.SoftReference;
+import com.intellij.util.ObjectUtils;
+import com.intellij.util.concurrency.AppExecutorUtil;
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionList;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
+import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
+import org.rri.server.LspPath;
 import org.rri.server.util.EditorUtil;
+import org.rri.server.util.MiscUtil;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.CompletableFuture;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -46,13 +51,42 @@ final public class MyCompletionsService implements Disposable {
     this.project = project;
   }
 
-  public @NotNull Either<List<CompletionItem>, CompletionList> launchCompletions(@NotNull PsiFile psiFile,
-                                                                                 @NotNull Position position,
-                                                                                 @NotNull CancelChecker cancelChecker) {
+  public CompletableFuture<Either<List<CompletionItem>, CompletionList>> getCompletionResults(
+          LspPath path, Position position) {
+    var app = ApplicationManager.getApplication();
+    return CompletableFutures.computeAsync(
+            AppExecutorUtil.getAppExecutorService(),
+            (cancelChecker) -> {
+              final Ref<Either<List<CompletionItem>, CompletionList>> ref = new Ref<>();
+              // todo invokeAndWait is necessary for editor creation. We can create editor only inside EDT
+              app.invokeAndWait(
+                      // todo Add version that have return statement
+                      () -> MiscUtil.withPsiFileInReadAction(
+                              project,
+                              path,
+                              (psiFile) ->
+                                      ref.set(createCompletionResults(psiFile, position, cancelChecker))),
+                      app.getDefaultModalityState()
+              );
+              return ref.get();
+            }
+    );
+  }
+
+  // todo This method needs for editor creation
+  @Override
+  public void dispose() {
+  }
+
+  // todo This class uses ideas internal API
+  @SuppressWarnings("UnstableApiUsage")
+  public @NotNull Either<List<CompletionItem>, CompletionList> createCompletionResults(@NotNull PsiFile psiFile,
+                                                                                       @NotNull Position position,
+                                                                                       @NotNull CancelChecker cancelChecker) {
     Ref<List<LookupElement>> sortedLookupElementsRef = new Ref<>(new ArrayList<>());
 
     EditorUtil.withEditor(this, psiFile, position, (editor) -> {
-      var completionResults = new ArrayList<CompletionResult>();
+      var ideaCompletionResults = new ArrayList<CompletionResult>();
 
       var process = new VoidCompletionProcess();
 
@@ -60,7 +94,10 @@ final public class MyCompletionsService implements Disposable {
               project,
               editor,
               editor.getCaretModel().getPrimaryCaret(),
-              0 /* i dont know purpose of this number */,
+              /* todo
+                  This number equal completion requests count in same place.
+                  It is used for change search scope in idea
+              */ 1,
               CompletionType.BASIC);
       assert initContext != null;
 
@@ -85,38 +122,32 @@ final public class MyCompletionsService implements Disposable {
       compService.performCompletion(parameters,
               (result) -> {
                 lookup.addItem(result.getLookupElement(),
-                        new CamelHumpMatcher("") /* ref solutions authors chose this matcher */);
-                completionResults.add(result);
+                        new PlainPrefixMatcher("") /* todo Ref solutions authors chose this matcher */);
+                ideaCompletionResults.add(result);
               });
 
-      Ref<List<LookupElement>> sorted = new Ref<>(new ArrayList<>());
-
-      // this "if" comes from Idea and reference solution
+      // todo This "if" comes from ref solution
       if (ApplicationManager.getApplication().isUnitTestMode()) {
-        completionResults.forEach((it) -> {
+        ideaCompletionResults.forEach((it) -> {
           try {
             arranger.addElement(it);
-          } catch (Exception e) {
-            throw new RuntimeException(e);
-          }
+          } catch (Exception ignored) {
+          } // todo we just skip this element
         });
       } else {
         ProgressManager.getInstance().runProcessWithProgressSynchronously(
-                () -> completionResults.forEach((it) -> {
+                () -> ideaCompletionResults.forEach((it) -> {
                   try {
                     arranger.addElement(it);
-                  } catch (Exception e) {
-                    throw new RuntimeException(e);
-                  }
+                  } catch (Exception ignored) {
+                  } // todo we just skip this element
                 }),
                 "Sort completion elements", false, project);
       }
-
-      sorted.set(arranger.arrangeItems(lookup, false).first);
-      sortedLookupElementsRef.set(sorted.get());
+      sortedLookupElementsRef.set(arranger.arrangeItems(lookup, false).first);
     });
 
-    cancelChecker.isCanceled();
+    cancelChecker.checkCanceled();
     var result = sortedLookupElementsRef.get().stream().map(
             (it) ->
             {
@@ -129,14 +160,18 @@ final public class MyCompletionsService implements Disposable {
     return Either.forLeft(result);
   }
 
+  /* todo
+      This process is needed for creation Completion Parameters and insertDummyIdentifier call.
+      I didn't find an alternative way to find Indicator from project for completion
+   */
   static private class VoidCompletionProcess extends AbstractProgressIndicatorExBase implements Disposable, CompletionProcess {
     @Override
     public boolean isAutopopupCompletion() {
-      return false; // ref solution choice
+      return false; // todo This is ref solution choice
     }
 
-    // this lock from ref solution. I didnt found an alternative way to find Indicator from project for completion
-    private final String myLock = "VoidCompletionProcess";
+    // todo This lock from ref solution.
+    private final Object myLock = ObjectUtils.sentinel("VoidCompletionProcess");
 
     @Override
     public void dispose() {
@@ -151,13 +186,23 @@ final public class MyCompletionsService implements Disposable {
     }
   }
 
+  /* todo
+   This method is analogue for insertDummyIdentifier in CompletionInitializationUtil.java from idea 201.6668.113.
+   There is CompletionProcessEx in ideas source code, that can't be reached publicly,
+   but it uses only getHostOffsets and registerChildDisposable,
+   that we can determine by ourself.
+   So solution is copy that code with our replacement for getHostOffsets and registerChildDisposable calls
+   Other private methods from CompletionInitializationUtil are copied below too.
+  */
   private OffsetsInFile insertDummyIdentifier(
           @NotNull CompletionInitializationContext initContext,
           @NotNull VoidCompletionProcess indicator,
           @NotNull OffsetsInFile topLevelOffsets) {
     var hostEditor = InjectedLanguageEditorUtil.getTopLevelEditor(initContext.getEditor());
     var hostMap = topLevelOffsets.getOffsets();
-    var hostCopy = obtainFileCopy(topLevelOffsets.getFile(), false);
+    boolean forbidCaching = false;
+
+    var hostCopy = obtainFileCopy(topLevelOffsets.getFile(), forbidCaching);
     var copyDocument = hostCopy.getViewProvider().getDocument();
     var dummyIdentifier = initContext.getDummyIdentifier();
     var startOffset = hostMap.getOffset(CompletionInitializationContext.START_OFFSET);
@@ -174,14 +219,14 @@ final public class MyCompletionsService implements Disposable {
     );
 
     var copyOffsets = topLevelOffsets.replaceInCopy(
-            hostCopy, startOffset, endOffset, dummyIdentifier
-    ).get();
+            hostCopy, startOffset, endOffset, dummyIdentifier).get();
     return hostCopy.isValid() ? copyOffsets : null;
   }
 
   private static final Key<SoftReference<Pair<PsiFile, Document>>> FILE_COPY_KEY = Key.create("CompletionFileCopy");
 
-  private static PsiFile obtainFileCopy(@NotNull PsiFile file, boolean forbidCaching) {
+  private static PsiFile obtainFileCopy(@NotNull PsiFile file,
+                                        boolean forbidCaching) {
     final VirtualFile virtualFile = file.getVirtualFile();
     boolean mayCacheCopy = !forbidCaching && file.isPhysical() &&
             // Idea developer: "we don't want to cache code fragment copies even if they appear to be physical"
@@ -204,7 +249,6 @@ final public class MyCompletionsService implements Disposable {
               " of " +
               file.getClass());
     }
-    // assertion from idea source
     assertCorrectOriginalFile("New", file, copy);
 
     if (mayCacheCopy) {
@@ -230,19 +274,13 @@ final public class MyCompletionsService implements Disposable {
             !copyFile.getName().equals(originalFile.getName())) {
       return false;
     }
-    // Idea developer:
-    // the psi file cache might have been cleared by some external activity,
-    // in which case PSI-document sync may stop working
+    /*
+     Idea developers:
+     the psi file cache might have been cleared by some external activity,
+     in which case PSI-document sync may stop working
+     */
     PsiFile current = PsiDocumentManager.getInstance(copyFile.getProject()).getPsiFile(document);
     return current != null && current.getViewProvider().getPsi(copyFile.getLanguage()) == copyFile;
-  }
-
-  private static void assertCorrectOriginalFile(@NonNls String prefix, PsiFile file, PsiFile copy) {
-    if (copy.getOriginalFile() != file) {
-      throw new AssertionError(prefix + " copied file doesn't have correct original: noOriginal=" + (copy.getOriginalFile() == copy) +
-              "\n file " + fileInfo(file) +
-              "\n copy " + fileInfo(copy));
-    }
   }
 
   private static @NonNls String fileInfo(@NotNull PsiFile file) {
@@ -251,7 +289,12 @@ final public class MyCompletionsService implements Disposable {
             ", physical=" + file.isPhysical();
   }
 
-  @Override
-  public void dispose() {
+  // todo this assertion method is package-private in Ideas CompletionAssertions class
+  private static void assertCorrectOriginalFile(@NonNls String prefix, PsiFile file, PsiFile copy) {
+    if (copy.getOriginalFile() != file) {
+      throw new AssertionError(prefix + " copied file doesn't have correct original: noOriginal=" + (copy.getOriginalFile() == copy) +
+              "\n file " + fileInfo(file) +
+              "\n copy " + fileInfo(copy));
+    }
   }
 }

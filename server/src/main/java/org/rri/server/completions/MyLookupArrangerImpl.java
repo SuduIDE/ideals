@@ -14,16 +14,22 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 
+/* todo
+  This LookupArranger implementation doesn't use methods from parent class,
+  its just simple arranger that can contain lookupElements from CompletionResults
+ */
 public class MyLookupArrangerImpl extends LookupArranger {
   @NotNull
   CompletionParameters parameters;
   @NotNull
   CompletionLocation location;
+  private final ArrayList<LookupElement> items = new ArrayList<>();
+
+
   public MyLookupArrangerImpl(@NotNull CompletionParameters parameters) {
     this.parameters = parameters;
     this.location = new CompletionLocation(parameters);
   }
-  private final ArrayList<LookupElement> items = new ArrayList<>();
 
   public void addElement(@NotNull CompletionResult completionItem) {
     var presentation = new LookupElementPresentation();
@@ -35,9 +41,6 @@ public class MyLookupArrangerImpl extends LookupArranger {
 
   @Override
   public Pair<List<LookupElement>, Integer> arrangeItems(@NotNull Lookup lookup, boolean onExplicitAction) {
-
-    //val toSelect = getItemToSelect(lookupImpl, listModel, onExplicitAction, relevantSelection) <- from ref solution comment
-    //LOG.assertTrue(toSelect >= 0) <- from ref solution comment
     var toSelect = 0;
     return new Pair<>(items, toSelect);
   }
