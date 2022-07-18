@@ -1,6 +1,7 @@
 package org.rri.server.completions;
 
 import com.intellij.codeInsight.completion.*;
+import com.intellij.codeInsight.completion.impl.CamelHumpMatcher;
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.impl.LookupImpl;
 import com.intellij.openapi.Disposable;
@@ -122,7 +123,7 @@ final public class MyCompletionsService implements Disposable {
       compService.performCompletion(parameters,
               (result) -> {
                 lookup.addItem(result.getLookupElement(),
-                        new PlainPrefixMatcher("") /* todo Ref solutions authors chose this matcher */);
+                        new CamelHumpMatcher("") /* todo Ref solutions authors chose this matcher */);
                 ideaCompletionResults.add(result);
               });
 
