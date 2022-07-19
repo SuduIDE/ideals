@@ -23,6 +23,7 @@ class LookupArrangerImpl extends LookupArranger {
   CompletionParameters parameters;
   @NotNull
   CompletionLocation location;
+  @NotNull
   private final ArrayList<LookupElement> items = new ArrayList<>();
 
 

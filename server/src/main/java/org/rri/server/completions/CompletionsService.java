@@ -63,9 +63,9 @@ final public class CompletionsService implements Disposable {
             AppExecutorUtil.getAppExecutorService(),
             (cancelChecker) -> {
               final Ref<Either<List<CompletionItem>, CompletionList>> ref = new Ref<>();
-              // todo invokeAndWait is necessary for editor creation. We can create editor only inside EDT
+              // invokeAndWait is necessary for editor creation. We can create editor only inside EDT
               app.invokeAndWait(
-                      // todo Add version that have return statement
+                      // todo Maybe we need to add version for `withPsiFileInReadAction` that has return statement
                       () -> MiscUtil.withPsiFileInReadAction(
                               project,
                               path,
@@ -167,10 +167,10 @@ final public class CompletionsService implements Disposable {
   static private class VoidCompletionProcess extends AbstractProgressIndicatorExBase implements Disposable, CompletionProcess {
     @Override
     public boolean isAutopopupCompletion() {
-      return false; // todo This is ref solution choice
+      return false; // todo This is ref solution choice, maybe we can use it for complex completion resolve
     }
 
-    // todo This lock from ref solution.
+    // todo This lock from ref solution. Maybe we don't need it
     @NotNull
     private final Object myLock = ObjectUtils.sentinel("VoidCompletionProcess");
 
@@ -223,7 +223,7 @@ final public class CompletionsService implements Disposable {
     var copyOffsets = topLevelOffsets.replaceInCopy(
             hostCopy, startOffset, endOffset, dummyIdentifier).get();
     if (!hostCopy.isValid()) {
-      throw new RuntimeException("File copy is not valid anymore");
+      throw new RuntimeException("PsiFile copy is not valid anymore");
     }
     return copyOffsets;
   }
@@ -299,7 +299,7 @@ final public class CompletionsService implements Disposable {
             ", physical=" + file.isPhysical();
   }
 
-  // this assertion method is package-private in Ideas CompletionAssertions class
+  // this assertion method is copied from package-private method in CompletionAssertions class
   private static void assertCorrectOriginalFile(@NonNls String prefix,
                                                 @NotNull PsiFile file,
                                                 @NotNull PsiFile copy) {

@@ -94,7 +94,7 @@ public class MyTextDocumentService implements TextDocumentService {
 
   @Override
   public CompletableFuture<CompletionItem> resolveCompletionItem(CompletionItem unresolved) {
-    // todo Resolve == simple text insert
+    // todo currently "completion resolve" == "insert completion item label"
     return CompletableFuture.completedFuture(unresolved);
   }
 
