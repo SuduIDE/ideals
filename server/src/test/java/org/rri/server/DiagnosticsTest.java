@@ -31,7 +31,7 @@ public class DiagnosticsTest extends LspServerTestBase {
       params.setTextDocument(MiscUtil.with(new TextDocumentItem(), item -> {
         item.setUri(filePath.toLspUri());
 
-        item.setText(MiscUtil.unexceptionize(() -> Files.readString(filePath.getPath())));
+        item.setText(MiscUtil.unexceptionize(() -> Files.readString(filePath.toPath())));
         item.setVersion(1);
       }));
     });
@@ -88,7 +88,7 @@ public class DiagnosticsTest extends LspServerTestBase {
       params.setTextDocument(MiscUtil.with(new TextDocumentItem(), item -> {
         item.setUri(filePath.toLspUri());
 
-        item.setText(MiscUtil.unexceptionize(() -> Files.readString(filePath.getPath())));
+        item.setText(MiscUtil.unexceptionize(() -> Files.readString(filePath.toPath())));
         item.setVersion(1);
       }));
     });
