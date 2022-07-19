@@ -13,10 +13,6 @@ import org.jetbrains.annotations.NotNull;
 import java.util.ArrayList;
 import java.util.List;
 
-/* todo
-  This LookupArranger implementation doesn't use methods from parent class,
-  its just simple arranger that can contain lookupElements from CompletionResults
- */
 class LookupArrangerImpl extends LookupArranger {
   @NotNull
   private final CompletionParameters parameters;
@@ -28,6 +24,9 @@ class LookupArrangerImpl extends LookupArranger {
     this.parameters = parameters;
   }
 
+  /* todo
+  Add completion results sorting
+ */
   public void addElement(@NotNull CompletionResult completionItem) {
     var presentation = new LookupElementPresentation();
     ReadAction.run(() -> completionItem.getLookupElement().renderElement(presentation));
