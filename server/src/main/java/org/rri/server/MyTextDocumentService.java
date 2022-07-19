@@ -16,8 +16,7 @@ import java.util.concurrent.CompletableFuture;
 
 public class MyTextDocumentService implements TextDocumentService {
   private static final Logger LOG = Logger.getInstance(MyTextDocumentService.class);
-  @NotNull
-  private final LspSession session;
+  private final @NotNull LspSession session;
 
   public MyTextDocumentService(@NotNull LspSession session) {
     this.session = session;
