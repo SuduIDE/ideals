@@ -3,43 +3,30 @@ package org.rri.server.commands;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiFile;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
-import org.rri.server.LspContext;
-import org.rri.server.LspPath;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 final public class ExecutorContext {
-    private final PsiFile file;
-    private final Project project;
-    private final LspPath path;
-    private final LspContext context; // Maybe not needed
-    private final CancelChecker cancelToken;
 
-    public ExecutorContext(PsiFile file, Project project, LspPath path, LspContext context, CancelChecker cancelToken) {
+    @NotNull private final PsiFile file;
+    @NotNull private final Project project;
+    @Nullable private final CancelChecker cancelToken;
+
+    public ExecutorContext(@NotNull PsiFile file, @NotNull Project project, @Nullable CancelChecker cancelToken) {
         this.file = file;
         this.project = project;
-        this.path = path;
-        this.context = context;
         this.cancelToken = cancelToken;
     }
 
-    public PsiFile getPsiFile() {
+    public @NotNull PsiFile getPsiFile() {
         return file;
     }
 
-    public Project getProject() {
+    public @NotNull Project getProject() {
         return project;
     }
 
-    public CancelChecker getCancelToken() {
+    public @Nullable CancelChecker getCancelToken() {
         return cancelToken;
-    }
-
-    @SuppressWarnings("unused")
-    public LspPath getPath() {
-        return path;
-    }
-
-    @SuppressWarnings("unused")
-    public LspContext getContext() {
-        return context;
     }
 }

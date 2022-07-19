@@ -6,7 +6,7 @@ import org.rri.server.MyTextDocumentService;
 
 import java.util.function.Function;
 
-public abstract class MyCommand<R> implements Function<ExecutorContext, R>, Disposable {
+public abstract class LspCommand<R> implements Function<ExecutorContext, R>, Disposable {
     protected static final Logger LOG = Logger.getInstance(MyTextDocumentService.class);
 
     @Override

@@ -10,9 +10,14 @@ import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import org.jetbrains.annotations.NotNull;
-import org.rri.server.commands.*;
+import org.jetbrains.annotations.Nullable;
+import org.rri.server.commands.ExecutorContext;
+import org.rri.server.commands.LspCommand;
 import org.rri.server.completions.CompletionsService;
 import org.rri.server.diagnostics.DiagnosticsService;
+import org.rri.server.references.FindDefinitionCommand;
+import org.rri.server.references.FindTypeDefinitionCommand;
+import org.rri.server.references.FindUsagesCommand;
 import org.rri.server.util.Metrics;
 import org.rri.server.util.MiscUtil;
 
@@ -134,7 +139,7 @@ public class MyTextDocumentService implements TextDocumentService {
     return completions().startCompletionCalculation(path, params.getPosition());
   }
 
-  private <R> CompletableFuture<R> invokeAndGetFuture(TextDocumentPositionParams params, MyCommand<R> command, Supplier<String> message, boolean withCancelToken) {
+  private <R> CompletableFuture<R> invokeAndGetFuture(TextDocumentPositionParams params, LspCommand<R> command, Supplier<String> message, boolean withCancelToken) {
     final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
     final var virtualFile = path.findVirtualFile();
     if (virtualFile == null) {
@@ -144,23 +149,22 @@ public class MyTextDocumentService implements TextDocumentService {
     }
 
     final var app = ApplicationManager.getApplication();
-    final var context = LspContext.getContext(session.getProject());
 
     LOG.info(message.get());
     if (withCancelToken) {
-      return CompletableFutures.computeAsync(cancelToken -> getResult(app, path, context, command, cancelToken));
+      return CompletableFutures.computeAsync(cancelToken -> getResult(app, path, command, cancelToken));
     } else {
-      return CompletableFuture.supplyAsync(() -> getResult(app, path, context, command, null));
+      return CompletableFuture.supplyAsync(() -> getResult(app, path, command, null));
     }
   }
 
-  private <R> R getResult(Application app, LspPath path, LspContext context, MyCommand<R> command, CancelChecker cancelToken) {
+  private <R> @Nullable R getResult(@NotNull Application app, @NotNull LspPath path, @NotNull LspCommand<R> command, @Nullable CancelChecker cancelToken) {
     final AtomicReference<R> ref = new AtomicReference<>();
     app.invokeAndWait(() -> MiscUtil.withPsiFileInReadAction(
             session.getProject(),
             path,
             (psiFile) -> {
-              final var execCtx = new ExecutorContext(psiFile, session.getProject(), path, context, cancelToken);
+              final var execCtx = new ExecutorContext(psiFile, session.getProject(), cancelToken);
               ref.set(command.apply(execCtx));
             }
     ), app.getDefaultModalityState());

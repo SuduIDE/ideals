@@ -1,4 +1,4 @@
-package org.rri.server.commands;
+package org.rri.server.references;
 
 import com.intellij.find.FindManager;
 import com.intellij.find.impl.FindManagerImpl;
@@ -14,6 +14,8 @@ import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.rri.server.commands.ExecutorContext;
+import org.rri.server.commands.LspCommand;
 import org.rri.server.util.MiscUtil;
 
 import java.util.ArrayList;
@@ -21,7 +23,7 @@ import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class FindUsagesCommand extends MyCommand<List<? extends Location>> {
+public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
     @NonNull
     private final Position position;
 

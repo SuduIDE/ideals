@@ -124,7 +124,7 @@ public class MiscUtil {
   }
 
   @Nullable
-  public static LocationLink psiElementToLocationLink(PsiElement targetElem, Document doc, Range originalRange) {
+  public static LocationLink psiElementToLocationLink(@NotNull PsiElement targetElem, @Nullable Document doc, @Nullable Range originalRange) {
     if (doc == null) { return null; }
     Range range = getPsiElementRange(targetElem, doc);
     String uri = LspPath.fromVirtualFile(targetElem.getContainingFile().getVirtualFile()).toLspUri();
@@ -132,18 +132,20 @@ public class MiscUtil {
   }
 
   @Nullable
-  public static Location psiElementToLocation(PsiElement elem) {
+  public static Location psiElementToLocation(@Nullable PsiElement elem) {
     if (elem == null) { return null; }
     var file = elem.getContainingFile();
     var doc = getDocument(file);
+    if (doc == null) { return null; }
     var uri = LspPath.fromVirtualFile(file.getVirtualFile()).toLspUri();
     Range range = getPsiElementRange(elem, doc);
     return range != null ? new Location(uri, range) : null;
   }
 
   @Nullable
-  public static Range getPsiElementRange(PsiElement elem, Document doc) {
+  public static Range getPsiElementRange(@Nullable PsiElement elem, @NotNull Document doc) {
     TextRange range = null;
+    if (elem == null) { return null; }
     if (elem instanceof PsiNameIdentifierOwner) {
       PsiElement identifier = ((PsiNameIdentifierOwner) elem).getNameIdentifier();
       if (identifier != null) {
@@ -156,7 +158,7 @@ public class MiscUtil {
     return range != null ? new Range(offsetToPosition(doc, range.getStartOffset()), offsetToPosition(doc, range.getEndOffset())) : null;
   }
 
-  public static int positionToOffset(Position pos, Document doc) {
+  public static int positionToOffset(@NotNull Position pos, @NotNull Document doc) {
     return doc.getLineStartOffset(pos.getLine()) + pos.getCharacter();
   }
 }

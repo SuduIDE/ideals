@@ -1,4 +1,4 @@
-package org.rri.server.commands;
+package org.rri.server.references;
 
 import com.intellij.codeInsight.navigation.actions.GotoTypeDeclarationAction;
 import com.intellij.openapi.editor.Document;
@@ -11,6 +11,8 @@ import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
+import org.rri.server.commands.ExecutorContext;
+import org.rri.server.commands.LspCommand;
 import org.rri.server.util.EditorUtil;
 import org.rri.server.util.MiscUtil;
 
@@ -20,7 +22,7 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
-public class FindTypeDefinitionCommand extends MyCommand<Either<List<? extends Location>, List<? extends LocationLink>>> {
+public class FindTypeDefinitionCommand extends LspCommand<Either<List<? extends Location>, List<? extends LocationLink>>> {
     @NonNull
     private final Position pos;
 
@@ -29,7 +31,7 @@ public class FindTypeDefinitionCommand extends MyCommand<Either<List<? extends L
     }
 
     @Override
-    public @NonNull Either<List<? extends Location>, @NonNull List<@NonNull ? extends LocationLink>> apply(@NonNull ExecutorContext ctx) {
+    public @NonNull Either<@NonNull List<@NonNull ? extends Location>, @NonNull List<@NonNull ? extends LocationLink>> apply(@NonNull ExecutorContext ctx) {
         PsiFile file = ctx.getPsiFile();
         Document doc = MiscUtil.getDocument(ctx.getPsiFile());
         if (doc == null) { return Either.forRight(new ArrayList<>()); }
