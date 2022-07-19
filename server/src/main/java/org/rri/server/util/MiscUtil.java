@@ -21,9 +21,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.server.LspPath;
 
-import javax.print.Doc;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
 

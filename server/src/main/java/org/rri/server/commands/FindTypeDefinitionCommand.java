@@ -39,7 +39,7 @@ public class FindTypeDefinitionCommand extends MyCommand<Either<List<? extends L
         Range originalRange = MiscUtil.getPsiElementRange(originalElem, doc);
 
         var ref = new AtomicReference<PsiElement[]>();
-        EditorUtil.withEditor(this, file, offset, editor -> {
+        EditorUtil.withEditor(this, file, MiscUtil.offsetToPosition(doc, offset), editor -> {
             var symbolTypes = GotoTypeDeclarationAction.findSymbolTypes(editor, offset);
             ref.set(symbolTypes);
         });
