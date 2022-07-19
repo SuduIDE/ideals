@@ -140,22 +140,25 @@ public class MiscUtil {
   }
 
   @Nullable
-  public static LocationLink psiElementLocationWithOrig(PsiElement elem, String uri, Document doc, Range originalRange) {
-    Range range = psiElementRange(elem, doc);
+  public static LocationLink psiElementToLocationLink(PsiElement targetElem, Document doc, Range originalRange) {
+    if (doc == null) { return null; }
+    Range range = getPsiElementRange(targetElem, doc);
+    String uri = LspPath.fromVirtualFile(targetElem.getContainingFile().getVirtualFile()).toLspUri();
     return range != null ? new LocationLink(uri, range, range, originalRange) : null;
   }
 
   @Nullable
-  public static Location psiElementLocation(PsiElement elem) {
+  public static Location psiElementToLocation(PsiElement elem) {
+    if (elem == null) { return null; }
     var file = elem.getContainingFile();
     var doc = getDocument(file);
     var uri = LspPath.fromVirtualFile(file.getVirtualFile()).toLspUri();
-    Range range = psiElementRange(elem, doc);
+    Range range = getPsiElementRange(elem, doc);
     return range != null ? new Location(uri, range) : null;
   }
 
   @Nullable
-  public static Range psiElementRange(PsiElement elem, Document doc) {
+  public static Range getPsiElementRange(PsiElement elem, Document doc) {
     TextRange range = null;
     if (elem instanceof PsiNameIdentifierOwner) {
       PsiElement identifier = ((PsiNameIdentifierOwner) elem).getNameIdentifier();
