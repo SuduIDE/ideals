@@ -21,9 +21,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.server.LspPath;
 
-import javax.print.Doc;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
 
@@ -124,19 +121,6 @@ public class MiscUtil {
     } catch (Exception e) {
       throw wrap(e);
     }
-  }
-
-  public static EditorEx createEditor(Disposable context, PsiFile file, int offset) {
-    Document doc = getDocument(file);
-    EditorFactory editorFactory = EditorFactory.getInstance();
-
-    assert doc != null;
-    EditorEx created = (EditorEx) editorFactory.createEditor(doc, file.getProject());
-    created.getCaretModel().moveToOffset(offset);
-
-    Disposer.register(context, () -> editorFactory.releaseEditor(created));
-
-    return created;
   }
 
   @Nullable
