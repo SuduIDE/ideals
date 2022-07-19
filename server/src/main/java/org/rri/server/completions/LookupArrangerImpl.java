@@ -1,6 +1,5 @@
 package org.rri.server.completions;
 
-import com.intellij.codeInsight.completion.CompletionLocation;
 import com.intellij.codeInsight.completion.CompletionParameters;
 import com.intellij.codeInsight.completion.CompletionResult;
 import com.intellij.codeInsight.lookup.Lookup;
@@ -20,16 +19,13 @@ import java.util.List;
  */
 class LookupArrangerImpl extends LookupArranger {
   @NotNull
-  CompletionParameters parameters;
-  @NotNull
-  CompletionLocation location;
+  private final CompletionParameters parameters;
   @NotNull
   private final ArrayList<LookupElement> items = new ArrayList<>();
 
 
   public LookupArrangerImpl(@NotNull CompletionParameters parameters) {
     this.parameters = parameters;
-    this.location = new CompletionLocation(parameters);
   }
 
   public void addElement(@NotNull CompletionResult completionItem) {

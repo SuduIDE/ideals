@@ -94,13 +94,15 @@ public class MyTextDocumentService implements TextDocumentService {
   }
 
   @Override
-  public CompletableFuture<CompletionItem> resolveCompletionItem(CompletionItem unresolved) {
+  @NotNull
+  public CompletableFuture<CompletionItem> resolveCompletionItem(@NotNull CompletionItem unresolved) {
     // todo currently "completion resolve" == "insert completion item label"
     return CompletableFuture.completedFuture(unresolved);
   }
 
   @Override
-  public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(CompletionParams params) {
+  @NotNull
+  public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(@NotNull CompletionParams params) {
     final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
 
     final var virtualFile = path.findVirtualFile();
