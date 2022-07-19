@@ -7,9 +7,9 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.function.Predicate;
 
-public class TestDocumentManager extends FileDocumentManagerImpl {
+public class TestFileDocumentManager extends FileDocumentManagerImpl {
   @SuppressWarnings("unused")
-  private final static Logger LOG = Logger.getInstance(TestDocumentManager.class);
+  private final static Logger LOG = Logger.getInstance(TestFileDocumentManager.class);
 
   @Override
   public void saveAllDocuments(boolean isExplicit) {
