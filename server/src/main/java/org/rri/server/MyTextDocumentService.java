@@ -3,16 +3,18 @@ package org.rri.server;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.DumbService;
 import org.eclipse.lsp4j.*;
+import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import org.jetbrains.annotations.NotNull;
+import org.rri.server.completions.CompletionsService;
 import org.rri.server.diagnostics.DiagnosticsService;
 import org.rri.server.util.Metrics;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class MyTextDocumentService implements TextDocumentService {
-
   private static final Logger LOG = Logger.getInstance(MyTextDocumentService.class);
   private final @NotNull LspSession session;
 
@@ -73,7 +75,7 @@ public class MyTextDocumentService implements TextDocumentService {
     LOG.info("Start refreshing diagnostics for all opened documents");
     documents().forEach(diagnostics()::launchDiagnostics);
   }
-  
+
   @NotNull
   private ManagedDocuments documents() {
     return session.getProject().getService(ManagedDocuments.class);
@@ -82,5 +84,31 @@ public class MyTextDocumentService implements TextDocumentService {
   @NotNull
   private DiagnosticsService diagnostics() {
     return session.getProject().getService(DiagnosticsService.class);
+  }
+
+  @NotNull
+  private CompletionsService completions() {
+    return session.getProject().getService(CompletionsService.class);
+  }
+
+  @Override
+  @NotNull
+  public CompletableFuture<CompletionItem> resolveCompletionItem(@NotNull CompletionItem unresolved) {
+    // todo currently "completion resolve" == "insert completion item label"
+    return CompletableFuture.completedFuture(unresolved);
+  }
+
+  @Override
+  @NotNull
+  public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(@NotNull CompletionParams params) {
+    final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
+
+    final var virtualFile = path.findVirtualFile();
+    if (virtualFile == null) {
+      LOG.info("File not found: " + path);
+      // todo Maybe we need to throw exception
+      return CompletableFuture.completedFuture(Either.forLeft(new ArrayList<>()));
+    }
+    return completions().startCompletionCalculation(path, params.getPosition());
   }
 }

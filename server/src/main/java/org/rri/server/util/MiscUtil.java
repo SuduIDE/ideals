@@ -22,6 +22,7 @@ public class MiscUtil {
   private static final Logger LOG = Logger.getInstance(MiscUtil.class);
   private MiscUtil() {}
 
+  @NotNull
   public static <T> T with(@NotNull T object, @NotNull Consumer<T> block) {
     block.accept(object);
     return object;

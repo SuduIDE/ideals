@@ -31,7 +31,7 @@ public class LspPath {
 
   @NotNull
   public static LspPath fromLspUri(@NotNull String uri) {
-      return new LspPath(uri);
+    return new LspPath(uri);
   }
 
   @NotNull
