@@ -6,7 +6,7 @@ import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import org.jetbrains.annotations.NotNull;
-import org.rri.server.completions.MyCompletionsService;
+import org.rri.server.completions.CompletionsService;
 import org.rri.server.diagnostics.DiagnosticsService;
 import org.rri.server.util.Metrics;
 
@@ -72,14 +72,6 @@ public class MyTextDocumentService implements TextDocumentService {
     return TextDocumentService.super.documentHighlight(params);
   }
 
-  @Override
-  public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> definition(DefinitionParams params) {
-    /*return CompletableFuture.supplyAsync(() -> {
-
-    });*/
-    return null;
-  }
-
   public void refreshDiagnostics() {
     LOG.info("Start refreshing diagnostics for all opened documents");
     documents().forEach(diagnostics()::launchDiagnostics);
@@ -96,8 +88,8 @@ public class MyTextDocumentService implements TextDocumentService {
   }
 
   @NotNull
-  private MyCompletionsService completions() {
-    return session.getProject().getService(MyCompletionsService.class);
+  private CompletionsService completions() {
+    return session.getProject().getService(CompletionsService.class);
   }
 
   @Override
@@ -116,6 +108,6 @@ public class MyTextDocumentService implements TextDocumentService {
       // todo Maybe we need to throw exception
       return CompletableFuture.completedFuture(Either.forLeft(new ArrayList<>()));
     }
-    return completions().getCompletionResults(path, params.getPosition());
+    return completions().startCompletionCalculation(path, params.getPosition());
   }
 }

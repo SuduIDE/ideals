@@ -1,17 +1,12 @@
 package org.rri.server.util;
 
-import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
-import com.intellij.openapi.editor.Editor;
-import com.intellij.openapi.editor.EditorFactory;
-import com.intellij.openapi.editor.LogicalPosition;
 import com.intellij.openapi.editor.impl.DocumentImpl;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.fileEditor.impl.FileDocumentManagerImpl;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.Ref;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiElement;
@@ -26,15 +21,14 @@ import org.jetbrains.annotations.Nullable;
 import org.rri.server.LspPath;
 
 import java.util.concurrent.Callable;
-import javax.print.Doc;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.util.function.Consumer;
 
 public class MiscUtil {
+  @NotNull
   private static final Logger LOG = Logger.getInstance(MiscUtil.class);
   private MiscUtil() {}
 
+  @NotNull
   public static <T> T with(@NotNull T object, @NotNull Consumer<T> block) {
     block.accept(object);
     return object;
@@ -129,22 +123,10 @@ public class MiscUtil {
     }
   }
 
-  public static Editor createEditor(@NotNull Disposable context,
-                                    @NotNull PsiFile file,
-                                    @NotNull Position position) {
-    Document doc = getDocument(file);
-    EditorFactory editorFactory = EditorFactory.getInstance();
-
-    assert doc != null;
-    Editor created = editorFactory.createEditor(doc, file.getProject());
-    created.getCaretModel().moveToLogicalPosition(new LogicalPosition(position.getLine(), position.getCharacter()));
-
-    Disposer.register(context, () -> editorFactory.releaseEditor(created));
-
-    return created;
-  }
-
-  public static Location psiElementLocation(PsiElement elem, String uri, Document doc) {
+  @Nullable
+  public static Location psiElementLocation(@NotNull PsiElement elem,
+                                            @NotNull String uri,
+                                            @NotNull Document doc) {
     if (elem instanceof PsiNameIdentifierOwner) {
       PsiElement identifier = ((PsiNameIdentifierOwner) elem).getNameIdentifier();
       if (identifier == null) { return null; }
@@ -156,7 +138,8 @@ public class MiscUtil {
     }
   }
 
-  public static int positionToOffset(Position pos, Document doc) {
+  public static int positionToOffset(@NotNull Position pos,
+                                     @NotNull Document doc) {
     return doc.getLineStartOffset(pos.getLine()) + pos.getCharacter();
   }
 }

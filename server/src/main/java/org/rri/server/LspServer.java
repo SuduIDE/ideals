@@ -66,7 +66,7 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
       it.setCompletionProvider(new CompletionOptions(true, Arrays.asList(".", "@", "#")));
 //      it.setSignatureHelpProvider(null);
 //      it.setDefinitionProvider(true);
-//      it.setTypeDefinitionP rovider(false);
+//      it.setTypeDefinitionProvider(false);
 //      it.setImplementationProvider(true);
 //      it.setReferencesProvider(true);
 //      it.setDocumentHighlightProvider(true);

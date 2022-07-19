@@ -18,7 +18,7 @@ import java.util.List;
   This LookupArranger implementation doesn't use methods from parent class,
   its just simple arranger that can contain lookupElements from CompletionResults
  */
-public class MyLookupArrangerImpl extends LookupArranger {
+class LookupArrangerImpl extends LookupArranger {
   @NotNull
   CompletionParameters parameters;
   @NotNull
@@ -26,7 +26,7 @@ public class MyLookupArrangerImpl extends LookupArranger {
   private final ArrayList<LookupElement> items = new ArrayList<>();
 
 
-  public MyLookupArrangerImpl(@NotNull CompletionParameters parameters) {
+  public LookupArrangerImpl(@NotNull CompletionParameters parameters) {
     this.parameters = parameters;
     this.location = new CompletionLocation(parameters);
   }
@@ -40,14 +40,16 @@ public class MyLookupArrangerImpl extends LookupArranger {
   }
 
   @Override
+  @NotNull
   public Pair<List<LookupElement>, Integer> arrangeItems(@NotNull Lookup lookup, boolean onExplicitAction) {
     var toSelect = 0;
     return new Pair<>(items, toSelect);
   }
 
   @Override
+  @NotNull
   public LookupArranger createEmptyCopy() {
-    return new MyLookupArrangerImpl(parameters);
+    return new LookupArrangerImpl(parameters);
   }
 
 }

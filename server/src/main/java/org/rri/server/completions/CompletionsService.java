@@ -32,6 +32,7 @@ import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.rri.server.LspPath;
 import org.rri.server.util.EditorUtil;
 import org.rri.server.util.MiscUtil;
@@ -43,17 +44,20 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Service(Service.Level.PROJECT)
-final public class MyCompletionsService implements Disposable {
+final public class CompletionsService implements Disposable {
   @NotNull
   private final Project project;
-  private static final Logger LOG = Logger.getInstance(MyCompletionsService.class);
+  @NotNull
+  private static final Logger LOG = Logger.getInstance(CompletionsService.class);
 
-  public MyCompletionsService(@NotNull Project project) {
+  public CompletionsService(@NotNull Project project) {
     this.project = project;
   }
 
-  public CompletableFuture<Either<List<CompletionItem>, CompletionList>> getCompletionResults(
-          LspPath path, Position position) {
+  @NotNull
+  public CompletableFuture<Either<List<CompletionItem>, CompletionList>> startCompletionCalculation(
+          @NotNull LspPath path,
+          @NotNull Position position) {
     var app = ApplicationManager.getApplication();
     return CompletableFutures.computeAsync(
             AppExecutorUtil.getAppExecutorService(),
@@ -74,7 +78,6 @@ final public class MyCompletionsService implements Disposable {
     );
   }
 
-  // todo This method needs for editor creation
   @Override
   public void dispose() {
   }
@@ -95,10 +98,7 @@ final public class MyCompletionsService implements Disposable {
               project,
               editor,
               editor.getCaretModel().getPrimaryCaret(),
-              /* todo
-                  This number equal completion requests count in same place.
-                  It is used for change search scope in idea
-              */ 1,
+              1,
               CompletionType.BASIC);
       assert initContext != null;
 
@@ -107,14 +107,13 @@ final public class MyCompletionsService implements Disposable {
       PsiDocumentManager.getInstance(initContext.getProject()).commitAllDocuments();
       var hostCopyOffsets =
               insertDummyIdentifier(initContext, process, topLevelOffsets);
-      assert hostCopyOffsets != null;
 
       OffsetsInFile finalOffsets = CompletionInitializationUtil.toInjectedIfAny(initContext.getFile(), hostCopyOffsets);
       CompletionParameters parameters = CompletionInitializationUtil.createCompletionParameters(
               initContext,
               process,
               finalOffsets);
-      var arranger = new MyLookupArrangerImpl(parameters);
+      var arranger = new LookupArrangerImpl(parameters);
       var lookup = new LookupImpl(project, editor, arranger);
 
       var compService = CompletionService.getCompletionService();
@@ -133,7 +132,7 @@ final public class MyCompletionsService implements Disposable {
           try {
             arranger.addElement(it);
           } catch (Exception ignored) {
-          } // todo we just skip this element
+          } // we just skip this element
         });
       } else {
         ProgressManager.getInstance().runProcessWithProgressSynchronously(
@@ -141,7 +140,7 @@ final public class MyCompletionsService implements Disposable {
                   try {
                     arranger.addElement(it);
                   } catch (Exception ignored) {
-                  } // todo we just skip this element
+                  } // we just skip this element
                 }),
                 "Sort completion elements", false, project);
       }
@@ -172,13 +171,14 @@ final public class MyCompletionsService implements Disposable {
     }
 
     // todo This lock from ref solution.
+    @NotNull
     private final Object myLock = ObjectUtils.sentinel("VoidCompletionProcess");
 
     @Override
     public void dispose() {
     }
 
-    void registerChildDisposable(Supplier<Disposable> child) {
+    void registerChildDisposable(@NotNull Supplier<Disposable> child) {
       synchronized (myLock) {
         // Idea developer says: "avoid registering stuff on an indicator being disposed concurrently"
         checkCanceled();
@@ -195,6 +195,7 @@ final public class MyCompletionsService implements Disposable {
    So solution is copy that code with our replacement for getHostOffsets and registerChildDisposable calls
    Other private methods from CompletionInitializationUtil are copied below too.
   */
+  @NotNull
   private OffsetsInFile insertDummyIdentifier(
           @NotNull CompletionInitializationContext initContext,
           @NotNull VoidCompletionProcess indicator,
@@ -221,11 +222,16 @@ final public class MyCompletionsService implements Disposable {
 
     var copyOffsets = topLevelOffsets.replaceInCopy(
             hostCopy, startOffset, endOffset, dummyIdentifier).get();
-    return hostCopy.isValid() ? copyOffsets : null;
+    if (!hostCopy.isValid()) {
+      throw new RuntimeException("File copy is not valid anymore");
+    }
+    return copyOffsets;
   }
 
+  @NotNull
   private static final Key<SoftReference<Pair<PsiFile, Document>>> FILE_COPY_KEY = Key.create("CompletionFileCopy");
 
+  @NotNull
   private static PsiFile obtainFileCopy(@NotNull PsiFile file,
                                         boolean forbidCaching) {
     final VirtualFile virtualFile = file.getVirtualFile();
@@ -261,7 +267,7 @@ final public class MyCompletionsService implements Disposable {
     return copy;
   }
 
-  private static void syncAcceptSlashR(Document originalDocument, @NotNull Document documentCopy) {
+  private static void syncAcceptSlashR(@Nullable Document originalDocument, @NotNull Document documentCopy) {
     if (!(originalDocument instanceof DocumentImpl) || !(documentCopy instanceof DocumentImpl)) {
       return;
     }
@@ -269,7 +275,9 @@ final public class MyCompletionsService implements Disposable {
     ((DocumentImpl) documentCopy).setAcceptSlashR(((DocumentImpl) originalDocument).acceptsSlashR());
   }
 
-  private static boolean isCopyUpToDate(Document document, @NotNull PsiFile copyFile, @NotNull PsiFile originalFile) {
+  private static boolean isCopyUpToDate(Document document,
+                                        @NotNull PsiFile copyFile,
+                                        @NotNull PsiFile originalFile) {
     if (!copyFile.getClass().equals(originalFile.getClass()) ||
             !copyFile.isValid() ||
             !copyFile.getName().equals(originalFile.getName())) {
@@ -284,14 +292,17 @@ final public class MyCompletionsService implements Disposable {
     return current != null && current.getViewProvider().getPsi(copyFile.getLanguage()) == copyFile;
   }
 
+  @NotNull
   private static @NonNls String fileInfo(@NotNull PsiFile file) {
     return file + " of " + file.getClass() +
             " in " + file.getViewProvider() + ", languages=" + file.getViewProvider().getLanguages() +
             ", physical=" + file.isPhysical();
   }
 
-  // todo this assertion method is package-private in Ideas CompletionAssertions class
-  private static void assertCorrectOriginalFile(@NonNls String prefix, PsiFile file, PsiFile copy) {
+  // this assertion method is package-private in Ideas CompletionAssertions class
+  private static void assertCorrectOriginalFile(@NonNls String prefix,
+                                                @NotNull PsiFile file,
+                                                @NotNull PsiFile copy) {
     if (copy.getOriginalFile() != file) {
       throw new AssertionError(prefix + " copied file doesn't have correct original: noOriginal=" + (copy.getOriginalFile() == copy) +
               "\n file " + fileInfo(file) +
