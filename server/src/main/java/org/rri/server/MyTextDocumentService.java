@@ -155,7 +155,7 @@ public class MyTextDocumentService implements TextDocumentService {
     return completions().startCompletionCalculation(path, params.getPosition());
   }
 
-  private <R> CompletableFuture<R> invokeAndGetFuture(TextDocumentPositionParams params, MyCommand<R> command, Supplier<String> message, boolean withCancelToken) {
+  private <R> CompletableFuture<R> invokeAndGetFuture(TextDocumentPositionParams params, LspCommand<R> command, Supplier<String> message, boolean withCancelToken) {
     final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
     final var virtualFile = path.findVirtualFile();
     if (virtualFile == null) {
@@ -175,13 +175,13 @@ public class MyTextDocumentService implements TextDocumentService {
     }
   }
 
-  private <R> R getResult(Application app, LspPath path, LspContext context, MyCommand<R> command, CancelChecker cancelToken) {
+  private <R> @Nullable R getResult(@NotNull Application app, @NotNull LspPath path, @NotNull LspCommand<R> command, @Nullable CancelChecker cancelToken) {
     final AtomicReference<R> ref = new AtomicReference<>();
     app.invokeAndWait(() -> MiscUtil.withPsiFileInReadAction(
             session.getProject(),
             path,
             (psiFile) -> {
-              final var execCtx = new ExecutorContext(psiFile, session.getProject(), path, context, cancelToken);
+              final var execCtx = new ExecutorContext(psiFile, session.getProject(), cancelToken);
               ref.set(command.apply(execCtx));
             }
     ), app.getDefaultModalityState());
