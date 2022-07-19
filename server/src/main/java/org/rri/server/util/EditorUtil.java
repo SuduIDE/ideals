@@ -15,7 +15,8 @@ import org.jetbrains.annotations.NotNull;
 import java.util.function.Consumer;
 
 public class EditorUtil {
-    @NotNull
+    private EditorUtil() {}
+
     private static final Logger LOG = Logger.getInstance(EditorUtil.class);
 
     @NotNull

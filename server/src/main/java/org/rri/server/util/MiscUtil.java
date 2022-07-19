@@ -24,7 +24,6 @@ import java.util.concurrent.Callable;
 import java.util.function.Consumer;
 
 public class MiscUtil {
-  @NotNull
   private static final Logger LOG = Logger.getInstance(MiscUtil.class);
   private MiscUtil() {}
 

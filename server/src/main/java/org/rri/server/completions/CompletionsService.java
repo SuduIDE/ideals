@@ -47,7 +47,6 @@ import java.util.stream.Collectors;
 final public class CompletionsService implements Disposable {
   @NotNull
   private final Project project;
-  @NotNull
   private static final Logger LOG = Logger.getInstance(CompletionsService.class);
 
   public CompletionsService(@NotNull Project project) {
