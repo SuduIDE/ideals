@@ -3,7 +3,6 @@ package org.rri.server;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.openapi.vfs.VirtualFileManager;
-import com.intellij.psi.PsiFile;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
@@ -21,8 +20,8 @@ public class LspPath {
   @NotNull
   private final String normalizedUri;
 
-  private LspPath(@NotNull String uri) {
-    this.normalizedUri = normalizeUri(uri);
+  private LspPath(@NotNull String normalizedUri) {
+    this.normalizedUri = normalizedUri;
   }
 
   @NotNull
@@ -32,7 +31,19 @@ public class LspPath {
 
   @NotNull
   public static LspPath fromLspUri(@NotNull String uri) {
-      return new LspPath(uri);
+    try {
+      final var normalizedUri = normalizeUri(uri);
+
+      // LSP URI comes without spaces encoded
+      return fromLocalPath(Paths.get(new URI(normalizedUri.replace(" ", "%20"))));
+    } catch (URISyntaxException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+  @NotNull
+  public static LspPath fromVirtualFile(@NotNull VirtualFile virtualFile) {
+    return LspPath.fromLspUri(virtualFile.getUrl());
   }
 
   @NotNull
@@ -41,9 +52,9 @@ public class LspPath {
   }
 
   @NotNull
-  public Path toPath() {
+  public Path getPath() {
     try {
-      return Paths.get(new URI(normalizedUri.replace(" ", "%20")));
+      return Paths.get(new URI(normalizedUri));
     } catch (URISyntaxException e) {
       throw new RuntimeException(e);
     }
@@ -105,8 +116,4 @@ public class LspPath {
 
     return decodedUri;
   }
-
-  public static String getURIForFile(PsiFile file) { return normalizeUri(file.getVirtualFile().getUrl()); }
-
-  public static String getURIForFile(VirtualFile file) { return normalizeUri(file.getUrl()); }
 }

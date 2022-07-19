@@ -15,9 +15,10 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class MyTextDocumentService implements TextDocumentService {
-
+  @NotNull
   private static final Logger LOG = Logger.getInstance(MyTextDocumentService.class);
-  private final @NotNull LspSession session;
+  @NotNull
+  private final LspSession session;
 
   public MyTextDocumentService(@NotNull LspSession session) {
     this.session = session;
