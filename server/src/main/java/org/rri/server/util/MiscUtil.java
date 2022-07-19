@@ -8,14 +8,9 @@ import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.fileEditor.impl.FileDocumentManagerImpl;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Ref;
-import com.intellij.openapi.util.TextRange;
-import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
-import com.intellij.psi.PsiNameIdentifierOwner;
-import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Position;
-import org.eclipse.lsp4j.Range;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.server.LspPath;
@@ -120,25 +115,5 @@ public class MiscUtil {
     } catch (Exception e) {
       throw wrap(e);
     }
-  }
-
-  @Nullable
-  public static Location psiElementLocation(@NotNull PsiElement elem,
-                                            @NotNull String uri,
-                                            @NotNull Document doc) {
-    if (elem instanceof PsiNameIdentifierOwner) {
-      PsiElement identifier = ((PsiNameIdentifierOwner) elem).getNameIdentifier();
-      if (identifier == null) { return null; }
-      TextRange range = identifier.getTextRange();
-      return new Location(uri,
-              new Range(offsetToPosition(doc, range.getStartOffset()), offsetToPosition(doc, range.getEndOffset())));
-    } else {
-      return null;
-    }
-  }
-
-  public static int positionToOffset(@NotNull Position pos,
-                                     @NotNull Document doc) {
-    return doc.getLineStartOffset(pos.getLine()) + pos.getCharacter();
   }
 }
