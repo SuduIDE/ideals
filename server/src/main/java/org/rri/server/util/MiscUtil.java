@@ -8,9 +8,15 @@ import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.fileEditor.impl.FileDocumentManagerImpl;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Ref;
+import com.intellij.openapi.util.TextRange;
+import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
+import com.intellij.psi.PsiNameIdentifierOwner;
+import org.eclipse.lsp4j.Location;
+import org.eclipse.lsp4j.LocationLink;
 import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.Range;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.server.LspPath;
@@ -73,7 +79,7 @@ public class MiscUtil {
     if(virtualFile == null)
       return file.getViewProvider().getDocument();
 
-    var doc = FileDocumentManager.getInstance() .getDocument(virtualFile);
+    var doc = FileDocumentManager.getInstance().getDocument(virtualFile);
 
     if (doc == null) {
       FileDocumentManagerImpl.registerDocument(
@@ -115,5 +121,44 @@ public class MiscUtil {
     } catch (Exception e) {
       throw wrap(e);
     }
+  }
+
+  @Nullable
+  public static LocationLink psiElementToLocationLink(@NotNull PsiElement targetElem, @Nullable Document doc, @Nullable Range originalRange) {
+    if (doc == null) { return null; }
+    Range range = getPsiElementRange(targetElem, doc);
+    String uri = LspPath.fromVirtualFile(targetElem.getContainingFile().getVirtualFile()).toLspUri();
+    return range != null ? new LocationLink(uri, range, range, originalRange) : null;
+  }
+
+  @Nullable
+  public static Location psiElementToLocation(@Nullable PsiElement elem) {
+    if (elem == null) { return null; }
+    var file = elem.getContainingFile();
+    var doc = getDocument(file);
+    if (doc == null) { return null; }
+    var uri = LspPath.fromVirtualFile(file.getVirtualFile()).toLspUri();
+    Range range = getPsiElementRange(elem, doc);
+    return range != null ? new Location(uri, range) : null;
+  }
+
+  @Nullable
+  public static Range getPsiElementRange(@Nullable PsiElement elem, @NotNull Document doc) {
+    TextRange range = null;
+    if (elem == null) { return null; }
+    if (elem instanceof PsiNameIdentifierOwner) {
+      PsiElement identifier = ((PsiNameIdentifierOwner) elem).getNameIdentifier();
+      if (identifier != null) {
+        range = identifier.getTextRange();
+      }
+    }
+    if (range == null) {
+      range = elem.getTextRange();
+    }
+    return range != null ? new Range(offsetToPosition(doc, range.getStartOffset()), offsetToPosition(doc, range.getEndOffset())) : null;
+  }
+
+  public static int positionToOffset(@NotNull Position pos, @NotNull Document doc) {
+    return doc.getLineStartOffset(pos.getLine()) + pos.getCharacter();
   }
 }

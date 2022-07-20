@@ -35,6 +35,11 @@ public class LspPath {
   }
 
   @NotNull
+  public static LspPath fromVirtualFile(@NotNull VirtualFile virtualFile) {
+    return LspPath.fromLspUri(virtualFile.getUrl());
+  }
+
+  @NotNull
   public String toLspUri() {
     return normalizedUri.replace("%20", " ");
   }

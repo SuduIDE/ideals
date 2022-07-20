@@ -8,6 +8,9 @@ import org.eclipse.lsp4j.services.TextDocumentService;
 import org.jetbrains.annotations.NotNull;
 import org.rri.server.completions.CompletionsService;
 import org.rri.server.diagnostics.DiagnosticsService;
+import org.rri.server.references.FindDefinitionCommand;
+import org.rri.server.references.FindTypeDefinitionCommand;
+import org.rri.server.references.FindUsagesCommand;
 import org.rri.server.util.Metrics;
 
 import java.util.ArrayList;
@@ -15,6 +18,7 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 public class MyTextDocumentService implements TextDocumentService {
+
   private static final Logger LOG = Logger.getInstance(MyTextDocumentService.class);
   private final @NotNull LspSession session;
 
@@ -67,8 +71,21 @@ public class MyTextDocumentService implements TextDocumentService {
   }
 
   @Override
-  public CompletableFuture<List<? extends DocumentHighlight>> documentHighlight(DocumentHighlightParams params) {
-    return TextDocumentService.super.documentHighlight(params);
+  public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> definition(DefinitionParams params) {
+    final var command = new FindDefinitionCommand(params.getPosition());
+    return command.invokeAndGetFuture(params, session.getProject(), () -> "Definition call", false);
+  }
+
+  @Override
+  public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> typeDefinition(TypeDefinitionParams params) {
+    final var command = new FindTypeDefinitionCommand(params.getPosition());
+    return command.invokeAndGetFuture(params, session.getProject(), () -> "TypeDefinition call", false);
+  }
+
+  @Override
+  public CompletableFuture<List<? extends Location>> references(ReferenceParams params) {
+    final var command = new FindUsagesCommand(params.getPosition());
+    return command.invokeAndGetFuture(params, session.getProject(), () -> "References (Find usages) call", true);
   }
 
   public void refreshDiagnostics() {
