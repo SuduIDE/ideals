@@ -48,7 +48,8 @@ public class MockLanguageClient implements MyLanguageClient {
             diagnosticsFuture.accumulateAndGet(null, (current, given) -> (current == null) ?
                     new CompletableFuture<>() :
                     current
-            )
+            ),
+            30000
     );
   }
 

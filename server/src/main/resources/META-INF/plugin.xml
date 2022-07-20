@@ -29,9 +29,9 @@
     <applicationService serviceImplementation="org.rri.server.ProjectService"/>
 
     <applicationService overrides="true"
-                        serviceImplementation="com.intellij.openapi.fileEditor.impl.FileDocumentManagerImpl"
                         serviceInterface="com.intellij.openapi.fileEditor.FileDocumentManager"
-                        testServiceImplementation="org.rri.server.components.TestDocumentManager"/>
+                        serviceImplementation="com.intellij.openapi.fileEditor.impl.FileDocumentManagerImpl"
+                        testServiceImplementation="org.rri.server.components.TestFileDocumentManager"/>
 
   </extensions>
 </idea-plugin>

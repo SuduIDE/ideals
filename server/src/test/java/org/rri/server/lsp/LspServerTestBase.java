@@ -1,4 +1,4 @@
-package org.rri.server;
+package org.rri.server.lsp;
 
 import com.intellij.openapi.project.ex.ProjectManagerEx;
 import com.intellij.testFramework.HeavyPlatformTestCase;
@@ -10,6 +10,8 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.rri.server.LspServer;
+import org.rri.server.TestUtil;
 import org.rri.server.mocks.MockLanguageClient;
 
 import java.nio.file.Path;
@@ -67,7 +69,7 @@ public abstract class LspServerTestBase extends HeavyPlatformTestCase {
   protected void initializeServer() {
     final var initializeParams = new InitializeParams();
     setupInitializeParams(initializeParams);
-    TestUtil.getNonBlockingEdt(server.initialize(initializeParams));
+    TestUtil.getNonBlockingEdt(server.initialize(initializeParams), 30000);
   }
 
   @Before

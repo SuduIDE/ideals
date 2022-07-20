@@ -1,9 +1,10 @@
-package org.rri.server;
+package org.rri.server.lsp;
 
 import org.eclipse.lsp4j.*;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Test;
+import org.rri.server.LspPath;
 import org.rri.server.util.MiscUtil;
 
 import java.nio.file.Files;
@@ -31,7 +32,7 @@ public class DiagnosticsTest extends LspServerTestBase {
       params.setTextDocument(MiscUtil.with(new TextDocumentItem(), item -> {
         item.setUri(filePath.toLspUri());
 
-        item.setText(MiscUtil.unexceptionize(() -> Files.readString(filePath.toPath())));
+        item.setText(MiscUtil.makeThrowsUnchecked(() -> Files.readString(filePath.toPath())));
         item.setVersion(1);
       }));
     });
@@ -88,7 +89,7 @@ public class DiagnosticsTest extends LspServerTestBase {
       params.setTextDocument(MiscUtil.with(new TextDocumentItem(), item -> {
         item.setUri(filePath.toLspUri());
 
-        item.setText(MiscUtil.unexceptionize(() -> Files.readString(filePath.toPath())));
+        item.setText(MiscUtil.makeThrowsUnchecked(() -> Files.readString(filePath.toPath())));
         item.setVersion(1);
       }));
     });

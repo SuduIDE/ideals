@@ -115,7 +115,7 @@ public class MiscUtil {
     };
   }
 
-  public static <T> T unexceptionize(@NotNull Callable<T> block) {
+  public static <T> T makeThrowsUnchecked(@NotNull Callable<T> block) {
     try {
       return block.call();
     } catch (Exception e) {

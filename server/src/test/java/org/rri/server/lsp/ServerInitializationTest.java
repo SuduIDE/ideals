@@ -1,8 +1,9 @@
-package org.rri.server;
+package org.rri.server.lsp;
 
 import org.eclipse.lsp4j.InitializeParams;
 import org.junit.Assert;
 import org.junit.Test;
+import org.rri.server.TestUtil;
 
 import java.nio.file.Paths;
 import java.util.Objects;
@@ -27,7 +28,7 @@ public class ServerInitializationTest extends LspServerTestBase {
 
     final var initializeResult = server().initialize(initializeParams);
 
-    TestUtil.getNonBlockingEdt(initializeResult);
+    TestUtil.getNonBlockingEdt(initializeResult, 30000);
 
     Assert.assertEquals("project has unexpected location",
             getProjectPath(),
