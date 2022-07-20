@@ -20,6 +20,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 
@@ -32,7 +33,17 @@ public class FindDefinitionCommand extends LspCommand<Either<List<? extends Loca
     }
 
     @Override
-    public @NotNull Either<List<? extends Location>, @NotNull List<? extends LocationLink>> apply(@NotNull ExecutorContext ctx) {
+    protected @NotNull Supplier<@NotNull String> getMessageSupplier() {
+        return () -> "Definition call";
+    }
+
+    @Override
+    protected boolean isCancellable() {
+        return false;
+    }
+
+    @Override
+    protected @NotNull Either<List<? extends Location>, @NotNull List<? extends LocationLink>> execute(@NotNull ExecutorContext ctx) {
         return getLocationLinks(ctx, (editor, offset) ->
                 GotoDeclarationAction.findTargetElementsNoVS(ctx.getProject(), editor, offset, false));
     }

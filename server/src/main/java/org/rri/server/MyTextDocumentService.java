@@ -72,20 +72,20 @@ public class MyTextDocumentService implements TextDocumentService {
 
   @Override
   public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> definition(DefinitionParams params) {
-    final var command = new FindDefinitionCommand(params.getPosition());
-    return command.invokeAndGetFuture(params, session.getProject(), () -> "Definition call", false);
+    return new FindDefinitionCommand(params.getPosition())
+            .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
   }
 
   @Override
   public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> typeDefinition(TypeDefinitionParams params) {
-    final var command = new FindTypeDefinitionCommand(params.getPosition());
-    return command.invokeAndGetFuture(params, session.getProject(), () -> "TypeDefinition call", false);
+    return new FindTypeDefinitionCommand(params.getPosition())
+            .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
   }
 
   @Override
   public CompletableFuture<List<? extends Location>> references(ReferenceParams params) {
-    final var command = new FindUsagesCommand(params.getPosition());
-    return command.invokeAndGetFuture(params, session.getProject(), () -> "References (Find usages) call", true);
+    return new FindUsagesCommand(params.getPosition())
+            .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
   }
 
   public void refreshDiagnostics() {

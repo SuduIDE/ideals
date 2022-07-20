@@ -20,6 +20,7 @@ import org.rri.server.util.MiscUtil;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
@@ -27,11 +28,21 @@ public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
     private final Position position;
 
     public FindUsagesCommand(@NotNull Position position) {
-        this.position = position;
+      this.position = position;
     }
 
     @Override
-    public @NotNull List<? extends Location> apply(@NotNull ExecutorContext ctx) {
+    protected @NotNull Supplier<@NotNull String> getMessageSupplier() {
+        return () -> "References (Find usages) call";
+    }
+
+    @Override
+    protected boolean isCancellable() {
+        return true;
+    }
+
+    @Override
+    protected @NotNull List<? extends Location> execute(@NotNull ExecutorContext ctx) {
         PsiFile file = ctx.getPsiFile();
         Document doc = MiscUtil.getDocument(file);
         if (doc == null) {

@@ -9,6 +9,7 @@ import org.jetbrains.annotations.NotNull;
 import org.rri.server.commands.ExecutorContext;
 
 import java.util.List;
+import java.util.function.Supplier;
 
 public class FindTypeDefinitionCommand extends FindDefinitionCommand {
     public FindTypeDefinitionCommand(@NotNull Position pos) {
@@ -16,7 +17,12 @@ public class FindTypeDefinitionCommand extends FindDefinitionCommand {
     }
 
     @Override
-    public @NotNull Either<@NotNull List<? extends Location>, @NotNull List<? extends LocationLink>> apply(@NotNull ExecutorContext ctx) {
+    protected @NotNull Supplier<@NotNull String> getMessageSupplier() {
+        return () -> "TypeDefinition call";
+    }
+
+    @Override
+    protected @NotNull Either<@NotNull List<? extends Location>, @NotNull List<? extends LocationLink>> execute(@NotNull ExecutorContext ctx) {
         return getLocationLinks(ctx, GotoTypeDeclarationAction::findSymbolTypes);
     }
 }

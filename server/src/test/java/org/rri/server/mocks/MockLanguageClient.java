@@ -5,6 +5,7 @@ import org.eclipse.lsp4j.MessageActionItem;
 import org.eclipse.lsp4j.MessageParams;
 import org.eclipse.lsp4j.PublishDiagnosticsParams;
 import org.eclipse.lsp4j.ShowMessageRequestParams;
+import org.jetbrains.annotations.NotNull;
 import org.rri.server.MyLanguageClient;
 import org.rri.server.TestUtil;
 
@@ -43,6 +44,7 @@ public class MockLanguageClient implements MyLanguageClient {
     diagnosticsFuture.set(new CompletableFuture<>());
   }
 
+  @NotNull
   public PublishDiagnosticsParams waitAndGetDiagnosticsPublished() {
     return TestUtil.getNonBlockingEdt(
             diagnosticsFuture.accumulateAndGet(null, (current, given) -> (current == null) ?
