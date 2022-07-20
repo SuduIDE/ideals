@@ -79,7 +79,7 @@ public class MiscUtil {
     if(virtualFile == null)
       return file.getViewProvider().getDocument();
 
-    var doc = FileDocumentManager.getInstance() .getDocument(virtualFile);
+    var doc = FileDocumentManager.getInstance().getDocument(virtualFile);
 
     if (doc == null) {
       FileDocumentManagerImpl.registerDocument(
