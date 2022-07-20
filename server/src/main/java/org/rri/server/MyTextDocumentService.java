@@ -10,20 +10,19 @@ import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.rri.server.commands.ExecutorContext;
+import org.rri.server.commands.LspCommand;
 import org.rri.server.completions.CompletionsService;
 import org.rri.server.diagnostics.DiagnosticsService;
 import org.rri.server.references.FindDefinitionCommand;
 import org.rri.server.references.FindTypeDefinitionCommand;
 import org.rri.server.references.FindUsagesCommand;
 import org.rri.server.util.Metrics;
-import org.rri.server.util.MiscUtil;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
 
 public class MyTextDocumentService implements TextDocumentService {
 
@@ -99,19 +98,19 @@ public class MyTextDocumentService implements TextDocumentService {
   @Override
   public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> definition(DefinitionParams params) {
     final var command = new FindDefinitionCommand(params.getPosition());
-    return invokeAndGetFuture(params, command, () -> "Definition call", false);
+    return command.invokeAndGetFuture(params, session.getProject(), () -> "Definition call", false);
   }
 
   @Override
   public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> typeDefinition(TypeDefinitionParams params) {
     final var command = new FindTypeDefinitionCommand(params.getPosition());
-    return invokeAndGetFuture(params, command, () -> "TypeDefinition call", false);
+    return command.invokeAndGetFuture(params, session.getProject(), () -> "TypeDefinition call", false);
   }
 
   @Override
   public CompletableFuture<List<? extends Location>> references(ReferenceParams params) {
     final var command = new FindUsagesCommand(params.getPosition());
-    return invokeAndGetFuture(params, command, () -> "References (Find usages) call", true);
+    return command.invokeAndGetFuture(params, session.getProject(), () -> "References (Find usages) call", true);
   }
 
   public void refreshDiagnostics() {
