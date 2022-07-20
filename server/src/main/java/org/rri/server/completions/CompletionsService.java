@@ -3,9 +3,11 @@ package org.rri.server.completions;
 import com.intellij.codeInsight.completion.*;
 import com.intellij.codeInsight.completion.impl.CamelHumpMatcher;
 import com.intellij.codeInsight.lookup.LookupElement;
+import com.intellij.codeInsight.lookup.LookupElementPresentation;
 import com.intellij.codeInsight.lookup.impl.LookupImpl;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
@@ -24,9 +26,7 @@ import com.intellij.psi.impl.source.tree.injected.InjectedLanguageEditorUtil;
 import com.intellij.reference.SoftReference;
 import com.intellij.util.ObjectUtils;
 import com.intellij.util.concurrency.AppExecutorUtil;
-import org.eclipse.lsp4j.CompletionItem;
-import org.eclipse.lsp4j.CompletionList;
-import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -148,15 +148,40 @@ final public class CompletionsService implements Disposable {
 
     cancelChecker.checkCanceled();
     var result = sortedLookupElementsRef.get().stream().map(
-            (it) ->
-            {
-              var resItem = new CompletionItem();
-              resItem.setLabel(it.getLookupString());
-              return resItem;
-            }
+            CompletionsService::createLSPCompletionItem
     ).collect(Collectors.toList());
 
     return Either.forLeft(result);
+  }
+
+  @NotNull
+  private static CompletionItem createLSPCompletionItem(@NotNull LookupElement lookupElement) {
+    var resItem = new CompletionItem();
+    var presentation = new LookupElementPresentation();
+
+    ReadAction.run(() -> lookupElement.renderElement(presentation));
+
+    StringBuilder contextInfo = new StringBuilder();
+    for (var textFragment : presentation.getTailFragments()) {
+      contextInfo.append(textFragment.text);
+    }
+
+    var lDetails = new CompletionItemLabelDetails();
+    lDetails.setDetail(contextInfo.toString());
+    lDetails.setDescription(presentation.getTypeText());
+
+    var tagList = new ArrayList<CompletionItemTag>();
+    if (presentation.isStrikeout()) { // todo Maybe we can find another way to determine is API deprecated
+      tagList.add(CompletionItemTag.Deprecated);
+    }
+
+    resItem.setLabel(presentation.getItemText());
+    resItem.setLabelDetails(lDetails);
+    resItem.setInsertText(lookupElement.getLookupString()); // todo replace by TextEdits in completion resolve
+    resItem.setDetail(presentation.getTypeText());
+    resItem.setTags(tagList);
+
+    return resItem;
   }
 
   /* todo

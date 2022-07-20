@@ -51,6 +51,14 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
     });
 
   }
+  @NotNull
+  private CompletionOptions defaultCompletionOptions() {
+    var completionOptions = new CompletionOptions(true, Arrays.asList(".", "@", "#"));
+    var completionItemOptions = new CompletionItemOptions();
+    completionItemOptions.setLabelDetailsSupport(true);
+    completionOptions.setCompletionItem(completionItemOptions);
+    return completionOptions;
+  }
 
   @NotNull
   private ServerCapabilities defaultServerCapabilities() {
@@ -63,7 +71,7 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
       }));
 
 //      it.setHoverProvider(true);
-      it.setCompletionProvider(new CompletionOptions(true, Arrays.asList(".", "@", "#")));
+      it.setCompletionProvider(defaultCompletionOptions());
 //      it.setSignatureHelpProvider(null);
       it.setDefinitionProvider(true);
       it.setTypeDefinitionProvider(true);
