@@ -4,7 +4,6 @@ import com.intellij.openapi.editor.Document;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiReference;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.LocationLink;
 import org.eclipse.lsp4j.Position;
@@ -20,7 +19,7 @@ import java.util.List;
 
 
 public class FindDefinitionCommand extends LspCommand<Either<List<? extends Location>, List<? extends LocationLink>>> {
-    @NonNull
+    @NotNull
     private final Position pos;
 
     public FindDefinitionCommand(@NotNull Position pos) {
@@ -28,7 +27,7 @@ public class FindDefinitionCommand extends LspCommand<Either<List<? extends Loca
     }
 
     @Override
-    public @NonNull Either<List<? extends Location>, @NonNull List<@NonNull ? extends LocationLink>> apply(@NonNull ExecutorContext ctx) {
+    public @NotNull Either<List<? extends Location>, @NotNull List<? extends LocationLink>> apply(@NotNull ExecutorContext ctx) {
         PsiFile file = ctx.getPsiFile();
         Document doc = MiscUtil.getDocument(file);
         if (doc == null) { return Either.forRight(new ArrayList<>()); }

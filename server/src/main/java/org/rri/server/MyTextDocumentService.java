@@ -1,31 +1,21 @@
 package org.rri.server;
 
-import com.intellij.openapi.application.Application;
-import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.DumbService;
 import org.eclipse.lsp4j.*;
-import org.eclipse.lsp4j.jsonrpc.CancelChecker;
-import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
-import org.rri.server.commands.ExecutorContext;
-import org.rri.server.commands.LspCommand;
 import org.rri.server.completions.CompletionsService;
 import org.rri.server.diagnostics.DiagnosticsService;
 import org.rri.server.references.FindDefinitionCommand;
 import org.rri.server.references.FindTypeDefinitionCommand;
 import org.rri.server.references.FindUsagesCommand;
 import org.rri.server.util.Metrics;
-import org.rri.server.util.MiscUtil;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReference;
-import java.util.function.Supplier;
 
 public class MyTextDocumentService implements TextDocumentService {
 
@@ -83,19 +73,19 @@ public class MyTextDocumentService implements TextDocumentService {
   @Override
   public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> definition(DefinitionParams params) {
     final var command = new FindDefinitionCommand(params.getPosition());
-    return invokeAndGetFuture(params, command, () -> "Definition call", false);
+    return command.invokeAndGetFuture(params, session.getProject(), () -> "Definition call", false);
   }
 
   @Override
   public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> typeDefinition(TypeDefinitionParams params) {
     final var command = new FindTypeDefinitionCommand(params.getPosition());
-    return invokeAndGetFuture(params, command, () -> "TypeDefinition call", false);
+    return command.invokeAndGetFuture(params, session.getProject(), () -> "TypeDefinition call", false);
   }
 
   @Override
   public CompletableFuture<List<? extends Location>> references(ReferenceParams params) {
     final var command = new FindUsagesCommand(params.getPosition());
-    return invokeAndGetFuture(params, command, () -> "References (Find usages) call", true);
+    return command.invokeAndGetFuture(params, session.getProject(), () -> "References (Find usages) call", true);
   }
 
   public void refreshDiagnostics() {
@@ -137,37 +127,5 @@ public class MyTextDocumentService implements TextDocumentService {
       return CompletableFuture.completedFuture(Either.forLeft(new ArrayList<>()));
     }
     return completions().startCompletionCalculation(path, params.getPosition());
-  }
-
-  private <R> CompletableFuture<R> invokeAndGetFuture(TextDocumentPositionParams params, LspCommand<R> command, Supplier<String> message, boolean withCancelToken) {
-    final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
-    final var virtualFile = path.findVirtualFile();
-    if (virtualFile == null) {
-      LOG.info("File not found: " + path);
-      // todo mb need to throw excep
-      return null;
-    }
-
-    final var app = ApplicationManager.getApplication();
-
-    LOG.info(message.get());
-    if (withCancelToken) {
-      return CompletableFutures.computeAsync(cancelToken -> getResult(app, path, command, cancelToken));
-    } else {
-      return CompletableFuture.supplyAsync(() -> getResult(app, path, command, null));
-    }
-  }
-
-  private <R> @Nullable R getResult(@NotNull Application app, @NotNull LspPath path, @NotNull LspCommand<R> command, @Nullable CancelChecker cancelToken) {
-    final AtomicReference<R> ref = new AtomicReference<>();
-    app.invokeAndWait(() -> MiscUtil.withPsiFileInReadAction(
-            session.getProject(),
-            path,
-            (psiFile) -> {
-              final var execCtx = new ExecutorContext(psiFile, session.getProject(), cancelToken);
-              ref.set(command.apply(execCtx));
-            }
-    ), app.getDefaultModalityState());
-    return ref.get();
   }
 }

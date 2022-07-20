@@ -4,7 +4,6 @@ import com.intellij.codeInsight.navigation.actions.GotoTypeDeclarationAction;
 import com.intellij.openapi.editor.Document;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.LocationLink;
 import org.eclipse.lsp4j.Position;
@@ -23,7 +22,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.stream.Collectors;
 
 public class FindTypeDefinitionCommand extends LspCommand<Either<List<? extends Location>, List<? extends LocationLink>>> {
-    @NonNull
+    @NotNull
     private final Position pos;
 
     public FindTypeDefinitionCommand(@NotNull Position pos) {
@@ -31,7 +30,7 @@ public class FindTypeDefinitionCommand extends LspCommand<Either<List<? extends 
     }
 
     @Override
-    public @NonNull Either<@NonNull List<@NonNull ? extends Location>, @NonNull List<@NonNull ? extends LocationLink>> apply(@NonNull ExecutorContext ctx) {
+    public @NotNull Either<@NotNull List<? extends Location>, @NotNull List<? extends LocationLink>> apply(@NotNull ExecutorContext ctx) {
         PsiFile file = ctx.getPsiFile();
         Document doc = MiscUtil.getDocument(ctx.getPsiFile());
         if (doc == null) { return Either.forRight(new ArrayList<>()); }

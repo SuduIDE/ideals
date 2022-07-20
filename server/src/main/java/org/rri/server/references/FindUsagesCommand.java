@@ -8,7 +8,6 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiReference;
 import com.intellij.psi.search.searches.ReferencesSearch;
-import org.checkerframework.checker.nullness.qual.NonNull;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
@@ -24,7 +23,7 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
-    @NonNull
+    @NotNull
     private final Position position;
 
     public FindUsagesCommand(@NotNull Position position) {
@@ -32,7 +31,7 @@ public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
     }
 
     @Override
-    public @NonNull List<@NonNull ? extends Location> apply(@NonNull ExecutorContext ctx) {
+    public @NotNull List<? extends Location> apply(@NotNull ExecutorContext ctx) {
         PsiFile file = ctx.getPsiFile();
         Document doc = MiscUtil.getDocument(file);
         if (doc == null) {
@@ -52,8 +51,8 @@ public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
         return findUsages(ctx.getProject(), target, ctx.getCancelToken());
     }
 
-    private static @NonNull List<@NonNull Location> findUsages(@NonNull Project project,
-                                                               @NonNull PsiElement target,
+    private static @NotNull List<@NotNull Location> findUsages(@NotNull Project project,
+                                                               @NotNull PsiElement target,
                                                                @Nullable CancelChecker cancelToken) {
         var manager = ((FindManagerImpl) FindManager.getInstance(project)).getFindUsagesManager();
         var handler = manager.getFindUsagesHandler(target, false);
