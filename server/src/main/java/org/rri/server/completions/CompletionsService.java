@@ -154,7 +154,8 @@ final public class CompletionsService implements Disposable {
     return Either.forLeft(result);
   }
 
-  private static CompletionItem createLSPCompletionItem(LookupElement lookupElement) {
+  @NotNull
+  private static CompletionItem createLSPCompletionItem(@NotNull LookupElement lookupElement) {
     var resItem = new CompletionItem();
     var presentation = new LookupElementPresentation();
 
@@ -170,7 +171,7 @@ final public class CompletionsService implements Disposable {
     lDetails.setDescription(presentation.getTypeText());
 
     var tagList = new ArrayList<CompletionItemTag>();
-    if (presentation.isStrikeout()) {
+    if (presentation.isStrikeout()) { // todo Maybe we can find another way to determine is API deprecated
       tagList.add(CompletionItemTag.Deprecated);
     }
 
