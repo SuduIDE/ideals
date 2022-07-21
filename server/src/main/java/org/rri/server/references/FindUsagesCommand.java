@@ -41,9 +41,9 @@ import org.rri.server.util.MiscUtil;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.function.Supplier;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
@@ -125,6 +125,10 @@ public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
     return result;
   }
 
+  // Took this function from com.intellij.find.findUsages.FundUsagesManager.
+  // It returns the UsageSearcher that can save found usages by processor.
+  // Reference solution (Ruin0x11/intellij-lsp-server) used outdated constructor of FindUsagesManager.
+  // Now this constructor is not exists.
   @NotNull
   private static UsageSearcher createUsageSearcher(PsiElement @NotNull [] primaryElements,
                                                    PsiElement @NotNull [] secondaryElements,
