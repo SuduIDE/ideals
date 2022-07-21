@@ -26,7 +26,7 @@ public class LspPath {
 
   @NotNull
   public static LspPath fromLocalPath(@NotNull Path localPath) {
-    return new LspPath(localPath.toAbsolutePath().toUri().toString());
+    return new LspPath(localPath.toUri().toString());
   }
 
   @NotNull
@@ -88,9 +88,11 @@ public class LspPath {
    * Converts URIs to have forward slashes and ensures the protocol has three slashes.
    * <p>
    * Important for testing URIs for equality across platforms.
+   * <p>
+   * Package visible for tests. Shall not be used directly.
    */
   @NotNull
-  private static String normalizeUri(@NotNull String uri) {
+  static String normalizeUri(@NotNull String uri) {
     var decodedUri = URLDecoder.decode(uri, StandardCharsets.UTF_8);
     decodedUri = StringUtil.trimTrailing(decodedUri, '/');
     decodedUri = protocolRegex.matcher(decodedUri).replaceFirst("file:///");
