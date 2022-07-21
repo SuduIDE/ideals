@@ -15,13 +15,11 @@ import com.intellij.openapi.project.IndexNotReadyException;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.ProperTextRange;
 import com.intellij.psi.PsiFile;
-import org.eclipse.lsp4j.Diagnostic;
-import org.eclipse.lsp4j.DiagnosticSeverity;
-import org.eclipse.lsp4j.PublishDiagnosticsParams;
-import org.eclipse.lsp4j.Range;
-import org.eclipse.lsp4j.services.LanguageClient;
+import org.eclipse.lsp4j.*;
+import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.rri.server.LspContext;
 import org.rri.server.LspPath;
 import org.rri.server.util.Metrics;
 import org.rri.server.util.MiscUtil;
@@ -40,22 +38,34 @@ class DiagnosticsTask implements Runnable {
   private final PsiFile file;
   @NotNull
   private final Document document;
-  @NotNull
-  private final LanguageClient client;
 
-  public DiagnosticsTask(@NotNull PsiFile file, @NotNull Document document, @NotNull LanguageClient client) {
+  public DiagnosticsTask(@NotNull PsiFile file, @NotNull Document document) {
     this.file = file;
     this.document = document;
-    this.client = client;
   }
 
   @Override
   public void run() {
-    var diags = getHighlights(file, document).stream()
-            .map((it) -> toDiagnostic(it, document))
-            .filter(Objects::nonNull)
-            .collect(Collectors.toList());
-    client.publishDiagnostics(new PublishDiagnosticsParams(LspPath.fromVirtualFile(file.getVirtualFile()).toLspUri(), diags));
+    String token = toString();
+
+    var client = LspContext.getContext(file.getProject()).getClient();
+
+    client.createProgress(new WorkDoneProgressCreateParams(Either.forLeft(token))).join();
+    final var progressBegin = new WorkDoneProgressBegin();
+    progressBegin.setTitle("Analyzing file...");
+    progressBegin.setCancellable(false);
+    progressBegin.setPercentage(0);
+    client.notifyProgress(new ProgressParams(Either.forLeft(token), Either.forLeft(progressBegin)));
+
+    try {
+      var diags = getHighlights(file, document).stream()
+              .map((it) -> toDiagnostic(it, document))
+              .filter(Objects::nonNull)
+              .collect(Collectors.toList());
+      client.publishDiagnostics(new PublishDiagnosticsParams(LspPath.fromVirtualFile(file.getVirtualFile()).toLspUri(), diags));
+    } finally {
+      client.notifyProgress(new ProgressParams(Either.forLeft(token), Either.forLeft(new WorkDoneProgressEnd())));
+    }
   }
 
   @NotNull

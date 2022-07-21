@@ -7,7 +7,6 @@ import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiFile;
 import com.intellij.util.concurrency.AppExecutorUtil;
 import org.jetbrains.annotations.NotNull;
-import org.rri.server.LspContext;
 import org.rri.server.LspPath;
 import org.rri.server.util.MiscUtil;
 
@@ -46,7 +45,7 @@ final public class DiagnosticsService {
         }
 
         if(current == null || current.isDone() || current.isCancelled()) {
-          LOG.debug("Launching delayed task for: " + path);
+          LOG.debug("Scheduling delayed task for: " + path);
           tasks.put(path, launchDelayedTask(psiFile, doc));
         }
       }
@@ -56,6 +55,6 @@ final public class DiagnosticsService {
   @NotNull
   private ScheduledFuture<?> launchDelayedTask(@NotNull PsiFile psiFile, @NotNull Document doc) {
     return AppExecutorUtil.getAppScheduledExecutorService().schedule(
-            new DiagnosticsTask(psiFile, doc, LspContext.getContext(project).getClient()), DELAY, TimeUnit.MILLISECONDS);
+            new DiagnosticsTask(psiFile, doc), DELAY, TimeUnit.MILLISECONDS);
   }
 }
