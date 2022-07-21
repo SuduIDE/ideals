@@ -75,14 +75,5 @@ public class FindDefinitionCommand extends LspCommand<Either<List<? extends Loca
                 .collect(Collectors.toList());
 
         return Either.forRight(locLst);
-
-        /*PsiReference ref = file.findReferenceAt(offset);
-        if (ref == null) { return Either.forRight(List.of()); }
-        PsiElement targetElem = ref.resolve();
-        if (targetElem == null) { return Either.forRight(List.of()); }
-        Document targetDoc = targetElem.getContainingFile().equals(file)
-                ? doc : MiscUtil.getDocument(targetElem.getContainingFile());
-        LocationLink loc = MiscUtil.psiElementToLocationLink(targetElem, targetDoc, originalRange);
-        return Either.forRight(loc == null ? List.of() : List.of(loc));*/
     }
 }
