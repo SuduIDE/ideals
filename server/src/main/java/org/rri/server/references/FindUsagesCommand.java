@@ -128,7 +128,7 @@ public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
   // Took this function from com.intellij.find.findUsages.FundUsagesManager.
   // It returns the UsageSearcher that can save found usages by processor.
   // Reference solution (Ruin0x11/intellij-lsp-server) used outdated constructor of FindUsagesManager.
-  // Now this constructor is not exists.
+  // Now this constructor is not exists. So we don't have another way to use this method.
   @NotNull
   private static UsageSearcher createUsageSearcher(PsiElement @NotNull [] primaryElements,
                                                    PsiElement @NotNull [] secondaryElements,
