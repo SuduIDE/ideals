@@ -1,10 +1,7 @@
 package org.rri.server.mocks;
 
 import com.intellij.openapi.diagnostic.Logger;
-import org.eclipse.lsp4j.MessageActionItem;
-import org.eclipse.lsp4j.MessageParams;
-import org.eclipse.lsp4j.PublishDiagnosticsParams;
-import org.eclipse.lsp4j.ShowMessageRequestParams;
+import org.eclipse.lsp4j.*;
 import org.jetbrains.annotations.NotNull;
 import org.rri.server.MyLanguageClient;
 import org.rri.server.TestUtil;
@@ -16,6 +13,7 @@ import java.util.concurrent.atomic.AtomicReference;
 public class MockLanguageClient implements MyLanguageClient {
   @SuppressWarnings("unused")
   private static final Logger LOG = Logger.getInstance(MockLanguageClient.class);
+
   @Override
   public void notifyIndexStarted() {
 
@@ -33,6 +31,14 @@ public class MockLanguageClient implements MyLanguageClient {
 
   private final AtomicReference<CompletableFuture<PublishDiagnosticsParams>> diagnosticsFuture = new AtomicReference<>();
 
+  @Override
+  public CompletableFuture<Void> createProgress(WorkDoneProgressCreateParams params) {
+    return CompletableFuture.completedFuture(null);
+  }
+
+  @Override
+  public void notifyProgress(ProgressParams params) {
+  }
 
   @Override
   public void publishDiagnostics(PublishDiagnosticsParams diagnostics) {
