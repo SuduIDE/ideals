@@ -26,7 +26,7 @@ public abstract class LspCommand<R> implements Disposable {
 
   protected abstract boolean isCancellable();
 
-  protected abstract R execute(@NotNull ExecutorContext t);
+  protected abstract R execute(@NotNull ExecutorContext ctx);
 
   @Override
   public void dispose() {
@@ -57,10 +57,7 @@ public abstract class LspCommand<R> implements Disposable {
     ApplicationManager.getApplication().invokeAndWait(() -> MiscUtil.withPsiFileInReadAction(
             project,
             path,
-            (psiFile) -> {
-              final var execCtx = new ExecutorContext(psiFile, project, cancelToken);
-              ref.set(execute(execCtx));
-            }
+            (psiFile) -> ref.set(execute(new ExecutorContext(psiFile, project, cancelToken)))
     ));
     return ref.get();
   }
