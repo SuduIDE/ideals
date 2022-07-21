@@ -49,7 +49,9 @@ public abstract class LspServerTestBase extends HeavyPlatformTestCase {
   }
 
   @Override
-  protected void setUpProject() { } // no IDEA project is created by default
+  protected void setUpProject() {
+    // no IDEA project is created by default
+  }
 
   protected void setupInitializeParams(@NotNull InitializeParams params) {
     Path projectPath = getProjectPath();

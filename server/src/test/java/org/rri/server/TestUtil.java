@@ -18,12 +18,12 @@ public class TestUtil {
   @SuppressWarnings("UnusedReturnValue")
   public static <T> T getNonBlockingEdt(@NotNull CompletableFuture<T> future, long timeoutMs) {
     final var mark = System.nanoTime();
-    if(ApplicationManager.getApplication().isDispatchThread()) {
+    if (ApplicationManager.getApplication().isDispatchThread()) {
       waitInEdtFor(() -> {
         if ((System.nanoTime() - mark) / 1_000_000 >= timeoutMs)
           throw new RuntimeException("timeout: " + timeoutMs, new TimeoutException());
 
-      return future.isDone();
+        return future.isDone();
       });
     }
     return MiscUtil.makeThrowsUnchecked(() -> future.get(timeoutMs, TimeUnit.MILLISECONDS));
@@ -31,7 +31,7 @@ public class TestUtil {
 
   public static void waitInEdt(long timeInMs) {
     final var mark = System.nanoTime();
-    waitInEdtFor (() -> (System.nanoTime() - mark)/1_000_000 >= timeInMs);
+    waitInEdtFor(() -> (System.nanoTime() - mark) / 1_000_000 >= timeInMs);
   }
 
 

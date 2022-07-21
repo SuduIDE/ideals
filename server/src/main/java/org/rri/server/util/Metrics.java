@@ -16,7 +16,7 @@ public class Metrics {
   }
 
   public static <T> T call(@NotNull Supplier<@NotNull String> blockNameSupplier, @NotNull Supplier<T> block) {
-    if(!LOG.isDebugEnabled()) {
+    if (!LOG.isDebugEnabled()) {
       return block.get();
     }
 
@@ -32,7 +32,7 @@ public class Metrics {
       throw MiscUtil.wrap(e);
     } finally {
       var end = System.nanoTime();
-      LOG.debug(prefix + ((end-start)/1_000_000) + " ms");
+      LOG.debug(prefix + ((end - start) / 1_000_000) + " ms");
     }
   }
 }

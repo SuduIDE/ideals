@@ -12,17 +12,17 @@ import java.util.List;
 import java.util.function.Supplier;
 
 public class FindTypeDefinitionCommand extends FindDefinitionCommand {
-    public FindTypeDefinitionCommand(@NotNull Position pos) {
-        super(pos);
-    }
+  public FindTypeDefinitionCommand(@NotNull Position pos) {
+    super(pos);
+  }
 
-    @Override
-    protected @NotNull Supplier<@NotNull String> getMessageSupplier() {
-        return () -> "TypeDefinition call";
-    }
+  @Override
+  protected @NotNull Supplier<@NotNull String> getMessageSupplier() {
+    return () -> "TypeDefinition call";
+  }
 
-    @Override
-    protected @NotNull Either<@NotNull List<? extends Location>, @NotNull List<? extends LocationLink>> execute(@NotNull ExecutorContext ctx) {
-        return getLocationLinks(ctx, GotoTypeDeclarationAction::findSymbolTypes);
-    }
+  @Override
+  protected @NotNull Either<@NotNull List<? extends Location>, @NotNull List<? extends LocationLink>> execute(@NotNull ExecutorContext ctx) {
+    return getLocationLinks(ctx, GotoTypeDeclarationAction::findSymbolTypes);
+  }
 }

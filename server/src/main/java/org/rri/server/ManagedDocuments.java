@@ -36,14 +36,14 @@ final public class ManagedDocuments {
   public void startManaging(@NotNull TextDocumentItem textDocument) {
     final var path = LspPath.fromLspUri(textDocument.getUri());
 
-    if(docs.containsKey(path)) {
+    if (docs.containsKey(path)) {
       LOG.warn("URI was opened again without being closed, resetting: " + path);
       docs.remove(path);
     }
     LOG.debug("Handling textDocument/didOpen for: " + path);
 
     // forcibly refresh file system to handle newly created files
-    if(path.refreshAndFindVirtualFile() == null) {
+    if (path.refreshAndFindVirtualFile() == null) {
       LOG.warn("Couldn't find virtual file: " + path);
       return;
     }
@@ -52,7 +52,7 @@ final public class ManagedDocuments {
 
       MiscUtil.withPsiFileInReadAction(project, path, (psi) -> {
         var doc = MiscUtil.getDocument(psi);
-        if(doc == null)
+        if (doc == null)
           return; // todo handle
 
         if (doc.isWritable()) {
@@ -61,7 +61,7 @@ final public class ManagedDocuments {
           PsiDocumentManager.getInstance(project).commitDocument(doc);
         }
 
-/*
+/*  todo not sure if we need this
         if (client != null) {
           server?.let { registerIndexNotifier(project, client, it) }
           val projectSdk = ProjectRootManager.getInstance(project).projectSdk
@@ -73,18 +73,10 @@ final public class ManagedDocuments {
 */
       });
 
-/*
-      if(!success) {
-        LOG.warn("Couldn't open Document for ${textDocument.uri}!")
-        return
-      }
-*/
-
       docs.put(path, new VersionedTextDocumentIdentifier(textDocument.getUri(), textDocument.getVersion()));
 
     }));
   }
-
 
 
   public void updateDocument(@NotNull DidChangeTextDocumentParams params) {
@@ -123,7 +115,7 @@ final public class ManagedDocuments {
         return;
       }
 
-        /*
+        /*  todo make it configurable
           if(managedTextDoc.contents != doc.text) {
             val change = Diff.buildChanges(managedTextDoc.contents, doc.text)
             LOG.error("Ground truth differed upon change! Old: \n${managedTextDoc.contents}\nNew: \n${doc.text}")
@@ -179,7 +171,7 @@ final public class ManagedDocuments {
   public void stopManaging(@NotNull TextDocumentIdentifier textDocument) {
     var path = LspPath.fromLspUri(textDocument.getUri());
 
-    if(docs.remove(path) == null) {
+    if (docs.remove(path) == null) {
       LOG.warn("Attempted to close document without opening it at: " + path);
     }
   }

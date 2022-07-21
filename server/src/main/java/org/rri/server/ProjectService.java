@@ -39,7 +39,7 @@ public class ProjectService {
   }
 
   public void closeProject(@NotNull Project project) {
-    if(projectHashes.values().remove(project.getLocationHash())) {
+    if (projectHashes.values().remove(project.getLocationHash())) {
       LOG.info("Closing project: " + project);
       ProjectManagerEx.getInstanceEx().closeAndDispose(project);
     } else {
@@ -50,7 +50,7 @@ public class ProjectService {
   @NotNull
   private Project ensureProject(@NotNull LspPath projectPath) {
     var project = getProject(projectPath);
-    if(project == null)
+    if (project == null)
       throw new IllegalArgumentException("Couldn't find document at " + projectPath);
     if (project.isDisposed())
       throw new IllegalArgumentException("Project was already disposed: " + project);
@@ -92,8 +92,7 @@ public class ProjectService {
   private Project findOrLoadProject(@NotNull LspPath projectPath, @NotNull ProjectManagerEx mgr) {
     try {
       var alreadyOpenProject = Arrays.stream(mgr.getOpenProjects()).filter(
-              (it)-> LspPath.fromLocalPath(Paths.get(Objects.requireNonNull(it.getBasePath())))
-              .equals(projectPath)
+        it -> LspPath.fromLocalPath(Paths.get(Objects.requireNonNull(it.getBasePath()))).equals(projectPath)
       ).findFirst().orElse(null);
 
       return alreadyOpenProject != null ?

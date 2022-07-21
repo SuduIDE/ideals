@@ -20,13 +20,11 @@ public class LspContext {
   private final Map<String, String> config = new HashMap<>();
 
   private static final Key<LspContext> KEY = new Key<>(LspContext.class.getCanonicalName());
-  @NotNull
-  public static LspContext getContext(@NotNull Project project) {
-    final var result = project.getUserData(KEY);
-    if(result == null)
-      throw new IllegalStateException("LSP context hasn't been created");
 
-    return result;
+  private LspContext(@NotNull MyLanguageClient client,
+                     @NotNull ClientCapabilities clientCapabilities) {
+    this.client = client;
+    this.clientCapabilities = clientCapabilities;
   }
 
   public static void createContext(@NotNull Project project,
@@ -35,10 +33,13 @@ public class LspContext {
     project.putUserData(KEY, new LspContext(client, clientCapabilities));
   }
 
-  private LspContext(@NotNull MyLanguageClient client,
-                    @NotNull ClientCapabilities clientCapabilities) {
-    this.client = client;
-    this.clientCapabilities = clientCapabilities;
+  @NotNull
+  public static LspContext getContext(@NotNull Project project) {
+    final var result = project.getUserData(KEY);
+    if (result == null)
+      throw new IllegalStateException("LSP context hasn't been created");
+
+    return result;
   }
 
   @NotNull

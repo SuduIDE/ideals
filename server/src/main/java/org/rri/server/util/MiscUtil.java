@@ -26,7 +26,8 @@ import java.util.function.Consumer;
 
 public class MiscUtil {
   private static final Logger LOG = Logger.getInstance(MiscUtil.class);
-  private MiscUtil() {}
+
+  private MiscUtil() { }
 
   @NotNull
   public static <T> T with(@NotNull T object, @NotNull Consumer<T> block) {
@@ -76,7 +77,7 @@ public class MiscUtil {
   public static Document getDocument(@NotNull PsiFile file) {
     var virtualFile = file.getVirtualFile();
 
-    if(virtualFile == null)
+    if (virtualFile == null)
       return file.getViewProvider().getDocument();
 
     var doc = FileDocumentManager.getInstance().getDocument(virtualFile);
@@ -105,6 +106,7 @@ public class MiscUtil {
   public interface RunnableWithException {
     void run() throws Exception;
   }
+
   public static Runnable asRunnable(@NotNull MiscUtil.RunnableWithException action) {
     return () -> {
       try {
@@ -125,7 +127,9 @@ public class MiscUtil {
 
   @Nullable
   public static LocationLink psiElementToLocationLink(@NotNull PsiElement targetElem, @Nullable Document doc, @Nullable Range originalRange) {
-    if (doc == null) { return null; }
+    if (doc == null) {
+      return null;
+    }
     Range range = getPsiElementRange(targetElem, doc);
     String uri = LspPath.fromVirtualFile(targetElem.getContainingFile().getVirtualFile()).toLspUri();
     return range != null ? new LocationLink(uri, range, range, originalRange) : null;
@@ -133,10 +137,14 @@ public class MiscUtil {
 
   @Nullable
   public static Location psiElementToLocation(@Nullable PsiElement elem) {
-    if (elem == null) { return null; }
+    if (elem == null) {
+      return null;
+    }
     var file = elem.getContainingFile();
     var doc = getDocument(file);
-    if (doc == null) { return null; }
+    if (doc == null) {
+      return null;
+    }
     var uri = LspPath.fromVirtualFile(file.getVirtualFile()).toLspUri();
     Range range = getPsiElementRange(elem, doc);
     return range != null ? new Location(uri, range) : null;
@@ -145,7 +153,9 @@ public class MiscUtil {
   @Nullable
   public static Range getPsiElementRange(@Nullable PsiElement elem, @NotNull Document doc) {
     TextRange range = null;
-    if (elem == null) { return null; }
+    if (elem == null) {
+      return null;
+    }
     if (elem instanceof PsiNameIdentifierOwner) {
       PsiElement identifier = ((PsiNameIdentifierOwner) elem).getNameIdentifier();
       if (identifier != null) {
