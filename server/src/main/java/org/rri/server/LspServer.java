@@ -1,9 +1,15 @@
 package org.rri.server;
 
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.progress.ProgressIndicator;
+import com.intellij.openapi.progress.ProgressManagerListener;
+import com.intellij.openapi.progress.Task;
 import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
+import com.intellij.util.messages.MessageBusConnection;
 import org.eclipse.lsp4j.*;
+import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.LanguageClient;
 import org.eclipse.lsp4j.services.LanguageClientAware;
 import org.eclipse.lsp4j.services.LanguageServer;
@@ -20,12 +26,21 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
   private final static Logger LOG = Logger.getInstance(LspServer.class);
   private final MyTextDocumentService myTextDocumentService = new MyTextDocumentService(this);
   private final MyWorkspaceService myWorkspaceService = new MyWorkspaceService(this);
+
+  @NotNull
+  private final MessageBusConnection messageBusConnection;
   @Nullable
   private MyLanguageClient client = null;
 
   @Nullable
   private Project project = null;
 
+  public LspServer() {
+    messageBusConnection = ApplicationManager.getApplication().getMessageBus().connect();
+    messageBusConnection.subscribe(ProgressManagerListener.TOPIC, new WorkDoneProgressReporter());
+  }
+
+  @NotNull
   @Override
   public CompletableFuture<InitializeResult> initialize(@NotNull InitializeParams params) {
     final var workspaceFolders = params.getWorkspaceFolders();
@@ -106,6 +121,8 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
   }
 
   public void stop() {
+    messageBusConnection.disconnect();
+
     if (project != null) {
       ProjectService.getInstance().closeProject(project);
       this.project = null;
@@ -155,4 +172,43 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
     getTextDocumentService().refreshDiagnostics();
   }
 
+  private class WorkDoneProgressReporter implements ProgressManagerListener {
+    @Override
+    public void afterTaskStart(@NotNull Task task, @NotNull ProgressIndicator indicator) {
+      if(!task.getProject().equals(project))
+        return;
+
+      var client = LspServer.this.client;
+
+      if(client == null)
+        return;
+
+      final String token = calculateUniqueToken(task);
+      client.createProgress(new WorkDoneProgressCreateParams(Either.forLeft(token))).join();
+
+      final var progressBegin = new WorkDoneProgressBegin();
+      progressBegin.setTitle(task.getTitle());
+      progressBegin.setCancellable(false);
+      progressBegin.setPercentage(0);
+      client.notifyProgress(new ProgressParams(Either.forLeft(token), Either.forLeft(progressBegin)));
+    }
+
+    @Override
+    public void afterTaskFinished(@NotNull Task task) {
+      if(!task.getProject().equals(project))
+        return;
+
+      var client = LspServer.this.client;
+
+      if(client == null)
+        return;
+
+      final String token = calculateUniqueToken(task);
+      client.notifyProgress(new ProgressParams(Either.forLeft(token), Either.forLeft(new WorkDoneProgressEnd())));
+    }
+
+    private String calculateUniqueToken(@NotNull Task task) {
+      return task.getClass().getName() + '@' + System.identityHashCode(task);
+    }
+  }
 }
