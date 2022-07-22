@@ -25,7 +25,7 @@ public class CompletionTest extends LspServerTestBase {
   static private final String LABEL_DETAIL_DESCRIPTION = DETAIL;
   static private final ArrayList<CompletionItemTag> TAGS = new ArrayList<>();
 
-  static final Set<CompletionItem> CORRECT_COMPLETION_ITEMS_SET = new HashSet<>();
+  static private final Set<CompletionItem> CORRECT_COMPLETION_ITEMS_SET = new HashSet<>();
 
   @Override
   protected void setUp() throws Exception {
