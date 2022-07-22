@@ -75,9 +75,7 @@ public class CompletionTest extends LspServerTestBase {
         Assert.assertTrue(completionRes.isLeft());
         completionItemList = completionRes.getLeft();
       }
-      var completionItemSet = new HashSet<>(completionItemList);
-      Assert.assertEquals(completionItemSet.size(), completionItemList.size());
-      Assert.assertEquals(completionItemSet, CORRECT_COMPLETION_ITEMS_SET);
+      Assert.assertEquals(CORRECT_COMPLETION_ITEMS_SET, new HashSet<>(completionItemList));
     });
   }
 
