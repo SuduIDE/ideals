@@ -15,23 +15,23 @@ import java.util.List;
 import java.util.Set;
 
 public class CompletionTest extends LspServerTestBase {
-  final Position completionInvokePosition = new Position();
-  final int completionInvokeLine = 8;
-  final int completionInvokeCharacter = 7;
+  static private final Position COMPLETION_INVOKE_POSITION = new Position();
+  static private final int COMPLETION_INVOKE_LINE = 8;
+  static private final int COMPLETION_INVOKE_CHARACTER = 7;
 
-  private final String LABEL = "completionVariant";
-  private final String INSERT_TEXT = LABEL;
-  private final String DETAIL = "void";
-  private final String LABEL_DETAIL_DESCRIPTION = DETAIL;
-  private final ArrayList<CompletionItemTag> TAGS = new ArrayList<>();
+  static private final String LABEL = "completionVariant";
+  static private final String INSERT_TEXT = LABEL;
+  static private final String DETAIL = "void";
+  static private final String LABEL_DETAIL_DESCRIPTION = DETAIL;
+  static private final ArrayList<CompletionItemTag> TAGS = new ArrayList<>();
 
-  final Set<CompletionItem> CORRECT_COMPLETION_ITEMS_SET = new HashSet<>();
+  static final Set<CompletionItem> CORRECT_COMPLETION_ITEMS_SET = new HashSet<>();
 
   @Override
   protected void setUp() throws Exception {
     System.setProperty("idea.log.debug.categories", "#org.rri");
-    completionInvokePosition.setLine(completionInvokeLine);
-    completionInvokePosition.setCharacter(completionInvokeCharacter);
+    COMPLETION_INVOKE_POSITION.setLine(COMPLETION_INVOKE_LINE);
+    COMPLETION_INVOKE_POSITION.setCharacter(COMPLETION_INVOKE_CHARACTER);
 
     addToSet("()");
     addToSet("(int x)");
@@ -90,7 +90,7 @@ public class CompletionTest extends LspServerTestBase {
     params.setTextDocument(
             MiscUtil.with(new TextDocumentIdentifier(),
                     documentIdentifier -> documentIdentifier.setUri(filePath.toLspUri())));
-    params.setPosition(completionInvokePosition);
+    params.setPosition(COMPLETION_INVOKE_POSITION);
     return params;
   }
 }
