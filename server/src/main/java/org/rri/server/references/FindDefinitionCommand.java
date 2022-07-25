@@ -56,9 +56,9 @@ public class FindDefinitionCommand extends LspCommand<Either<List<? extends Loca
       return Either.forRight(List.of());
     }
 
-    var offset = MiscUtil.positionToOffset(pos, doc);
+    var offset = MiscUtil.positionToOffset(doc, pos);
     PsiElement originalElem = file.findElementAt(offset);
-    Range originalRange = MiscUtil.getPsiElementRange(originalElem, doc);
+    Range originalRange = MiscUtil.getPsiElementRange(doc, originalElem);
 
     var ref = new AtomicReference<PsiElement[]>();
     EditorUtil.withEditor(this, file, pos, editor -> {

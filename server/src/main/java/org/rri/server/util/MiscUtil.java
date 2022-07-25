@@ -130,7 +130,7 @@ public class MiscUtil {
     if (doc == null) {
       return null;
     }
-    Range range = getPsiElementRange(targetElem, doc);
+    Range range = getPsiElementRange(doc, targetElem);
     String uri = LspPath.fromVirtualFile(targetElem.getContainingFile().getVirtualFile()).toLspUri();
     return range != null ? new LocationLink(uri, range, range, originalRange) : null;
   }
@@ -146,12 +146,12 @@ public class MiscUtil {
       return null;
     }
     var uri = LspPath.fromVirtualFile(file.getVirtualFile()).toLspUri();
-    Range range = getPsiElementRange(elem, doc);
+    Range range = getPsiElementRange(doc, elem);
     return range != null ? new Location(uri, range) : null;
   }
 
   @Nullable
-  public static Range getPsiElementRange(@Nullable PsiElement elem, @NotNull Document doc) {
+  public static Range getPsiElementRange(@NotNull Document doc, @Nullable PsiElement elem) {
     TextRange range = null;
     if (elem == null) {
       return null;
@@ -168,7 +168,7 @@ public class MiscUtil {
     return range != null ? new Range(offsetToPosition(doc, range.getStartOffset()), offsetToPosition(doc, range.getEndOffset())) : null;
   }
 
-  public static int positionToOffset(@NotNull Position pos, @NotNull Document doc) {
+  public static int positionToOffset(@NotNull Document doc, @NotNull Position pos) {
     return doc.getLineStartOffset(pos.getLine()) + pos.getCharacter();
   }
 }

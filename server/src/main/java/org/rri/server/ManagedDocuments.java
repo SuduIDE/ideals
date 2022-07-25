@@ -94,7 +94,7 @@ final public class ManagedDocuments {
     // If stored version is null, this means the document has been just saved
     if (managedTextDocId.getVersion() != null && managedTextDocId.getVersion() != (textDocument.getVersion() - 1)) {
       LOG.warn(String.format("Version mismatch on document change - " +
-              "ours: %d, theirs: %d", managedTextDocId.getVersion(), textDocument.getVersion()));
+          "ours: %d, theirs: %d", managedTextDocId.getVersion(), textDocument.getVersion()));
       return;
     }
 
@@ -107,7 +107,7 @@ final public class ManagedDocuments {
 
     // all updates must go through CommandProcessor
     ApplicationManager.getApplication().invokeAndWait(() -> CommandProcessor.getInstance().executeCommand(
-            project, MiscUtil.asWriteAction(() -> {
+      project, MiscUtil.asWriteAction(() -> {
       var doc = MiscUtil.getDocument(file);
 
       if (doc == null) {
@@ -154,15 +154,15 @@ final public class ManagedDocuments {
     }
 
     ApplicationManager.getApplication().invokeAndWait(
-            MiscUtil.asWriteAction(() -> MiscUtil.withPsiFileInReadAction(project, path, (psi) -> {
-              var doc = MiscUtil.getDocument(psi);
-              if (doc == null)
-                return; // todo handle
+        MiscUtil.asWriteAction(() -> MiscUtil.withPsiFileInReadAction(project, path, (psi) -> {
+          var doc = MiscUtil.getDocument(psi);
+          if (doc == null)
+            return; // todo handle
 
-              FileDocumentManager.getInstance().reloadFromDisk(doc);
-              VirtualFileManager.getInstance().syncRefresh();
-              PsiDocumentManager.getInstance(project).commitAllDocuments();
-            })));
+          FileDocumentManager.getInstance().reloadFromDisk(doc);
+          VirtualFileManager.getInstance().syncRefresh();
+          PsiDocumentManager.getInstance(project).commitAllDocuments();
+        })));
 
     // drop stored version to bring it in sync with the client (if there was any mismatch)
     docs.put(path, new VersionedTextDocumentIdentifier(textDocument.getUri(), null));
@@ -187,12 +187,12 @@ final public class ManagedDocuments {
   @NotNull
   private static List<TextDocumentContentChangeEvent> sortContentChangeEventChanges(@NotNull List<TextDocumentContentChangeEvent> edits) {
     return edits.stream()
-            .sorted(
-                    Comparator.comparingInt((TextDocumentContentChangeEvent o) -> o.getRange().getStart().getLine())
-                            .thenComparingInt(o -> o.getRange().getStart().getCharacter())
-                            .reversed()
-            )
-            .collect(Collectors.toList());
+        .sorted(
+            Comparator.comparingInt((TextDocumentContentChangeEvent o) -> o.getRange().getStart().getLine())
+                .thenComparingInt(o -> o.getRange().getStart().getCharacter())
+                .reversed()
+        )
+        .collect(Collectors.toList());
   }
 
   private static void applyChange(@NotNull Document doc, TextDocumentContentChangeEvent change) {
@@ -215,13 +215,8 @@ final public class ManagedDocuments {
   @NotNull
   private static TextRange toTextRange(@NotNull Document doc, Range range) {
     return new TextRange(
-            toOffset(doc, range.getStart()),
-            toOffset(doc, range.getEnd())
+        MiscUtil.positionToOffset(doc, range.getStart()),
+        MiscUtil.positionToOffset(doc, range.getEnd())
     );
-  }
-
-
-  private static int toOffset(@NotNull Document doc, @NotNull Position pos) {
-    return doc.getLineStartOffset(pos.getLine()) + pos.getCharacter();
   }
 }
