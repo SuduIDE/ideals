@@ -1,14 +1,13 @@
 package org.rri.server;
 
+import com.intellij.ide.impl.OpenProjectTask;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.project.ex.ProjectManagerEx;
-import org.jdom.JDOMException;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Paths;
 import java.util.Arrays;
@@ -41,7 +40,7 @@ public class ProjectService {
   public void closeProject(@NotNull Project project) {
     if (projectHashes.values().remove(project.getLocationHash())) {
       LOG.info("Closing project: " + project);
-      ProjectManagerEx.getInstanceEx().closeAndDispose(project);
+      ApplicationManager.getApplication().invokeAndWait(() -> ProjectManagerEx.getInstanceEx().closeAndDispose(project));
     } else {
       LOG.warn("Closing project: Project wasn't opened by LSP server; do nothing: " + project);
     }
@@ -90,19 +89,11 @@ public class ProjectService {
 
   @Nullable
   private Project findOrLoadProject(@NotNull LspPath projectPath, @NotNull ProjectManagerEx mgr) {
-    try {
-      var alreadyOpenProject = Arrays.stream(mgr.getOpenProjects()).filter(
-        it -> LspPath.fromLocalPath(Paths.get(Objects.requireNonNull(it.getBasePath()))).equals(projectPath)
-      ).findFirst().orElse(null);
+    return Arrays.stream(mgr.getOpenProjects())
+        .filter(it -> LspPath.fromLocalPath(Paths.get(Objects.requireNonNull(it.getBasePath()))).equals(projectPath))
+        .findFirst()
+        .orElseGet(() -> mgr.openProject(projectPath.toPath(), new OpenProjectTask().withForceOpenInNewFrame(true)));
 
-      return alreadyOpenProject != null ?
-              alreadyOpenProject :
-              mgr.loadAndOpenProject(projectPath.toPath().toString());
-
-    } catch (IOException | JDOMException e) {
-      LOG.warn("Exception occurred trying to find document for path " + projectPath, e);
-      throw new RuntimeException(e);
-    }
   }
 
   private void waitUntilInitialized(@NotNull Project project) {

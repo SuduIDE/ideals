@@ -53,6 +53,14 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
 
     return CompletableFuture.supplyAsync(() -> {
       Metrics.run(() -> "initialize: " + projectRoot, () -> {
+
+        var oldProject = project;
+        if(oldProject != null && oldProject.isOpen()) {
+          LOG.info("Closing old project: " + oldProject);
+          ProjectService.getInstance().closeProject(oldProject);
+        }
+
+        LOG.info("Opening project: " + projectRoot);
         project = ProjectService.getInstance().resolveProjectFromRoot(projectRoot);
 
         assert client != null;
@@ -175,7 +183,7 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
   private class WorkDoneProgressReporter implements ProgressManagerListener {
     @Override
     public void afterTaskStart(@NotNull Task task, @NotNull ProgressIndicator indicator) {
-      if(!task.getProject().equals(project))
+      if(task.getProject() == null || !task.getProject().equals(project))
         return;
 
       var client = LspServer.this.client;
