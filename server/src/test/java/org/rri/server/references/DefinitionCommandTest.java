@@ -26,7 +26,7 @@ public class DefinitionCommandTest extends BasePlatformTestCase {
 
   @Test
   public void testDefinitionJava() {
-    var virtualFile = myFixture.copyDirectoryToProject("java/project1", "");
+    var virtualFile = myFixture.copyDirectoryToProject("java/project1/src", "");
     virtualFile = virtualFile.findChild("org");
     assertNotNull(virtualFile);
     virtualFile = virtualFile.findChild("DefinitionJava.java");
@@ -75,7 +75,7 @@ public class DefinitionCommandTest extends BasePlatformTestCase {
     final var privateStaticIntX = range(3, 23, 3, 24);
     final var publicStaticVoidFoo = range(5, 23, 5, 26);
     final var intZ = range(8, 12, 8, 13);
-    final var classOrgAnother = range(2, 6, 2, 13);
+    final var classOrgAnother = range(2, 13, 2, 20);
     final var constructorOrgAnother = range(9, 11, 9, 18);
     final var classComAnother = range(2, 13, 2, 20);
     final var constructorComAnother = range(6, 11, 6, 18);
