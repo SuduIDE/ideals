@@ -18,6 +18,7 @@ import org.rri.server.util.MiscUtil;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
@@ -72,10 +73,12 @@ public class FindDefinitionCommand extends LspCommand<Either<List<? extends Loca
 
     var locLst = Arrays.stream(result)
             .map(targetElem -> {
+              if (targetElem.getContainingFile() == null) { return null; }
               Document targetDoc = targetElem.getContainingFile().equals(file)
                       ? doc : MiscUtil.getDocument(targetElem.getContainingFile());
               return MiscUtil.psiElementToLocationLink(targetElem, targetDoc, originalRange);
             })
+            .filter(Objects::nonNull)
             .collect(Collectors.toList());
 
     return Either.forRight(locLst);
