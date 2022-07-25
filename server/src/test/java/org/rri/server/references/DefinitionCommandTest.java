@@ -1,36 +1,24 @@
 package org.rri.server.references;
 
-import com.intellij.psi.PsiPackage;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
-import org.eclipse.lsp4j.ClientCapabilities;
 import org.eclipse.lsp4j.LocationLink;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.jetbrains.annotations.NotNull;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.rri.server.LspContext;
 import org.rri.server.LspPath;
 import org.rri.server.TestUtil;
-import org.rri.server.mocks.MockLanguageClient;
 import org.rri.server.util.MiscUtil;
 
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
+import java.util.Set;
 
 @RunWith(JUnit4.class)
 public class DefinitionCommandTest extends BasePlatformTestCase {
-
-  @Before
-  public void setupContext() {
-    LspContext.createContext(getProject(),
-            new MockLanguageClient(),
-            new ClientCapabilities()
-    );
-  }
 
   @Override
   protected String getTestDataPath() {
@@ -45,32 +33,7 @@ public class DefinitionCommandTest extends BasePlatformTestCase {
     virtualFile = virtualFile.findChild("DefinitionJava.java");
     assertNotNull(virtualFile);
     final var path = LspPath.fromVirtualFile(virtualFile);
-
-    final var answers = answersJavaDefinition();
-    final var file = MiscUtil.resolvePsiFile(getProject(), path);
-    assertNotNull(file);
-    final var doc = MiscUtil.getDocument(file);
-    assertNotNull(doc);
-    final int FILE_SIZE = 294;
-    for (int offset = 0; offset < FILE_SIZE; ++offset) {
-      final var elem = file.findElementAt(offset);
-      assertNotNull(elem);
-      if (elem instanceof PsiPackage || file.findElementAt(offset - 1) instanceof PsiPackage) { continue; }
-      var start = elem.getTextRange().getStartOffset();
-      final var ans = answers.get(start);
-
-      final var future = new FindDefinitionCommand(MiscUtil.offsetToPosition(doc, offset)).runAsync(getProject(), path);
-      final var lst = TestUtil.getNonBlockingEdt(future, 50000);
-      assertNotNull(lst);
-      final var result = lst.getRight();
-      assertTrue(result.size() == 0 || result.size() == 1);
-
-      if (result.size() == 0) {
-        assertNull(ans);
-      } else {
-        assertEquals(ans, result.get(0));
-      }
-    }
+    checkDefinitions(path, answersJavaDefinition(), Set.of());
   }
 
   @Test
@@ -79,15 +42,17 @@ public class DefinitionCommandTest extends BasePlatformTestCase {
     virtualFile = virtualFile.findChild("first.py");
     assertNotNull(virtualFile);
     final var path = LspPath.fromVirtualFile(virtualFile);
+    checkDefinitions(path, answersPythonDefinition(), Set.of(49));
+  }
 
-    final var answers = answersPythonDefinition();
+  private void checkDefinitions(LspPath path, Map<Integer, LocationLink> answers, Set<Integer> notCheck) {
     final var file = MiscUtil.resolvePsiFile(getProject(), path);
     assertNotNull(file);
     final var doc = MiscUtil.getDocument(file);
     assertNotNull(doc);
     final int FILE_SIZE = 126;
     for (int offset = 0; offset < FILE_SIZE; ++offset) {
-      if (offset == 49) { continue; }
+      if (notCheck.contains(offset)) { continue; }
       final var elem = file.findElementAt(offset);
       assertNotNull(elem);
       var start = elem.getTextRange().getStartOffset();
