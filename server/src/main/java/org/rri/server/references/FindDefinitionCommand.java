@@ -66,7 +66,7 @@ public class FindDefinitionCommand extends LspCommand<Either<List<? extends Loca
       ref.set(declarations);
     });
     var result = ref.get();
-    if (result == null) {
+    if (result == null || result.length == 0) {
       return Either.forRight(List.of());
     }
 
