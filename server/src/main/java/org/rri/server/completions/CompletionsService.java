@@ -12,7 +12,6 @@ import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.impl.DocumentImpl;
-import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.progress.util.AbstractProgressIndicatorExBase;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
@@ -125,24 +124,12 @@ final public class CompletionsService implements Disposable {
                 ideaCompletionResults.add(result);
               });
 
-      // todo This "if" comes from ref solution
-      if (ApplicationManager.getApplication().isUnitTestMode()) {
-        ideaCompletionResults.forEach((it) -> {
-          try {
-            arranger.addElement(it);
-          } catch (Exception ignored) {
-          } // we just skip this element
-        });
-      } else {
-        ProgressManager.getInstance().runProcessWithProgressSynchronously(
-                () -> ideaCompletionResults.forEach((it) -> {
-                  try {
-                    arranger.addElement(it);
-                  } catch (Exception ignored) {
-                  } // we just skip this element
-                }),
-                "Sort completion elements", false, project);
-      }
+      ideaCompletionResults.forEach((it) -> {
+        try {
+          arranger.addElement(it);
+        } catch (Exception ignored) {
+        } // we just skip this element
+      });
       sortedLookupElementsRef.set(arranger.arrangeItems(lookup, false).first);
     });
 
