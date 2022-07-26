@@ -9,6 +9,7 @@ import com.intellij.find.findUsages.FindUsagesOptions;
 import com.intellij.find.impl.FindManagerImpl;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.progress.ProcessCanceledException;
+import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.psi.PsiElement;
@@ -28,6 +29,7 @@ import com.intellij.usages.UsageSearcher;
 import com.intellij.util.ArrayUtil;
 import com.intellij.util.CommonProcessors;
 import com.intellij.util.Processor;
+import com.intellij.util.containers.ContainerUtil;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
@@ -41,6 +43,7 @@ import org.rri.server.util.MiscUtil;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
+import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
@@ -66,21 +69,23 @@ public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
 
   @Override
   protected @NotNull List<? extends Location> execute(@NotNull ExecutorContext ctx) {
-    PsiFile file = ctx.getPsiFile();
-    Document doc = MiscUtil.getDocument(file);
-    if (doc == null) {
-      return List.of();
-    }
-    var ref = new AtomicReference<PsiElement>();
-    EditorUtil.withEditor(this, file, pos, editor -> {
-      var targetElement = TargetElementUtil.findTargetElement(editor, TargetElementUtil.getInstance().getAllAccepted());
-      ref.set(targetElement);
+    return DumbService.getInstance(ctx.getProject()).runReadActionInSmartMode(() -> {
+      PsiFile file = ctx.getPsiFile();
+      Document doc = MiscUtil.getDocument(file);
+      if (doc == null) {
+        return List.of();
+      }
+      var ref = new AtomicReference<PsiElement>();
+      EditorUtil.withEditor(this, file, pos, editor -> {
+        var targetElement = TargetElementUtil.findTargetElement(editor, TargetElementUtil.getInstance().getAllAccepted());
+        ref.set(targetElement);
+      });
+      var target = ref.get();
+      if (target == null) {
+        return List.of();
+      }
+      return findUsages(ctx.getProject(), target, ctx.getCancelToken());
     });
-    var target = ref.get();
-    if (target == null) {
-      return List.of();
-    }
-    return findUsages(ctx.getProject(), target, ctx.getCancelToken());
   }
 
   private static @NotNull List<@NotNull Location> findUsages(@NotNull Project project,
@@ -96,7 +101,7 @@ public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
       PsiElement[] primaryElements = handler.getPrimaryElements();
       PsiElement[] secondaryElements = handler.getSecondaryElements();
       UsageSearcher searcher = createUsageSearcher(primaryElements, secondaryElements, handler, options, project);
-      result = new ArrayList<>();
+      Set<Location> saver = ContainerUtil.newConcurrentSet();
       searcher.generate(usage -> {
         if (cancelToken != null) {
           try {
@@ -110,11 +115,12 @@ public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
           var elem = ui2ua.getElement();
           var loc = MiscUtil.psiElementToLocation(elem);
           if (loc != null) {
-            result.add(loc);
+            saver.add(loc);
           }
         }
         return true;
       });
+      result = new ArrayList<>(saver);
     } else {
       result = ReferencesSearch.search(target).findAll().stream()
               .map(PsiReference::getElement)
