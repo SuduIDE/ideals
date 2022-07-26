@@ -108,7 +108,7 @@ public class DefinitionCommandTest extends BasePlatformTestCase {
     final var b1 = range(12, 0, 12, 2);
     final var b2 = range(13, 0, 13, 2);
     final var second = range(0, 0, 1, 8);
-    final var class1 = range(0, 0, 7, 8);
+    final var class1 = range(0, 0, 8, 8);
     final var class2 = range(0, 0, 1, 8);
     final var class1B = range(0, 6, 0, 7);
     final var class2B = range(0, 6, 0, 7);

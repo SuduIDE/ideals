@@ -1,5 +1,6 @@
 class B:
-    pass
+    def func(self):
+        pass
 
 class BB:
     pass
