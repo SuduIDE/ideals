@@ -8,6 +8,7 @@ import org.eclipse.lsp4j.services.TextDocumentService;
 import org.jetbrains.annotations.NotNull;
 import org.rri.server.completions.CompletionService;
 import org.rri.server.diagnostics.DiagnosticsService;
+import org.rri.server.formatting.FormattingCommand;
 import org.rri.server.references.FindDefinitionCommand;
 import org.rri.server.references.FindTypeDefinitionCommand;
 import org.rri.server.references.FindUsagesCommand;
@@ -127,5 +128,11 @@ public class MyTextDocumentService implements TextDocumentService {
       return CompletableFuture.completedFuture(Either.forLeft(new ArrayList<>()));
     }
     return completions().startCompletionCalculation(path, params.getPosition());
+  }
+
+  @Override
+  public CompletableFuture<List<? extends TextEdit>> formatting(@NotNull DocumentFormattingParams params) {
+    return new FormattingCommand(null, params.getOptions())
+        .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
   }
 }

@@ -213,7 +213,7 @@ final public class ManagedDocuments {
   }
 
   @NotNull
-  private static TextRange toTextRange(@NotNull Document doc, Range range) {
+  public static TextRange toTextRange(@NotNull Document doc, Range range) {
     return new TextRange(
         MiscUtil.positionToOffset(doc, range.getStart()),
         MiscUtil.positionToOffset(doc, range.getEnd())
