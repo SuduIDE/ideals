@@ -20,8 +20,8 @@ import java.util.function.Consumer;
 public class CompletionTest extends LspServerTestBase {
   @Override
   protected void setUp() throws Exception {
-    System.setProperty("idea.log.debug.categories", "#org.rri");
     super.setUp();
+    System.setProperty("idea.log.debug.categories", "#org.rri");
   }
 
   @Override
