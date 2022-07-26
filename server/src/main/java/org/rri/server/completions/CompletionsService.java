@@ -63,7 +63,7 @@ final public class CompletionsService implements Disposable {
           final Ref<Either<List<CompletionItem>, CompletionList>> ref = new Ref<>();
           // invokeAndWait is necessary for editor creation. We can create editor only inside EDT
           app.invokeAndWait(
-              // todo Maybe we need to add version for `withPsiFileInReadAction` that has return statement
+              // todo add version `withPsiFileInReadAction` that has return statement
               () -> MiscUtil.withPsiFileInReadAction(
                   project,
                   path,
@@ -80,7 +80,6 @@ final public class CompletionsService implements Disposable {
   public void dispose() {
   }
 
-  // todo This class uses ideas internal API
   @SuppressWarnings("UnstableApiUsage")
   public @NotNull Either<List<CompletionItem>, CompletionList> createCompletionResults(@NotNull PsiFile psiFile,
                                                                                        @NotNull Position position,
@@ -119,7 +118,7 @@ final public class CompletionsService implements Disposable {
         compService.performCompletion(parameters,
             (result) -> {
               lookup.addItem(result.getLookupElement(),
-                  new CamelHumpMatcher("") /* todo Ref solutions authors chose this matcher */);
+                  new CamelHumpMatcher("") /* todo compare with another PrefixMatchers */);
               ideaCompletionResults.add(result);
             });
 
@@ -157,16 +156,15 @@ final public class CompletionsService implements Disposable {
 
     var lDetails = new CompletionItemLabelDetails();
     lDetails.setDetail(contextInfo.toString());
-    lDetails.setDescription(presentation.getTypeText());
 
     var tagList = new ArrayList<CompletionItemTag>();
-    if (presentation.isStrikeout()) { // todo Maybe we can find another way to determine is API deprecated
+    if (presentation.isStrikeout()) {
       tagList.add(CompletionItemTag.Deprecated);
     }
 
     resItem.setLabel(presentation.getItemText());
     resItem.setLabelDetails(lDetails);
-    resItem.setInsertText(lookupElement.getLookupString()); // todo replace by TextEdits in completion resolve
+    resItem.setInsertText(lookupElement.getLookupString()); // todo replace with TextEdits in completion resolve
     resItem.setDetail(presentation.getTypeText());
     resItem.setTags(tagList);
 
@@ -174,16 +172,16 @@ final public class CompletionsService implements Disposable {
   }
 
   /* todo
+      Find an alternative way to find Indicator from project for completion
       This process is needed for creation Completion Parameters and insertDummyIdentifier call.
-      I didn't find an alternative way to find Indicator from project for completion
    */
   static private class VoidCompletionProcess extends AbstractProgressIndicatorExBase implements Disposable, CompletionProcess {
     @Override
     public boolean isAutopopupCompletion() {
-      return false; // todo This is ref solution choice, maybe we can use it for complex completion resolve
+      return false;
     }
 
-    // todo This lock from ref solution. Maybe we don't need it
+    // todo check that we don't need this lock
     @NotNull
     private final Object myLock = ObjectUtils.sentinel("VoidCompletionProcess");
 
@@ -200,12 +198,11 @@ final public class CompletionsService implements Disposable {
     }
   }
 
-  /* todo
+  /*
    This method is analogue for insertDummyIdentifier in CompletionInitializationUtil.java from idea 201.6668.113.
    There is CompletionProcessEx in ideas source code, that can't be reached publicly,
-   but it uses only getHostOffsets and registerChildDisposable,
-   that we can determine by ourself.
-   So solution is copy that code with our replacement for getHostOffsets and registerChildDisposable calls
+   but it uses only getHostOffsets and registerChildDisposable, that we can determine by ourselves.
+   So solution is to copy that code with our replacement for getHostOffsets and registerChildDisposable calls.
    Other private methods from CompletionInitializationUtil are copied below too.
   */
   @NotNull

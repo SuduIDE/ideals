@@ -3,7 +3,10 @@ package org.rri.server.completions;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemLabelDetails;
+import org.eclipse.lsp4j.CompletionItemTag;
 import org.eclipse.lsp4j.Position;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
@@ -19,62 +22,63 @@ import java.util.HashSet;
 public class CompletionsServiceTest extends BasePlatformTestCase {
 
   @Test
-  public void testCompletionItemsAreAllDifferent() {
-    final var file = myFixture.configureByFile(getEmptyPythonFilePath());
-    var completionItemList =
-            TestUtil.getCompletionListAtPosition(getProject(), file, new Position(0, 0));
-    Assertions.assertEquals(completionItemList.size(), (new HashSet<>(completionItemList)).size());
+  public void testCompletionForKeywordsThatContainsLetterD() {
+    final var file = myFixture.configureByFile("only_d_file.py");
+    var completionItemList = TestUtil.getCompletionListAtPosition(
+        getProject(), file, new Position(0, 1));
+
+    var correctSet = new HashSet<CompletionItem>();
+    correctSet.add(createCompletionItem("del", "", null, new ArrayList<>(), "del"));
+    correctSet.add(createCompletionItem("def", "", null, new ArrayList<>(), "def"));
+    correctSet.add(createCompletionItem("and", "", null, new ArrayList<>(), "and"));
+    correctSet.add(createCompletionItem("lambda", "", null, new ArrayList<>(), "lambda"));
+
+    Assertions.assertEquals(correctSet, new HashSet<>(completionItemList));
   }
 
-  @Test
-  public void testCompletionForKeywords() {
-    final var file = myFixture.configureByFile(getEmptyPythonFilePath());
-    var completionItemList = TestUtil.getCompletionListAtPosition(
-            getProject(), file, new Position(0, 0)
-    );
-    Assertions.assertEquals(25, completionItemList.size());
-    completionItemList.forEach(completionItem -> {
-      Assertions.assertEquals(completionItem.getLabel(), completionItem.getInsertText());
-      Assertions.assertEquals("", completionItem.getLabelDetails().getDetail());
-      Assertions.assertNull(completionItem.getLabelDetails().getDescription());
-      Assertions.assertEquals(0, completionItem.getTags().size());
+  @SuppressWarnings("SameParameterValue")
+  @NotNull
+  private CompletionItem createCompletionItem(@NotNull String label,
+                                              @NotNull String labelDetail,
+                                              @Nullable String detail,
+                                              @NotNull ArrayList<CompletionItemTag> completionItemTags,
+                                              @NotNull String insertText) {
+    return MiscUtil.with(new CompletionItem(), item -> {
+      item.setLabel(label);
+      item.setLabelDetails(MiscUtil.with(new CompletionItemLabelDetails(), completionItemLabelDetails -> completionItemLabelDetails.setDetail(labelDetail)));
+      item.setDetail(detail);
+      item.setTags(completionItemTags);
+      item.setInsertText(insertText);
     });
   }
 
   @Test
-  public void testCompletionForKeywordAndFunction() {
-    var correctSet = new HashSet<>();
-    correctSet.add(MiscUtil.with(new CompletionItem(), item -> {
-      item.setLabel("for");
-      item.setLabelDetails(MiscUtil.with(new CompletionItemLabelDetails(), completionItemLabelDetails -> {
-        completionItemLabelDetails.setDetail("");
-        completionItemLabelDetails.setDescription(null);
-      }));
-      item.setTags(new ArrayList<>());
-      item.setInsertText("for");
-    }));
-    correctSet.add(MiscUtil.with(new CompletionItem(), item -> {
-      item.setLabel("formula");
-      item.setLabelDetails(MiscUtil.with(new CompletionItemLabelDetails(), completionItemLabelDetails -> {
-        completionItemLabelDetails.setDetail("(x)");
-        completionItemLabelDetails.setDescription(null);
-      }));
-      item.setTags(new ArrayList<>());
-      item.setInsertText("formula");
-    }));
-
+  public void testCompletionForKeywordAndFunctionPython() {
+    var correctSet = new HashSet<CompletionItem>();
+    correctSet.add(createCompletionItem("for", "", null, new ArrayList<>(), "for"));
+    correctSet.add(createCompletionItem("formula", "(x)", null, new ArrayList<>(), "formula"));
     final var file = myFixture.configureByFile("function_and_keyword.py");
 
     var completionItemList = TestUtil.getCompletionListAtPosition(
-            getProject(), file, new Position(3, 3)
+        getProject(), file, new Position(3, 3)
     );
     Assert.assertNotNull(completionItemList);
-
     Assert.assertEquals(correctSet, new HashSet<>(completionItemList));
   }
 
-  private String getEmptyPythonFilePath() {
-    return "empty_file.py";
+  @Test
+  public void testCompletionForKeywordAndFunctionJava() {
+    var correctSet = new HashSet<CompletionItem>();
+    correctSet.add(createCompletionItem("formula", "()", "void", new ArrayList<>(), "formula"));
+    correctSet.add(createCompletionItem("for", "", null, new ArrayList<>(), "for"));
+
+    final var file = myFixture.configureByFile("function_and_keyword.java");
+
+    var completionItemList = TestUtil.getCompletionListAtPosition(
+        getProject(), file, new Position(2, 7)
+    );
+    Assert.assertNotNull(completionItemList);
+    Assert.assertEquals(correctSet, new HashSet<>(completionItemList));
   }
 
   @Override
