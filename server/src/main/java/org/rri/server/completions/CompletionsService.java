@@ -54,25 +54,25 @@ final public class CompletionsService implements Disposable {
 
   @NotNull
   public CompletableFuture<Either<List<CompletionItem>, CompletionList>> startCompletionCalculation(
-          @NotNull LspPath path,
-          @NotNull Position position) {
+      @NotNull LspPath path,
+      @NotNull Position position) {
     var app = ApplicationManager.getApplication();
     return CompletableFutures.computeAsync(
-            AppExecutorUtil.getAppExecutorService(),
-            (cancelChecker) -> {
-              final Ref<Either<List<CompletionItem>, CompletionList>> ref = new Ref<>();
-              // invokeAndWait is necessary for editor creation. We can create editor only inside EDT
-              app.invokeAndWait(
-                      // todo Maybe we need to add version for `withPsiFileInReadAction` that has return statement
-                      () -> MiscUtil.withPsiFileInReadAction(
-                              project,
-                              path,
-                              (psiFile) ->
-                                      ref.set(createCompletionResults(psiFile, position, cancelChecker))),
-                      app.getDefaultModalityState()
-              );
-              return ref.get();
-            }
+        AppExecutorUtil.getAppExecutorService(),
+        (cancelChecker) -> {
+          final Ref<Either<List<CompletionItem>, CompletionList>> ref = new Ref<>();
+          // invokeAndWait is necessary for editor creation. We can create editor only inside EDT
+          app.invokeAndWait(
+              // todo add version `withPsiFileInReadAction` that has return statement
+              () -> MiscUtil.withPsiFileInReadAction(
+                  project,
+                  path,
+                  (psiFile) ->
+                      ref.set(createCompletionResults(psiFile, position, cancelChecker))),
+              app.getDefaultModalityState()
+          );
+          return ref.get();
+        }
     );
   }
 
@@ -80,62 +80,63 @@ final public class CompletionsService implements Disposable {
   public void dispose() {
   }
 
-  // todo This class uses ideas internal API
   @SuppressWarnings("UnstableApiUsage")
   public @NotNull Either<List<CompletionItem>, CompletionList> createCompletionResults(@NotNull PsiFile psiFile,
                                                                                        @NotNull Position position,
                                                                                        @NotNull CancelChecker cancelChecker) {
     Ref<List<LookupElement>> sortedLookupElementsRef = new Ref<>(new ArrayList<>());
+    VoidCompletionProcess process = new VoidCompletionProcess();
+    try {
+      EditorUtil.withEditor(process, psiFile, position, (editor) -> {
+        var ideaCompletionResults = new ArrayList<CompletionResult>();
 
-    EditorUtil.withEditor(this, psiFile, position, (editor) -> {
-      var ideaCompletionResults = new ArrayList<CompletionResult>();
+        var initContext = CompletionInitializationUtil.createCompletionInitializationContext(
+            project,
+            editor,
+            editor.getCaretModel().getPrimaryCaret(),
+            1,
+            CompletionType.BASIC);
+        assert initContext != null;
 
-      var process = new VoidCompletionProcess();
+        var topLevelOffsets =
+            new OffsetsInFile(initContext.getFile(), initContext.getOffsetMap()).toTopLevelFile();
+        PsiDocumentManager.getInstance(initContext.getProject()).commitAllDocuments();
+        var hostCopyOffsets =
+            insertDummyIdentifier(initContext, process, topLevelOffsets);
 
-      var initContext = CompletionInitializationUtil.createCompletionInitializationContext(
-              project,
-              editor,
-              editor.getCaretModel().getPrimaryCaret(),
-              1,
-              CompletionType.BASIC);
-      assert initContext != null;
+        OffsetsInFile finalOffsets = CompletionInitializationUtil.toInjectedIfAny(initContext.getFile(), hostCopyOffsets);
+        CompletionParameters parameters = CompletionInitializationUtil.createCompletionParameters(
+            initContext,
+            process,
+            finalOffsets);
+        var arranger = new LookupArrangerImpl(parameters);
+        var lookup = new LookupImpl(project, editor, arranger);
 
-      var topLevelOffsets =
-              new OffsetsInFile(initContext.getFile(), initContext.getOffsetMap()).toTopLevelFile();
-      PsiDocumentManager.getInstance(initContext.getProject()).commitAllDocuments();
-      var hostCopyOffsets =
-              insertDummyIdentifier(initContext, process, topLevelOffsets);
+        var compService = CompletionService.getCompletionService();
+        assert compService != null;
 
-      OffsetsInFile finalOffsets = CompletionInitializationUtil.toInjectedIfAny(initContext.getFile(), hostCopyOffsets);
-      CompletionParameters parameters = CompletionInitializationUtil.createCompletionParameters(
-              initContext,
-              process,
-              finalOffsets);
-      var arranger = new LookupArrangerImpl(parameters);
-      var lookup = new LookupImpl(project, editor, arranger);
+        compService.performCompletion(parameters,
+            (result) -> {
+              lookup.addItem(result.getLookupElement(),
+                  new CamelHumpMatcher("") /* todo compare with another PrefixMatchers */);
+              ideaCompletionResults.add(result);
+            });
 
-      var compService = CompletionService.getCompletionService();
-      assert compService != null;
-
-      compService.performCompletion(parameters,
-              (result) -> {
-                lookup.addItem(result.getLookupElement(),
-                        new CamelHumpMatcher("") /* todo Ref solutions authors chose this matcher */);
-                ideaCompletionResults.add(result);
-              });
-
-      ideaCompletionResults.forEach((it) -> {
-        try {
-          arranger.addElement(it);
-        } catch (Exception ignored) {
-        } // we just skip this element
+        ideaCompletionResults.forEach((it) -> {
+          try {
+            arranger.addElement(it);
+          } catch (Exception ignored) {
+          } // we just skip this element
+        });
+        sortedLookupElementsRef.set(arranger.arrangeItems(lookup, false).first);
       });
-      sortedLookupElementsRef.set(arranger.arrangeItems(lookup, false).first);
-    });
+    } finally {
+      Disposer.dispose(process);
+    }
 
     cancelChecker.checkCanceled();
     var result = sortedLookupElementsRef.get().stream().map(
-            CompletionsService::createLSPCompletionItem
+        CompletionsService::createLSPCompletionItem
     ).collect(Collectors.toList());
 
     return Either.forLeft(result);
@@ -155,16 +156,15 @@ final public class CompletionsService implements Disposable {
 
     var lDetails = new CompletionItemLabelDetails();
     lDetails.setDetail(contextInfo.toString());
-    lDetails.setDescription(presentation.getTypeText());
 
     var tagList = new ArrayList<CompletionItemTag>();
-    if (presentation.isStrikeout()) { // todo Maybe we can find another way to determine is API deprecated
+    if (presentation.isStrikeout()) {
       tagList.add(CompletionItemTag.Deprecated);
     }
 
     resItem.setLabel(presentation.getItemText());
     resItem.setLabelDetails(lDetails);
-    resItem.setInsertText(lookupElement.getLookupString()); // todo replace by TextEdits in completion resolve
+    resItem.setInsertText(lookupElement.getLookupString()); // todo replace with TextEdits in completion resolve
     resItem.setDetail(presentation.getTypeText());
     resItem.setTags(tagList);
 
@@ -172,16 +172,16 @@ final public class CompletionsService implements Disposable {
   }
 
   /* todo
+      Find an alternative way to find Indicator from project for completion
       This process is needed for creation Completion Parameters and insertDummyIdentifier call.
-      I didn't find an alternative way to find Indicator from project for completion
    */
   static private class VoidCompletionProcess extends AbstractProgressIndicatorExBase implements Disposable, CompletionProcess {
     @Override
     public boolean isAutopopupCompletion() {
-      return false; // todo This is ref solution choice, maybe we can use it for complex completion resolve
+      return false;
     }
 
-    // todo This lock from ref solution. Maybe we don't need it
+    // todo check that we don't need this lock
     @NotNull
     private final Object myLock = ObjectUtils.sentinel("VoidCompletionProcess");
 
@@ -198,19 +198,18 @@ final public class CompletionsService implements Disposable {
     }
   }
 
-  /* todo
+  /*
    This method is analogue for insertDummyIdentifier in CompletionInitializationUtil.java from idea 201.6668.113.
    There is CompletionProcessEx in ideas source code, that can't be reached publicly,
-   but it uses only getHostOffsets and registerChildDisposable,
-   that we can determine by ourself.
-   So solution is copy that code with our replacement for getHostOffsets and registerChildDisposable calls
+   but it uses only getHostOffsets and registerChildDisposable, that we can determine by ourselves.
+   So solution is to copy that code with our replacement for getHostOffsets and registerChildDisposable calls.
    Other private methods from CompletionInitializationUtil are copied below too.
   */
   @NotNull
   private OffsetsInFile insertDummyIdentifier(
-          @NotNull CompletionInitializationContext initContext,
-          @NotNull VoidCompletionProcess indicator,
-          @NotNull OffsetsInFile topLevelOffsets) {
+      @NotNull CompletionInitializationContext initContext,
+      @NotNull VoidCompletionProcess indicator,
+      @NotNull OffsetsInFile topLevelOffsets) {
     var hostEditor = InjectedLanguageEditorUtil.getTopLevelEditor(initContext.getEditor());
     var hostMap = topLevelOffsets.getOffsets();
     boolean forbidCaching = false;
@@ -222,17 +221,17 @@ final public class CompletionsService implements Disposable {
     var endOffset = hostMap.getOffset(CompletionInitializationContext.SELECTION_END_OFFSET);
 
     indicator.registerChildDisposable(
-            () -> new OffsetTranslator(
-                    hostEditor.getDocument(),
-                    initContext.getFile(),
-                    copyDocument,
-                    startOffset,
-                    endOffset,
-                    dummyIdentifier)
+        () -> new OffsetTranslator(
+            hostEditor.getDocument(),
+            initContext.getFile(),
+            copyDocument,
+            startOffset,
+            endOffset,
+            dummyIdentifier)
     );
 
     var copyOffsets = topLevelOffsets.replaceInCopy(
-            hostCopy, startOffset, endOffset, dummyIdentifier).get();
+        hostCopy, startOffset, endOffset, dummyIdentifier).get();
     if (!hostCopy.isValid()) {
       throw new RuntimeException("PsiFile copy is not valid anymore");
     }
@@ -247,8 +246,8 @@ final public class CompletionsService implements Disposable {
                                         boolean forbidCaching) {
     final VirtualFile virtualFile = file.getVirtualFile();
     boolean mayCacheCopy = !forbidCaching && file.isPhysical() &&
-            // Idea developer: "we don't want to cache code fragment copies even if they appear to be physical"
-            virtualFile != null && virtualFile.isInLocalFileSystem();
+        // Idea developer: "we don't want to cache code fragment copies even if they appear to be physical"
+        virtualFile != null && virtualFile.isInLocalFileSystem();
     if (mayCacheCopy) {
       final Pair<PsiFile, Document> cached = SoftReference.dereference(file.getUserData(FILE_COPY_KEY));
       if (cached != null && isCopyUpToDate(cached.second, cached.first, file)) {
@@ -261,11 +260,11 @@ final public class CompletionsService implements Disposable {
     final PsiFile copy = (PsiFile) file.copy();
     if (copy.isPhysical() || copy.getViewProvider().isEventSystemEnabled()) {
       LOG.error("File copy should be non-physical and non-event-system-enabled! Language=" +
-              file.getLanguage() +
-              "; file=" +
-              file +
-              " of " +
-              file.getClass());
+          file.getLanguage() +
+          "; file=" +
+          file +
+          " of " +
+          file.getClass());
     }
     assertCorrectOriginalFile("New", file, copy);
 
@@ -290,8 +289,8 @@ final public class CompletionsService implements Disposable {
                                         @NotNull PsiFile copyFile,
                                         @NotNull PsiFile originalFile) {
     if (!copyFile.getClass().equals(originalFile.getClass()) ||
-            !copyFile.isValid() ||
-            !copyFile.getName().equals(originalFile.getName())) {
+        !copyFile.isValid() ||
+        !copyFile.getName().equals(originalFile.getName())) {
       return false;
     }
     /*
@@ -306,8 +305,8 @@ final public class CompletionsService implements Disposable {
   @NotNull
   private static @NonNls String fileInfo(@NotNull PsiFile file) {
     return file + " of " + file.getClass() +
-            " in " + file.getViewProvider() + ", languages=" + file.getViewProvider().getLanguages() +
-            ", physical=" + file.isPhysical();
+        " in " + file.getViewProvider() + ", languages=" + file.getViewProvider().getLanguages() +
+        ", physical=" + file.isPhysical();
   }
 
   // this assertion method is copied from package-private method in CompletionAssertions class
@@ -316,8 +315,8 @@ final public class CompletionsService implements Disposable {
                                                 @NotNull PsiFile copy) {
     if (copy.getOriginalFile() != file) {
       throw new AssertionError(prefix + " copied file doesn't have correct original: noOriginal=" + (copy.getOriginalFile() == copy) +
-              "\n file " + fileInfo(file) +
-              "\n copy " + fileInfo(copy));
+          "\n file " + fileInfo(file) +
+          "\n copy " + fileInfo(copy));
     }
   }
 }

@@ -47,9 +47,6 @@ public class EditorUtil {
     } catch (Exception e) {
       LOG.error("Exception during editor callback: " + e
               + ExceptionUtils.getStackTrace(e));
-    } finally {
-      EditorFactory editorFactory = EditorFactory.getInstance();
-      editorFactory.releaseEditor(editor);
     }
   }
 }
