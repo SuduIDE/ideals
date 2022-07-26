@@ -19,7 +19,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 
 @RunWith(JUnit4.class)
-public class CompletionsServiceTest extends BasePlatformTestCase {
+public class CompletionServiceTest extends BasePlatformTestCase {
 
   @Test
   public void testCompletionForKeywordsThatContainsLetterD() {
@@ -83,6 +83,6 @@ public class CompletionsServiceTest extends BasePlatformTestCase {
 
   @Override
   protected String getTestDataPath() {
-    return "test-data/completion-project";
+    return "test-data/completion/completion-project";
   }
 }

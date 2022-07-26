@@ -43,12 +43,12 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 @Service(Service.Level.PROJECT)
-final public class CompletionsService implements Disposable {
+final public class CompletionService implements Disposable {
   @NotNull
   private final Project project;
-  private static final Logger LOG = Logger.getInstance(CompletionsService.class);
+  private static final Logger LOG = Logger.getInstance(CompletionService.class);
 
-  public CompletionsService(@NotNull Project project) {
+  public CompletionService(@NotNull Project project) {
     this.project = project;
   }
 
@@ -112,7 +112,7 @@ final public class CompletionsService implements Disposable {
         var arranger = new LookupArrangerImpl(parameters);
         var lookup = new LookupImpl(project, editor, arranger);
 
-        var compService = CompletionService.getCompletionService();
+        var compService = com.intellij.codeInsight.completion.CompletionService.getCompletionService();
         assert compService != null;
 
         compService.performCompletion(parameters,
@@ -136,7 +136,7 @@ final public class CompletionsService implements Disposable {
 
     cancelChecker.checkCanceled();
     var result = sortedLookupElementsRef.get().stream().map(
-        CompletionsService::createLSPCompletionItem
+        CompletionService::createLSPCompletionItem
     ).collect(Collectors.toList());
 
     return Either.forLeft(result);

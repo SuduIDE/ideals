@@ -2,7 +2,7 @@ class CompletionExampleTest {
   void completionVariant(int x) {
   }
 
-  void completionVariant() {
+  int completionVariant() {
   }
 
   void main() {

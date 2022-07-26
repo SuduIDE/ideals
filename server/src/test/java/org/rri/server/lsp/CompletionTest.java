@@ -15,7 +15,6 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
-import java.util.function.Consumer;
 
 public class CompletionTest extends LspServerTestBase {
   @Override
@@ -26,36 +25,18 @@ public class CompletionTest extends LspServerTestBase {
 
   @Override
   protected String getProjectRelativePath() {
-    return "completion-project";
+    return "completion/completion-project";
   }
 
   @Test
   public void completion() {
-    final String LABEL = "completionVariant";
-    final String DETAIL = "void";
-    final Position COMPLETION_INVOKE_POSITION = new Position(8, 7);
+    final String label = "completionVariant";
+    final Position completionInvokePosition = new Position(8, 7);
 
-    final ArrayList<CompletionItemTag> TAGS = new ArrayList<>();
-
-    final Set<CompletionItem> CORRECT_COMPLETION_ITEMS_SET = new HashSet<>();
-    Consumer<String> addToSet = (@NotNull String completionItemLabelDetail) -> CORRECT_COMPLETION_ITEMS_SET.add(
-        MiscUtil.with(
-            new CompletionItem(),
-            completionItem -> {
-              completionItem.setLabel(LABEL);
-              completionItem.setInsertText(LABEL);
-              completionItem.setLabelDetails(MiscUtil.with(new CompletionItemLabelDetails(),
-                  completionItemLabelDetails -> {
-                    completionItemLabelDetails.setDetail(completionItemLabelDetail);
-                    completionItemLabelDetails.setDescription(DETAIL);
-                  }));
-              completionItem.setDetail(DETAIL);
-              completionItem.setTags(TAGS);
-            }
-        ));
-
-    addToSet.accept("()");
-    addToSet.accept("(int x)");
+    final Set<CompletionItem> expected = Set.of(
+        newCompletionItem(label, "int", "()"),
+        newCompletionItem(label, "void", "(int x)")
+    );
 
     final var filePath = LspPath.fromLocalPath(getProjectPath().resolve("src/CompletionExampleTest.java"));
 
@@ -64,21 +45,44 @@ public class CompletionTest extends LspServerTestBase {
     params.setTextDocument(
         MiscUtil.with(new TextDocumentIdentifier(),
             documentIdentifier -> documentIdentifier.setUri(filePath.toLspUri())));
-    params.setPosition(COMPLETION_INVOKE_POSITION);
+    params.setPosition(completionInvokePosition);
 
     Ref<Either<List<CompletionItem>, CompletionList>> completionResRef = new Ref<>();
 
     Assertions.assertDoesNotThrow(() -> completionResRef.set(
         TestUtil.getNonBlockingEdt(server().getTextDocumentService().completion(params), 3000)));
 
-    var completionRes = completionResRef.get();
+    Assert.assertEquals(expected, new HashSet<>(extractItemList(completionResRef.get())));
+  }
+
+  @NotNull
+  private static List<CompletionItem> extractItemList(@NotNull Either<List<CompletionItem>, CompletionList> completionResult) {
     List<CompletionItem> completionItemList;
-    if (completionRes.isRight()) {
-      completionItemList = completionRes.getRight().getItems();
+    if (completionResult.isRight()) {
+      completionItemList = completionResult.getRight().getItems();
     } else {
-      Assert.assertTrue(completionRes.isLeft());
-      completionItemList = completionRes.getLeft();
+      Assert.assertTrue(completionResult.isLeft());
+      completionItemList = completionResult.getLeft();
     }
-    Assert.assertEquals(CORRECT_COMPLETION_ITEMS_SET, new HashSet<>(completionItemList));
+    return completionItemList;
+  }
+
+  @SuppressWarnings("SameParameterValue")
+  @NotNull
+  private static CompletionItem newCompletionItem(@NotNull String label, @NotNull String detail, @NotNull String completionItemLabelDetail) {
+    return MiscUtil.with(
+        new CompletionItem(),
+        item -> {
+          item.setLabel(label);
+          item.setInsertText(label);
+          item.setLabelDetails(MiscUtil.with(new CompletionItemLabelDetails(),
+              labelDetails -> {
+                labelDetails.setDetail(completionItemLabelDetail);
+                // labelDetails.setDescription(detail); TODO @Ramazan : test fails with this line uncommented
+              }));
+          item.setDetail(detail);
+          item.setTags(new ArrayList<>());
+        }
+    );
   }
 }

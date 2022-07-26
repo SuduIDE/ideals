@@ -7,7 +7,7 @@ import com.intellij.testFramework.PlatformTestUtil;
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.Position;
 import org.jetbrains.annotations.NotNull;
-import org.rri.server.completions.CompletionsService;
+import org.rri.server.completions.CompletionService;
 import org.rri.server.util.MiscUtil;
 
 import java.util.List;
@@ -44,7 +44,7 @@ public class TestUtil {
   @NotNull
   public static List<CompletionItem> getCompletionListAtPosition(
           @NotNull Project project, @NotNull PsiFile file, @NotNull Position position) {
-    return TestUtil.getNonBlockingEdt(project.getService(CompletionsService.class).startCompletionCalculation(
+    return TestUtil.getNonBlockingEdt(project.getService(CompletionService.class).startCompletionCalculation(
             LspPath.fromVirtualFile(file.getVirtualFile()), position), 3000).getLeft();
   }
 }

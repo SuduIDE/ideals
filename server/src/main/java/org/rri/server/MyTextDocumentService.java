@@ -6,7 +6,7 @@ import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import org.jetbrains.annotations.NotNull;
-import org.rri.server.completions.CompletionsService;
+import org.rri.server.completions.CompletionService;
 import org.rri.server.diagnostics.DiagnosticsService;
 import org.rri.server.references.FindDefinitionCommand;
 import org.rri.server.references.FindTypeDefinitionCommand;
@@ -104,8 +104,8 @@ public class MyTextDocumentService implements TextDocumentService {
   }
 
   @NotNull
-  private CompletionsService completions() {
-    return session.getProject().getService(CompletionsService.class);
+  private CompletionService completions() {
+    return session.getProject().getService(CompletionService.class);
   }
 
   @Override
