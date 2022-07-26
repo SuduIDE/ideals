@@ -1,33 +1,17 @@
 package org.rri.server.references;
 
-import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.testFramework.fixtures.BasePlatformTestCase;
-import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Position;
-import org.eclipse.lsp4j.Range;
-import org.jetbrains.annotations.NotNull;
 import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.rri.server.LspPath;
-import org.rri.server.TestUtil;
 
-import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 @RunWith(JUnit4.class)
-public class FindUsagesCommandPythonTest extends BasePlatformTestCase {
-
-  @Override
-  protected String getTestDataPath() {
-    return Paths.get("test-data/references").toAbsolutePath().toString();
-  }
-
-  private VirtualFile projectFile;
-
+public class FindUsagesCommandPythonTest extends ReferencesCommandTestBase {
   @Before
   public void copyDirectoryToProject() {
     projectFile = myFixture.copyDirectoryToProject("python/projectDefinition", "");
@@ -107,23 +91,5 @@ public class FindUsagesCommandPythonTest extends BasePlatformTestCase {
 
     check(answers, new Position(12, 12), definitionPythonPath);
     check(answers, new Position(0, 6), class1Path);
-  }
-
-  private void check(Set<Location> answers, Position pos, LspPath path) {
-    final var future = new FindUsagesCommand(pos).runAsync(getProject(), path);
-    final var lst = TestUtil.getNonBlockingEdt(future, 100000);
-    assertNotNull(lst);
-    final var result = new HashSet<>(lst);
-    assertEquals(answers, result);
-  }
-
-  private Location location(String uri, Range targetRange) {
-    return new Location(uri, targetRange);
-  }
-
-  @SuppressWarnings("SameParameterValue")
-  @NotNull
-  private static Range range(int line1, int char1, int line2, int char2) {
-    return new Range(new Position(line1, char1), new Position(line2, char2));
   }
 }

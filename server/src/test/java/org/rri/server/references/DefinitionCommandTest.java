@@ -1,10 +1,6 @@
 package org.rri.server.references;
 
-import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.eclipse.lsp4j.LocationLink;
-import org.eclipse.lsp4j.Position;
-import org.eclipse.lsp4j.Range;
-import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -12,18 +8,11 @@ import org.rri.server.LspPath;
 import org.rri.server.TestUtil;
 import org.rri.server.util.MiscUtil;
 
-import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.Map;
 
 @RunWith(JUnit4.class)
-public class DefinitionCommandTest extends BasePlatformTestCase {
-
-  @Override
-  protected String getTestDataPath() {
-    return Paths.get("test-data/references").toAbsolutePath().toString();
-  }
-
+public class DefinitionCommandTest extends ReferencesCommandTestBase {
   @Test
   public void testDefinitionJava() {
     var virtualFile = myFixture.copyDirectoryToProject("java/project1/src", "");
@@ -146,15 +135,5 @@ public class DefinitionCommandTest extends BasePlatformTestCase {
     answers.put(124, locationLink(class2Url, class2B, range(13, 12, 13, 13)));
     answers.put(125, locationLink(class2Url, class2B, range(13, 13, 13, 14)));
     return answers;
-  }
-
-  private LocationLink locationLink(String uri, Range targetRange, Range originalRange) {
-    return new LocationLink(uri, targetRange, targetRange, originalRange);
-  }
-
-  @SuppressWarnings("SameParameterValue")
-  @NotNull
-  private static Range range(int line1, int char1, int line2, int char2) {
-    return new Range(new Position(line1, char1), new Position(line2, char2));
   }
 }
