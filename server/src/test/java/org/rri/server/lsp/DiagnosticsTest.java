@@ -20,7 +20,7 @@ public class DiagnosticsTest extends LspServerTestBase {
 
   @Override
   protected String getProjectRelativePath() {
-    return "project";
+    return "lsp/project1";
   }
 
   @Test

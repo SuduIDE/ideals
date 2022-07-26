@@ -43,22 +43,26 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
   @NotNull
   @Override
   public CompletableFuture<InitializeResult> initialize(@NotNull InitializeParams params) {
-    final var workspaceFolders = params.getWorkspaceFolders();
-    if (workspaceFolders == null) {
-      return CompletableFuture.completedFuture(new InitializeResult(defaultServerCapabilities()));
-    }
-
-    //   // todo how about multiple folders
-    final var projectRoot = LspPath.fromLspUri(workspaceFolders.get(0).getUri());
-
     return CompletableFuture.supplyAsync(() -> {
-      Metrics.run(() -> "initialize: " + projectRoot, () -> {
+      final var workspaceFolders = params.getWorkspaceFolders();
 
-        var oldProject = project;
-        if(oldProject != null && oldProject.isOpen()) {
+      var oldProject = project;
+      if(oldProject != null) {
+        if(oldProject.isOpen()) {
           LOG.info("Closing old project: " + oldProject);
           ProjectService.getInstance().closeProject(oldProject);
         }
+        project = null;
+      }
+
+      if (workspaceFolders == null) {
+        return new InitializeResult(new ServerCapabilities());
+      }
+
+      //   // todo how about multiple folders
+      final var projectRoot = LspPath.fromLspUri(workspaceFolders.get(0).getUri());
+
+      Metrics.run(() -> "initialize: " + projectRoot, () -> {
 
         LOG.info("Opening project: " + projectRoot);
         project = ProjectService.getInstance().resolveProjectFromRoot(projectRoot);
@@ -72,7 +76,6 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
 
       return new InitializeResult(defaultServerCapabilities());
     });
-
   }
 
   @NotNull

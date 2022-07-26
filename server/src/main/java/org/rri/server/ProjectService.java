@@ -40,7 +40,11 @@ public class ProjectService {
   public void closeProject(@NotNull Project project) {
     if (projectHashes.values().remove(project.getLocationHash())) {
       LOG.info("Closing project: " + project);
-      ApplicationManager.getApplication().invokeAndWait(() -> ProjectManagerEx.getInstanceEx().closeAndDispose(project));
+      var closed = new boolean[]{false};
+      ApplicationManager.getApplication().invokeAndWait(() -> closed[0] = ProjectManagerEx.getInstanceEx().forceCloseProject(project));
+      if(!closed[0]) {
+        LOG.warn("Closing project: Project wasn't closed: " + project);
+      }
     } else {
       LOG.warn("Closing project: Project wasn't opened by LSP server; do nothing: " + project);
     }

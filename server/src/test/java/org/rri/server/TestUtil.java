@@ -19,24 +19,17 @@ public class TestUtil {
   public static <T> T getNonBlockingEdt(@NotNull CompletableFuture<T> future, long timeoutMs) {
     final var mark = System.nanoTime();
     if (ApplicationManager.getApplication().isDispatchThread()) {
-      waitInEdtFor(() -> {
-        if ((System.nanoTime() - mark) / 1_000_000 >= timeoutMs)
-          throw new RuntimeException("timeout: " + timeoutMs, new TimeoutException());
-
-        return future.isDone();
-      });
+      waitInEdtFor(future::isDone, timeoutMs);
     }
     return MiscUtil.makeThrowsUnchecked(() -> future.get(timeoutMs, TimeUnit.MILLISECONDS));
   }
 
-  public static void waitInEdt(long timeInMs) {
+  public static void waitInEdtFor(@NotNull Supplier<Boolean> condition, long timeoutMs) {
     final var mark = System.nanoTime();
-    waitInEdtFor(() -> (System.nanoTime() - mark) / 1_000_000 >= timeInMs);
-  }
-
-
-  public static void waitInEdtFor(@NotNull Supplier<Boolean> condition) {
     while (!condition.get()) {
+      if ((System.nanoTime() - mark) / 1_000_000 >= timeoutMs)
+        throw new RuntimeException("timeout: " + timeoutMs, new TimeoutException());
+
       PlatformTestUtil.dispatchAllInvocationEventsInIdeEventQueue();
       Thread.yield();
     }
