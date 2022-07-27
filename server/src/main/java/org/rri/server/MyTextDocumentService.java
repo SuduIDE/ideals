@@ -14,6 +14,7 @@ import org.rri.server.references.DocumentHighlightCommand;
 import org.rri.server.references.FindDefinitionCommand;
 import org.rri.server.references.FindTypeDefinitionCommand;
 import org.rri.server.references.FindUsagesCommand;
+import org.rri.server.symbol.DocumentSymbolCommand;
 import org.rri.server.util.Metrics;
 
 import java.util.ArrayList;
@@ -95,6 +96,12 @@ public class MyTextDocumentService implements TextDocumentService {
   public CompletableFuture<List<? extends DocumentHighlight>> documentHighlight(DocumentHighlightParams params) {
     return new DocumentHighlightCommand(params.getPosition())
             .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
+  }
+
+  @SuppressWarnings("deprecation")
+  @Override
+  public CompletableFuture<List<Either<SymbolInformation, DocumentSymbol>>> documentSymbol(DocumentSymbolParams params) {
+    return new DocumentSymbolCommand().runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
   }
 
   public void refreshDiagnostics() {
