@@ -35,13 +35,13 @@ public class FormattingTest extends LspServerTestBase {
         lastLineEdit
     ));
     final var filePath = LspPath.fromLocalPath(getProjectPath().resolve("main.py"));
-    wholeFileFormatting(expected, filePath);
+    checkWholeFileFormatting(expected, filePath);
     expected.remove(lastLineEdit);
-    rangeFormatting(expected, filePath);
+    checkRangeFormatting(expected, filePath);
   }
 
 
-  private void wholeFileFormatting(@NotNull Set<? extends TextEdit> expected, LspPath filePath) {
+  private void checkWholeFileFormatting(@NotNull Set<? extends TextEdit> expected, @NotNull LspPath filePath) {
     var params = new DocumentFormattingParams();
 
     params.setTextDocument(TestUtil.getDocumentIdentifier(filePath));
@@ -50,7 +50,7 @@ public class FormattingTest extends LspServerTestBase {
     checkFormattingResult(expected, server().getTextDocumentService().formatting(params));
   }
 
-  private void rangeFormatting(@NotNull Set<? extends TextEdit> expected, @NotNull LspPath filePath) {
+  private void checkRangeFormatting(@NotNull Set<? extends TextEdit> expected, @NotNull LspPath filePath) {
     var params = new DocumentRangeFormattingParams();
 
     params.setTextDocument(TestUtil.getDocumentIdentifier(filePath));
@@ -60,7 +60,7 @@ public class FormattingTest extends LspServerTestBase {
     checkFormattingResult(expected, server().getTextDocumentService().rangeFormatting(params));
   }
   private void checkFormattingResult(@NotNull Set<? extends TextEdit> expected,
-                                     CompletableFuture<List<? extends TextEdit>> formattingResultFuture) {
+                                     @NotNull CompletableFuture<List<? extends TextEdit>> formattingResultFuture) {
     Ref<List<? extends TextEdit>> formattingResRef = new Ref<>();
 
     Assertions.assertDoesNotThrow(() -> formattingResRef.set(

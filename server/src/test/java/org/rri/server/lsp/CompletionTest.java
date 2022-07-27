@@ -42,9 +42,7 @@ public class CompletionTest extends LspServerTestBase {
 
     var params = new CompletionParams();
 
-    params.setTextDocument(
-        MiscUtil.with(new TextDocumentIdentifier(),
-            documentIdentifier -> documentIdentifier.setUri(filePath.toLspUri())));
+    params.setTextDocument(TestUtil.getDocumentIdentifier(filePath));
     params.setPosition(completionInvokePosition);
 
     Ref<Either<List<CompletionItem>, CompletionList>> completionResRef = new Ref<>();

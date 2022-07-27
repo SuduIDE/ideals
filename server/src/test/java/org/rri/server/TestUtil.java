@@ -43,7 +43,7 @@ public class TestUtil {
   }
 
   @NotNull
-  public static List<CompletionItem> getCompletionListAtPosition(
+  public static List<@NotNull CompletionItem> getCompletionListAtPosition(
           @NotNull Project project, @NotNull PsiFile file, @NotNull Position position) {
     return TestUtil.getNonBlockingEdt(project.getService(CompletionService.class).startCompletionCalculation(
             LspPath.fromVirtualFile(file.getVirtualFile()), position), 3000).getLeft();
