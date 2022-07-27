@@ -69,23 +69,22 @@ public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
 
   @Override
   protected @NotNull List<? extends Location> execute(@NotNull ExecutorContext ctx) {
-    return DumbService.getInstance(ctx.getProject()).runReadActionInSmartMode(() -> {
-      PsiFile file = ctx.getPsiFile();
-      Document doc = MiscUtil.getDocument(file);
-      if (doc == null) {
-        return List.of();
-      }
-      var ref = new AtomicReference<PsiElement>();
-      EditorUtil.withEditor(this, file, pos, editor -> {
-        var targetElement = TargetElementUtil.findTargetElement(editor, TargetElementUtil.getInstance().getAllAccepted());
-        ref.set(targetElement);
-      });
-      var target = ref.get();
-      if (target == null) {
-        return List.of();
-      }
-      return findUsages(ctx.getProject(), target, ctx.getCancelToken());
+    if (DumbService.isDumb(ctx.getProject())) { return List.of(); }
+    PsiFile file = ctx.getPsiFile();
+    Document doc = MiscUtil.getDocument(file);
+    if (doc == null) {
+      return List.of();
+    }
+    var ref = new AtomicReference<PsiElement>();
+    EditorUtil.withEditor(this, file, pos, editor -> {
+      var targetElement = TargetElementUtil.findTargetElement(editor, TargetElementUtil.getInstance().getAllAccepted());
+      ref.set(targetElement);
     });
+    var target = ref.get();
+    if (target == null) {
+      return List.of();
+    }
+    return findUsages(ctx.getProject(), target, ctx.getCancelToken());
   }
 
   private static @NotNull List<@NotNull Location> findUsages(@NotNull Project project,

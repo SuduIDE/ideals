@@ -16,6 +16,7 @@ import java.util.Set;
 
 public abstract class ReferencesCommandTestBase extends BasePlatformTestCase {
   protected VirtualFile projectFile;
+  protected final String PREFIX_FILE = "temp:///src/";
 
   @Override
   protected String getTestDataPath() {

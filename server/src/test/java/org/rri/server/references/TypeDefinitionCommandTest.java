@@ -1,6 +1,10 @@
 package org.rri.server.references;
 
+import com.intellij.openapi.vfs.VirtualFile;
+import org.eclipse.lsp4j.LocationLink;
 import org.eclipse.lsp4j.Position;
+import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -8,74 +12,55 @@ import org.rri.server.LspPath;
 import org.rri.server.TestUtil;
 import org.rri.server.util.MiscUtil;
 
-import java.util.List;
+import java.util.Map;
 
 @RunWith(JUnit4.class)
 public class TypeDefinitionCommandTest extends ReferencesCommandTestBase {
   @Test
   public void testTypeDefinitionJava() {
-    var virtualFile = myFixture.copyDirectoryToProject("java/project1/src", "");
-    virtualFile = virtualFile.findChild("TypeDefinitionJava.java");
-    assertNotNull(virtualFile);
-    final var path = LspPath.fromVirtualFile(virtualFile);
+    final var virtualFile = myFixture.copyDirectoryToProject("java/project1/src", "");
 
-    final var prefix = "temp:///src/";
-    final var orgAnotherUri = prefix + "org/Another.java";
-    final var comAnotherUri = prefix + "com/Another.java";
+    final var orgAnotherUri = PREFIX_FILE + "org/Another.java";
+    final var comAnotherUri = PREFIX_FILE + "com/Another.java";
     final var classOrgAnother = range(2, 13, 2, 20);
     final var classComAnother = range(2, 13, 2, 20);
 
-    final var file = MiscUtil.resolvePsiFile(getProject(), path);
-    assertNotNull(file);
-    final var doc = MiscUtil.getDocument(file);
-    assertNotNull(doc);
+    final var checks = Map.of(new Position(4, 16), locationLink(orgAnotherUri, classOrgAnother, range(4, 16, 4, 17)),
+            new Position(5, 20), locationLink(orgAnotherUri, classOrgAnother, range(5, 20, 5, 22)),
+            new Position(6, 20), locationLink(comAnotherUri, classComAnother, range(6, 20, 6, 21)));
 
-    final var positions = List.of(new Position(4, 16), new Position(5, 20), new Position(6, 20));
-    final var answers = List.of(locationLink(orgAnotherUri, classOrgAnother, range(4, 16, 4, 17)),
-            locationLink(orgAnotherUri, classOrgAnother, range(5, 20, 5, 22)),
-            locationLink(comAnotherUri, classComAnother, range(6, 20, 6, 21)));
-    for (int ind = 0; ind < 3; ++ind) {
-      final var pos = positions.get(ind);
-      final var ans = answers.get(ind);
-      final var elem = file.findElementAt(MiscUtil.positionToOffset(pos, doc));
-      assertNotNull(elem);
-
-      final var future = new FindTypeDefinitionCommand(pos).runAsync(getProject(), path);
-      final var lst = TestUtil.getNonBlockingEdt(future, 50000);
-      assertNotNull(lst);
-      final var result = lst.getRight();
-      assertEquals(1, result.size());
-      assertEquals(ans, result.get(0));
-    }
+    checkTypeDefinitions(virtualFile.findChild("TypeDefinitionJava.java"), checks);
   }
 
   @Test
   public void testTypeDefinitionPython() {
-    var virtualFile = myFixture.copyDirectoryToProject("python/projectDefinition", "");
-    virtualFile = virtualFile.findChild("typeDefinitionPython.py");
-    assertNotNull(virtualFile);
-    final var path = LspPath.fromVirtualFile(virtualFile);
+    final var virtualFile = myFixture.copyDirectoryToProject("python/projectDefinition", "");
 
-    final var prefix = "temp:///src/";
-    final var secondUri = prefix + "second.py";
-    final var class1Uri = prefix + "class1.py";
-    final var class2Uri = prefix + "class2.py";
+    final var secondUri = PREFIX_FILE + "second.py";
+    final var class1Uri = PREFIX_FILE + "class1.py";
+    final var class2Uri = PREFIX_FILE + "class2.py";
     final var A = range(0, 6, 0, 7);
     final var class1B = range(0, 6, 0, 7);
     final var class2B = range(0, 6, 0, 7);
 
+    final var checks = Map.of(new Position(5, 0), locationLink(secondUri, A, range(5, 0, 5, 1)),
+            new Position(6, 0), locationLink(class1Uri, class1B, range(6, 0, 6, 1)),
+            new Position(7, 0), locationLink(class2Uri, class2B, range(7, 0, 7, 2)));
+
+    checkTypeDefinitions(virtualFile.findChild("typeDefinitionPython.py"), checks);
+  }
+
+  private void checkTypeDefinitions(@Nullable VirtualFile virtualFile, @NotNull Map<@NotNull Position, @NotNull LocationLink> checks) {
+    assertNotNull(virtualFile);
+    final var path = LspPath.fromVirtualFile(virtualFile);
     final var file = MiscUtil.resolvePsiFile(getProject(), path);
     assertNotNull(file);
     final var doc = MiscUtil.getDocument(file);
     assertNotNull(doc);
 
-    final var positions = List.of(new Position(5, 0), new Position(6, 0), new Position(7, 0));
-    final var answers = List.of(locationLink(secondUri, A, range(5, 0, 5, 1)),
-            locationLink(class1Uri, class1B, range(6, 0, 6, 1)),
-            locationLink(class2Uri, class2B, range(7, 0, 7, 2)));
-    for (int ind = 0; ind < 3; ++ind) {
-      final var pos = positions.get(ind);
-      final var ans = answers.get(ind);
+    for (final var entry : checks.entrySet()) {
+      final var pos = entry.getKey();
+      final var ans = entry.getValue();
       final var elem = file.findElementAt(MiscUtil.positionToOffset(pos, doc));
       assertNotNull(elem);
 
