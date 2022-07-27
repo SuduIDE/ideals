@@ -40,7 +40,6 @@ final public class FormattingCommand extends LspCommand<List<? extends TextEdit>
       indentOptions.TAB_SIZE = formattingOptions.getTabSize();
       indentOptions.INDENT_SIZE = formattingOptions.getTabSize();
       indentOptions.USE_TAB_CHARACTER = !formattingOptions.isInsertSpaces();
-
       CodeStyle.doWithTemporarySettings(context.getProject(), codeStyleSettings, () -> {
         var doc = MiscUtil.getDocument(context.getPsiFile());
         assert doc != null;
@@ -51,9 +50,15 @@ final public class FormattingCommand extends LspCommand<List<? extends TextEdit>
           textRange = new TextRange(0, copy.getTextLength());
         }
         ApplicationManager.getApplication().runWriteAction(() ->
-            CodeStyleManager.getInstance(
-                copy.getProject()).reformatText(copy, textRange.getStartOffset(), textRange.getEndOffset()));
+            CodeStyleManager.getInstance(copy.getProject())
+                .reformatText(
+                    copy,
+                    textRange.getStartOffset(),
+                    textRange.getEndOffset()));
       });
+      assert context.getCancelToken() != null;
+      context.getCancelToken().checkCanceled();
+      return copy;
     });
   }
 
@@ -65,7 +70,7 @@ final public class FormattingCommand extends LspCommand<List<? extends TextEdit>
 
   @Override
   protected boolean isCancellable() {
-    return false;
+    return true;
   }
 
   @NotNull

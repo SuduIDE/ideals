@@ -135,4 +135,10 @@ public class MyTextDocumentService implements TextDocumentService {
     return new FormattingCommand(null, params.getOptions())
         .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
   }
+
+  @Override
+  public CompletableFuture<List<? extends TextEdit>> rangeFormatting(@NotNull DocumentRangeFormattingParams params) {
+    return new FormattingCommand(params.getRange(), params.getOptions())
+        .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
+  }
 }

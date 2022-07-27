@@ -22,6 +22,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
 import java.util.function.Consumer;
+import java.util.function.Function;
 import java.util.stream.Collectors;
 
 public class EditorUtil {
@@ -61,10 +62,11 @@ public class EditorUtil {
   }
 
   @NotNull
-  public static List<@NotNull TextEdit> differenceAfterAction(@NotNull PsiFile psiFile, @NotNull Consumer<@NotNull PsiFile> action) {
+  public static List<@NotNull TextEdit> differenceAfterAction(@NotNull PsiFile psiFile,
+                                                              @NotNull Function<@NotNull PsiFile, @NotNull PsiFile> action) {
     var copy = (PsiFile) psiFile.copy();
 
-    action.accept(copy);
+    copy = action.apply(copy);
 
     var oldDoc = MiscUtil.getDocument(psiFile);
     assert oldDoc != null;
