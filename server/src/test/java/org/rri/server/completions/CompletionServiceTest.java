@@ -20,7 +20,6 @@ import java.util.HashSet;
 
 @RunWith(JUnit4.class)
 public class CompletionServiceTest extends BasePlatformTestCase {
-
   @Test
   public void testCompletionForKeywordsThatContainsLetterD() {
     final var file = myFixture.configureByFile("only_d_file.py");
@@ -34,22 +33,6 @@ public class CompletionServiceTest extends BasePlatformTestCase {
     correctSet.add(createCompletionItem("lambda", "", null, new ArrayList<>(), "lambda"));
 
     Assertions.assertEquals(correctSet, new HashSet<>(completionItemList));
-  }
-
-  @SuppressWarnings("SameParameterValue")
-  @NotNull
-  private CompletionItem createCompletionItem(@NotNull String label,
-                                              @NotNull String labelDetail,
-                                              @Nullable String detail,
-                                              @NotNull ArrayList<CompletionItemTag> completionItemTags,
-                                              @NotNull String insertText) {
-    return MiscUtil.with(new CompletionItem(), item -> {
-      item.setLabel(label);
-      item.setLabelDetails(MiscUtil.with(new CompletionItemLabelDetails(), completionItemLabelDetails -> completionItemLabelDetails.setDetail(labelDetail)));
-      item.setDetail(detail);
-      item.setTags(completionItemTags);
-      item.setInsertText(insertText);
-    });
   }
 
   @Test
@@ -84,5 +67,21 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   @Override
   protected String getTestDataPath() {
     return "test-data/completion/completion-project";
+  }
+
+  @SuppressWarnings("SameParameterValue")
+  @NotNull
+  private CompletionItem createCompletionItem(@NotNull String label,
+                                              @NotNull String labelDetail,
+                                              @Nullable String detail,
+                                              @NotNull ArrayList<CompletionItemTag> completionItemTags,
+                                              @NotNull String insertText) {
+    return MiscUtil.with(new CompletionItem(), item -> {
+      item.setLabel(label);
+      item.setLabelDetails(MiscUtil.with(new CompletionItemLabelDetails(), completionItemLabelDetails -> completionItemLabelDetails.setDetail(labelDetail)));
+      item.setDetail(detail);
+      item.setTags(completionItemTags);
+      item.setInsertText(insertText);
+    });
   }
 }
