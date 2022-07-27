@@ -9,7 +9,6 @@ import com.intellij.find.findUsages.FindUsagesOptions;
 import com.intellij.find.impl.FindManagerImpl;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.progress.ProcessCanceledException;
-import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.psi.PsiElement;
@@ -69,7 +68,6 @@ public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
 
   @Override
   protected @NotNull List<? extends Location> execute(@NotNull ExecutorContext ctx) {
-    if (DumbService.isDumb(ctx.getProject())) { return List.of(); }
     PsiFile file = ctx.getPsiFile();
     Document doc = MiscUtil.getDocument(file);
     if (doc == null) {
