@@ -61,7 +61,7 @@ public class TypeDefinitionCommandTest extends ReferencesCommandTestBase {
     for (final var entry : checks.entrySet()) {
       final var pos = entry.getKey();
       final var ans = entry.getValue();
-      final var elem = file.findElementAt(MiscUtil.positionToOffset(pos, doc));
+      final var elem = file.findElementAt(MiscUtil.positionToOffset(doc, pos));
       assertNotNull(elem);
 
       final var future = new FindTypeDefinitionCommand(pos).runAsync(getProject(), path);

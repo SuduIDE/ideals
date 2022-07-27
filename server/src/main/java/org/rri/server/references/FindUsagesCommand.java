@@ -11,6 +11,7 @@ import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.progress.ProcessCanceledException;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
+import com.intellij.openapi.util.Disposer;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiInvalidElementAccessException;
@@ -74,10 +75,14 @@ public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
       return List.of();
     }
     var ref = new AtomicReference<PsiElement>();
-    EditorUtil.withEditor(this, file, pos, editor -> {
-      var targetElement = TargetElementUtil.findTargetElement(editor, TargetElementUtil.getInstance().getAllAccepted());
-      ref.set(targetElement);
-    });
+    try {
+      EditorUtil.withEditor(this, file, pos, editor -> {
+        var targetElement = TargetElementUtil.findTargetElement(editor, TargetElementUtil.getInstance().getAllAccepted());
+        ref.set(targetElement);
+      });
+    } finally {
+      Disposer.dispose(this);
+    }
     var target = ref.get();
     if (target == null) {
       return List.of();
