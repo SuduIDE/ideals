@@ -76,10 +76,7 @@ public class CompletionTest extends LspServerTestBase {
           item.setLabel(label);
           item.setInsertText(label);
           item.setLabelDetails(MiscUtil.with(new CompletionItemLabelDetails(),
-              labelDetails -> {
-                labelDetails.setDetail(completionItemLabelDetail);
-                // labelDetails.setDescription(detail); TODO @Ramazan : test fails with this line uncommented
-              }));
+              labelDetails -> labelDetails.setDetail(completionItemLabelDetail)));
           item.setDetail(detail);
           item.setTags(new ArrayList<>());
         }
