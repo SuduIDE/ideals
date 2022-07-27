@@ -26,34 +26,34 @@ public class CompletionServiceTest extends BasePlatformTestCase {
     var completionItemList = TestUtil.getCompletionListAtPosition(
         getProject(), file, new Position(0, 1));
 
-    var correctSet = new HashSet<CompletionItem>();
-    correctSet.add(createCompletionItem("del", "", null, new ArrayList<>(), "del"));
-    correctSet.add(createCompletionItem("def", "", null, new ArrayList<>(), "def"));
-    correctSet.add(createCompletionItem("and", "", null, new ArrayList<>(), "and"));
-    correctSet.add(createCompletionItem("lambda", "", null, new ArrayList<>(), "lambda"));
+    var expected = new HashSet<CompletionItem>();
+    expected.add(createCompletionItem("del", "", null, new ArrayList<>(), "del"));
+    expected.add(createCompletionItem("def", "", null, new ArrayList<>(), "def"));
+    expected.add(createCompletionItem("and", "", null, new ArrayList<>(), "and"));
+    expected.add(createCompletionItem("lambda", "", null, new ArrayList<>(), "lambda"));
 
-    Assertions.assertEquals(correctSet, new HashSet<>(completionItemList));
+    Assertions.assertEquals(expected, new HashSet<>(completionItemList));
   }
 
   @Test
   public void testCompletionForKeywordAndFunctionPython() {
-    var correctSet = new HashSet<CompletionItem>();
-    correctSet.add(createCompletionItem("for", "", null, new ArrayList<>(), "for"));
-    correctSet.add(createCompletionItem("formula", "(x)", null, new ArrayList<>(), "formula"));
+    var expected = new HashSet<CompletionItem>();
+    expected.add(createCompletionItem("for", "", null, new ArrayList<>(), "for"));
+    expected.add(createCompletionItem("formula", "(x)", null, new ArrayList<>(), "formula"));
     final var file = myFixture.configureByFile("function_and_keyword.py");
 
     var completionItemList = TestUtil.getCompletionListAtPosition(
         getProject(), file, new Position(3, 3)
     );
     Assert.assertNotNull(completionItemList);
-    Assert.assertEquals(correctSet, new HashSet<>(completionItemList));
+    Assert.assertEquals(expected, new HashSet<>(completionItemList));
   }
 
   @Test
   public void testCompletionForKeywordAndFunctionJava() {
-    var correctSet = new HashSet<CompletionItem>();
-    correctSet.add(createCompletionItem("formula", "()", "void", new ArrayList<>(), "formula"));
-    correctSet.add(createCompletionItem("for", "", null, new ArrayList<>(), "for"));
+    var expected = new HashSet<CompletionItem>();
+    expected.add(createCompletionItem("formula", "()", "void", new ArrayList<>(), "formula"));
+    expected.add(createCompletionItem("for", "", null, new ArrayList<>(), "for"));
 
     final var file = myFixture.configureByFile("function_and_keyword.java");
 
@@ -61,7 +61,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
         getProject(), file, new Position(2, 7)
     );
     Assert.assertNotNull(completionItemList);
-    Assert.assertEquals(correctSet, new HashSet<>(completionItemList));
+    Assert.assertEquals(expected, new HashSet<>(completionItemList));
   }
 
   @Override
