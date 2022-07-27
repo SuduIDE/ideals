@@ -3,6 +3,7 @@ package org.rri.server.references;
 import com.intellij.codeInsight.navigation.actions.GotoDeclarationAction;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.util.Disposer;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import org.eclipse.lsp4j.Location;
@@ -18,6 +19,7 @@ import org.rri.server.util.MiscUtil;
 
 import java.util.Arrays;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.BiFunction;
 import java.util.function.Supplier;
@@ -61,21 +63,27 @@ public class FindDefinitionCommand extends LspCommand<Either<List<? extends Loca
     Range originalRange = MiscUtil.getPsiElementRange(doc, originalElem);
 
     var ref = new AtomicReference<PsiElement[]>();
-    EditorUtil.withEditor(this, file, pos, editor -> {
-      var declarations = invokeAction.apply(editor, offset);
-      ref.set(declarations);
-    });
+    try {
+      EditorUtil.withEditor(this, file, pos, editor -> {
+        var declarations = invokeAction.apply(editor, offset);
+        ref.set(declarations);
+      });
+    } finally {
+      Disposer.dispose(this);
+    }
     var result = ref.get();
-    if (result == null) {
+    if (result == null || result.length == 0) {
       return Either.forRight(List.of());
     }
 
     var locLst = Arrays.stream(result)
             .map(targetElem -> {
+              if (targetElem.getContainingFile() == null) { return null; }
               Document targetDoc = targetElem.getContainingFile().equals(file)
                       ? doc : MiscUtil.getDocument(targetElem.getContainingFile());
               return MiscUtil.psiElementToLocationLink(targetElem, targetDoc, originalRange);
             })
+            .filter(Objects::nonNull)
             .collect(Collectors.toList());
 
     return Either.forRight(locLst);
