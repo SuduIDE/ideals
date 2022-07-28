@@ -1,5 +1,6 @@
 package org.rri.server.components;
 
+import com.intellij.openapi.application.WriteAction;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.fileEditor.impl.FileDocumentManagerImpl;
@@ -13,6 +14,7 @@ public class TestFileDocumentManager extends FileDocumentManagerImpl {
 
   @Override
   public void saveAllDocuments(boolean isExplicit) {
+    WriteAction.run(this::dropAllUnsavedDocuments);
     // do nothing
   }
 
