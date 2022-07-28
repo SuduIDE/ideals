@@ -69,16 +69,11 @@ public class FindUsagesCommandJavaTest extends ReferencesCommandTestBase {
     final var definitionPath = LspPath.fromVirtualFile(definitionFile);
 
     final var definitionJavaUri = PREFIX_FILE + "org/DefinitionJava.java";
-    final var typeDefinitionIntegratingTestUri = PREFIX_FILE + "TypeDefinitionIntegratingTest.java";
     final var typeDefinitionJavaUri = PREFIX_FILE + "TypeDefinitionJava.java";
 
     final var answers = new HashSet<>(List.of(
             location(definitionJavaUri, range(13, 8, 13, 19)),
             location(definitionJavaUri, range(13, 28, 13, 39)),
-            location(typeDefinitionIntegratingTestUri, range(0, 7, 0, 18)),
-            location(typeDefinitionIntegratingTestUri, range(4, 4, 4, 11)),
-            location(typeDefinitionIntegratingTestUri, range(4, 20, 4, 27)),
-            location(typeDefinitionIntegratingTestUri, range(5, 4, 5, 11)),
             location(typeDefinitionJavaUri, range(0, 7, 0, 18)),
             location(typeDefinitionJavaUri, range(4, 8, 4, 15)),
             location(typeDefinitionJavaUri, range(5, 8, 5, 19))));

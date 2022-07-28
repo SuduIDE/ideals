@@ -28,16 +28,15 @@ public class ReferencesTest extends LspServerTestBase {
   @Test
   public void typeDefinition() {
     final var filePath = LspPath.fromLocalPath(getProjectPath().resolve("src/TypeDefinitionIntegratingTest.java"));
-    final var typeDefinitionParams = new TypeDefinitionParams(new TextDocumentIdentifier(filePath.toLspUri()), new Position(5, 16));
+    final var typeDefinitionParams = new TypeDefinitionParams(new TextDocumentIdentifier(filePath.toLspUri()), new Position(11, 16));
     final var future = server().getTextDocumentService().typeDefinition(typeDefinitionParams);
     final var result = TestUtil.getNonBlockingEdt(future, 30000);
 
-    final var targetRange = new Range(new Position(2, 13), new Position(2, 20));
-    final var originalRange = new Range(new Position(5, 16), new Position(5, 17));
+    final var targetRange = new Range(new Position(1, 16), new Position(1, 23));
+    final var originalRange = new Range(new Position(11, 16), new Position(11, 17));
 
-    final var anotherFilePath = LspPath.fromLocalPath(getProjectPath().resolve("src/org/Another.java"));
     assertEquals(1, result.getRight().size());
-    assertEquals(new LocationLink(anotherFilePath.toLspUri(), targetRange, targetRange, originalRange), result.getRight().get(0));
+    assertEquals(new LocationLink(filePath.toLspUri(), targetRange, targetRange, originalRange), result.getRight().get(0));
   }
 
   @Test
