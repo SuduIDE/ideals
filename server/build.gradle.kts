@@ -19,12 +19,12 @@ dependencies {
 
 // Configure Gradle IntelliJ Plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
 intellij {
-  version.set("2022.1")
+  version.set("2022.2")
   type.set("IC") // Target IDE Platform
   pluginsRepositories {
     marketplace()
   }
-  plugins.set(listOf("Kotlin", "java", "PythonCore:221.5080.216"))
+  plugins.set(listOf("Kotlin", "java", "PythonCore:222.3345.131"))
 }
 
 open class PlainIdeTask : RunIdeTask()
@@ -38,18 +38,30 @@ tasks {
     }
 
     jvmArgs = listOf(
-      "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED",
       "--add-opens=java.base/java.lang=ALL-UNNAMED",
       "--add-opens=java.base/java.lang.reflect=ALL-UNNAMED",
       "--add-opens=java.base/java.io=ALL-UNNAMED",
+      "--add-opens=java.desktop/java.awt=ALL-UNNAMED",
+      "--add-opens=java.desktop/java.awt.event=ALL-UNNAMED",
+      "--add-opens=java.desktop/sun.awt=ALL-UNNAMED",
+      "--add-opens=java.desktop/sun.font=ALL-UNNAMED",
+      "--add-opens=java.desktop/javax.swing=ALL-UNNAMED",
+      "--add-opens=java.desktop/javax.swing.plaf.basic=ALL-UNNAMED",
+      "--add-exports=java.base/sun.nio.ch=ALL-UNNAMED",
+      "--add-exports=java.desktop/sun.awt=ALL-UNNAMED",
+      "--add-exports=java.desktop/sun.font=ALL-UNNAMED",
       "--add-exports=jdk.unsupported/sun.misc=ALL-UNNAMED",
-
+      "--add-exports=java.base/jdk.internal.vm=ALL-UNNAMED",
       "-Djdk.module.illegalAccess.silent=true"
     )
 
     useJUnitPlatform {
       includeEngines("junit-jupiter", "junit-vintage")
     }
+  }
+
+  runIde {
+    jvmArgs = listOf("-Xmx4G")
   }
 
   getByName("runIde") {
@@ -60,8 +72,8 @@ tasks {
 
   // Set the JVM compatibility versions
   withType<JavaCompile> {
-    sourceCompatibility = "11"
-    targetCompatibility = "11"
+    sourceCompatibility = "17"
+    targetCompatibility = "17"
   }
 /*
     withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
