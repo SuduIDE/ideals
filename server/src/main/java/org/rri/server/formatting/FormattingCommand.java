@@ -52,19 +52,19 @@ final public class FormattingCommand extends LspCommand<List<? extends TextEdit>
   @NotNull
   private List<? extends TextEdit> createFormattingResults(@NotNull ExecutorContext context) {
     LOG.info(getMessageSupplier().get());
-    return EditorUtil.differenceAfterAction(context.getPsiFile(), (copy) -> reformatCopy(context, copy));
+    return EditorUtil.differenceAfterAction(context.getPsiFile(), (copy) -> reformatPsiFile(context, copy));
   }
 
   @NotNull
-  public PsiFile reformatCopy(@NotNull ExecutorContext context, @NotNull PsiFile copy) {
+  public PsiFile reformatPsiFile(@NotNull ExecutorContext context, @NotNull PsiFile psiFile) {
     CodeStyle.doWithTemporarySettings(
         context.getProject(),
-        getConfiguredSettings(copy),
-        () -> doReformat(copy, getConfiguredTextRange(copy)));
+        getConfiguredSettings(psiFile),
+        () -> doReformat(psiFile, getConfiguredTextRange(psiFile)));
 
     assert context.getCancelToken() != null;
     context.getCancelToken().checkCanceled();
-    return copy;
+    return psiFile;
   }
 
   @NotNull

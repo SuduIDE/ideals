@@ -7,6 +7,7 @@ import com.intellij.testFramework.PlatformTestUtil;
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
+import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.jetbrains.annotations.NotNull;
 import org.rri.server.completions.CompletionService;
 import org.rri.server.util.MiscUtil;
@@ -53,5 +54,16 @@ public class TestUtil {
   public static TextDocumentIdentifier getDocumentIdentifier(@NotNull LspPath filePath) {
     return MiscUtil.with(new TextDocumentIdentifier(),
         documentIdentifier -> documentIdentifier.setUri(filePath.toLspUri()));
+  }
+
+  public static class DumbCancelChecker implements CancelChecker {
+
+    @Override
+    public void checkCanceled() {}
+
+    @Override
+    public boolean isCanceled() {
+      return false;
+    }
   }
 }

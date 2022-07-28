@@ -61,7 +61,7 @@ public class EditorUtil {
     }
   }
 
-  @NotNull
+  @NotNull // todo replace to misc util
   public static List<@NotNull TextEdit> differenceAfterAction(@NotNull PsiFile psiFile,
                                                               @NotNull Function<@NotNull PsiFile, @NotNull PsiFile> action) {
     var copy = (PsiFile) psiFile.copy();
