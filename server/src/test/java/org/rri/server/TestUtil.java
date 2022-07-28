@@ -4,9 +4,7 @@ import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiFile;
 import com.intellij.testFramework.PlatformTestUtil;
-import org.eclipse.lsp4j.CompletionItem;
-import org.eclipse.lsp4j.Position;
-import org.eclipse.lsp4j.TextDocumentIdentifier;
+import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.jetbrains.annotations.NotNull;
 import org.rri.server.completions.CompletionService;
@@ -54,6 +52,11 @@ public class TestUtil {
   public static TextDocumentIdentifier getDocumentIdentifier(@NotNull LspPath filePath) {
     return MiscUtil.with(new TextDocumentIdentifier(),
         documentIdentifier -> documentIdentifier.setUri(filePath.toLspUri()));
+  }
+
+  public static TextEdit createTextEdit(int startLine, int startCharacter, int endLine, int endCharacter, String newText) {
+    return new TextEdit(new Range(
+        new Position(startLine, startCharacter), new Position(endLine, endCharacter)), newText);
   }
 
   public static class DumbCancelChecker implements CancelChecker {

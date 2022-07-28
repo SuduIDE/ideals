@@ -7,7 +7,7 @@ import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.rri.server.LspPath;
 import org.rri.server.TestUtil;
-import org.rri.server.util.MiscUtil;
+import org.rri.server.formatting.FormattingCommandTests;
 
 import java.util.HashSet;
 import java.util.List;
@@ -28,10 +28,10 @@ public class FormattingTest extends LspServerTestBase {
 
   @Test
   public void formatting() {
-    var lastLineEdit = createTextEdit(3, 2, 3, 2, "  ");
+    var lastLineEdit = TestUtil.createTextEdit(3, 2, 3, 2, "  ");
     final Set<? extends TextEdit> expected = new HashSet<>(Set.of(
-        createTextEdit(1, 2, 1, 2, "  "),
-        createTextEdit(2, 0, 2, 0, "\n\n"),
+        TestUtil.createTextEdit(1, 2, 1, 2, "  "),
+        TestUtil.createTextEdit(2, 0, 2, 0, "\n\n"),
         lastLineEdit
     ));
     final var filePath = LspPath.fromLocalPath(getProjectPath().resolve("main.py"));
@@ -45,7 +45,7 @@ public class FormattingTest extends LspServerTestBase {
     var params = new DocumentFormattingParams();
 
     params.setTextDocument(TestUtil.getDocumentIdentifier(filePath));
-    params.setOptions(defaultOptions());
+    params.setOptions(FormattingCommandTests.defaultOptions());
 
     checkFormattingResult(expected, server().getTextDocumentService().formatting(params));
   }
@@ -54,7 +54,7 @@ public class FormattingTest extends LspServerTestBase {
     var params = new DocumentRangeFormattingParams();
 
     params.setTextDocument(TestUtil.getDocumentIdentifier(filePath));
-    params.setOptions(defaultOptions());
+    params.setOptions(FormattingCommandTests.defaultOptions());
     params.setRange(new Range(new Position(0, 0), new Position(2, 0)));
 
     checkFormattingResult(expected, server().getTextDocumentService().rangeFormatting(params));
@@ -66,20 +66,5 @@ public class FormattingTest extends LspServerTestBase {
     Assertions.assertDoesNotThrow(() -> formattingResRef.set(
         TestUtil.getNonBlockingEdt(formattingResultFuture, 3000)));
     Assertions.assertEquals(expected, new HashSet<>(formattingResRef.get()));
-  }
-
-  private TextEdit createTextEdit(int startLine, int startCharacter, int endLine, int endCharacter, String newText) {
-    return new TextEdit(new Range(
-        new Position(startLine, startCharacter), new Position(endLine, endCharacter)), newText);
-  }
-
-  @NotNull
-  private FormattingOptions defaultOptions() {
-    return MiscUtil.with(
-        new FormattingOptions(),
-        formattingOptions -> {
-          formattingOptions.setInsertSpaces(true);
-          formattingOptions.setTabSize(4);
-        });
   }
 }

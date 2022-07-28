@@ -74,7 +74,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   private CompletionItem createCompletionItem(@NotNull String label,
                                               @NotNull String labelDetail,
                                               @Nullable String detail,
-                                              @NotNull ArrayList<CompletionItemTag> completionItemTags,
+                                              @NotNull ArrayList<@NotNull CompletionItemTag> completionItemTags,
                                               @NotNull String insertText) {
     return MiscUtil.with(new CompletionItem(), item -> {
       item.setLabel(label);

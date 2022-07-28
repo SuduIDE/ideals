@@ -16,7 +16,6 @@ import org.jetbrains.annotations.Nullable;
 import org.rri.server.ManagedDocuments;
 import org.rri.server.commands.ExecutorContext;
 import org.rri.server.commands.LspCommand;
-import org.rri.server.util.EditorUtil;
 import org.rri.server.util.MiscUtil;
 
 import java.util.List;
@@ -52,11 +51,10 @@ final public class FormattingCommand extends LspCommand<List<? extends TextEdit>
   @NotNull
   private List<? extends TextEdit> createFormattingResults(@NotNull ExecutorContext context) {
     LOG.info(getMessageSupplier().get());
-    return EditorUtil.differenceAfterAction(context.getPsiFile(), (copy) -> reformatPsiFile(context, copy));
+    return MiscUtil.differenceAfterAction(context.getPsiFile(), (copy) -> reformatPsiFile(context, copy));
   }
 
-  @NotNull
-  public PsiFile reformatPsiFile(@NotNull ExecutorContext context, @NotNull PsiFile psiFile) {
+  public void reformatPsiFile(@NotNull ExecutorContext context, @NotNull PsiFile psiFile) {
     CodeStyle.doWithTemporarySettings(
         context.getProject(),
         getConfiguredSettings(psiFile),
@@ -64,7 +62,6 @@ final public class FormattingCommand extends LspCommand<List<? extends TextEdit>
 
     assert context.getCancelToken() != null;
     context.getCancelToken().checkCanceled();
-    return psiFile;
   }
 
   @NotNull

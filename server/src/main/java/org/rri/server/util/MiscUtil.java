@@ -1,11 +1,16 @@
 package org.rri.server.util;
 
+import com.intellij.diff.comparison.ComparisonManager;
+import com.intellij.diff.comparison.ComparisonPolicy;
+import com.intellij.diff.fragments.DiffFragment;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.impl.DocumentImpl;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.fileEditor.impl.FileDocumentManagerImpl;
+import com.intellij.openapi.progress.DumbProgressIndicator;
+import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Ref;
 import com.intellij.openapi.util.TextRange;
@@ -13,26 +18,61 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiManager;
 import com.intellij.psi.PsiNameIdentifierOwner;
-import org.eclipse.lsp4j.Location;
-import org.eclipse.lsp4j.LocationLink;
-import org.eclipse.lsp4j.Position;
-import org.eclipse.lsp4j.Range;
+import org.eclipse.lsp4j.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.server.LspPath;
 
+import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
+import java.util.stream.Collectors;
 
 public class MiscUtil {
   private static final Logger LOG = Logger.getInstance(MiscUtil.class);
 
-  private MiscUtil() { }
+  private MiscUtil() {
+  }
 
   @NotNull
   public static <T> T with(@NotNull T object, @NotNull Consumer<T> block) {
     block.accept(object);
     return object;
+  }
+
+  @NotNull //
+  public static List<@NotNull TextEdit> differenceAfterAction(@NotNull PsiFile psiFile,
+                                                              @NotNull Consumer<@NotNull PsiFile> action) {
+    var copy = (PsiFile) psiFile.copy();
+
+    action.accept(copy);
+
+    var oldDoc = MiscUtil.getDocument(psiFile);
+    assert oldDoc != null;
+    var newDoc = MiscUtil.getDocument(copy);
+    assert newDoc != null;
+    return textEditFromDocs(oldDoc, newDoc);
+  }
+
+  @NotNull
+  private static List<@NotNull TextEdit> textEditFromDocs(@NotNull Document oldDoc, @NotNull Document newDoc) {
+    var changes = diff(oldDoc.getText(), newDoc.getText());
+    return changes.stream().map(diffFragment -> {
+      var start = MiscUtil.offsetToPosition(oldDoc, diffFragment.getStartOffset1());
+      var end = MiscUtil.offsetToPosition(oldDoc, diffFragment.getEndOffset1());
+      var text = newDoc.getText(new TextRange(diffFragment.getStartOffset2(), diffFragment.getEndOffset2()));
+      return new TextEdit(new Range(start, end), text);
+    }).collect(Collectors.toList());
+  }
+
+  @NotNull
+  private static List<@NotNull DiffFragment> diff(@NotNull String oldText, @NotNull String newText) {
+    var indicator = ProgressManager.getInstance().getProgressIndicator();
+    if (indicator == null) {
+      indicator = DumbProgressIndicator.INSTANCE;
+    }
+
+    return ComparisonManager.getInstance().compareChars(oldText, newText, ComparisonPolicy.DEFAULT, indicator);
   }
 
   @NotNull
