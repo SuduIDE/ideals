@@ -5,7 +5,6 @@ import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiFile;
 import com.intellij.testFramework.PlatformTestUtil;
 import org.eclipse.lsp4j.*;
-import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.jetbrains.annotations.NotNull;
 import org.rri.server.completions.CompletionService;
 import org.rri.server.util.MiscUtil;
@@ -57,16 +56,5 @@ public class TestUtil {
   public static TextEdit createTextEdit(int startLine, int startCharacter, int endLine, int endCharacter, String newText) {
     return new TextEdit(new Range(
         new Position(startLine, startCharacter), new Position(endLine, endCharacter)), newText);
-  }
-
-  public static class DumbCancelChecker implements CancelChecker {
-
-    @Override
-    public void checkCanceled() {}
-
-    @Override
-    public boolean isCanceled() {
-      return false;
-    }
   }
 }

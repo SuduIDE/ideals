@@ -69,7 +69,7 @@ public class FormattingCommandTest extends BasePlatformTestCase {
                                                 @NotNull FileType fileType) {
     final var actualPsiFile = myFixture.configureByText(fileType, actualText);
 
-    var context = new ExecutorContext(actualPsiFile, getProject(), new TestUtil.DumbCancelChecker());
+    var context = new ExecutorContext(actualPsiFile, getProject(), new FormattingCommandTests.DumbCancelChecker());
     var command = new FormattingCommand(null, FormattingCommandTests.defaultOptions());
 
     return MiscUtil.differenceAfterAction(actualPsiFile, (copy) -> {
