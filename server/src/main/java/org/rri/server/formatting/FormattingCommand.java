@@ -4,7 +4,10 @@ import com.intellij.application.options.CodeStyle;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.TextRange;
+import com.intellij.psi.PsiFile;
 import com.intellij.psi.codeStyle.CodeStyleManager;
+import com.intellij.psi.codeStyle.CodeStyleSettings;
+import com.intellij.psi.codeStyle.CodeStyleSettingsManager;
 import org.eclipse.lsp4j.FormattingOptions;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.TextEdit;
@@ -22,44 +25,72 @@ import java.util.function.Supplier;
 final public class FormattingCommand extends LspCommand<List<? extends TextEdit>> {
   private static final Logger LOG = Logger.getInstance(FormattingCommand.class);
   @Nullable
-  private final Range range;
+  private final Range lspRange;
   @NotNull
   private final FormattingOptions formattingOptions;
 
-  public FormattingCommand(@Nullable Range range, @NotNull FormattingOptions formattingOptions) {
-    this.range = range;
+  public FormattingCommand(@Nullable Range lspRange, @NotNull FormattingOptions formattingOptions) {
+    this.lspRange = lspRange;
     this.formattingOptions = formattingOptions;
+  }
+
+  static public void doReformat(@NotNull PsiFile psiFile, @NotNull TextRange textRange) {
+    ApplicationManager.getApplication().runWriteAction(() ->
+        CodeStyleManager.getInstance(psiFile.getProject())
+            .reformatText(
+                psiFile,
+                textRange.getStartOffset(),
+                textRange.getEndOffset()));
+  }
+
+  @NotNull
+  @Override
+  protected List<? extends TextEdit> execute(@NotNull ExecutorContext context) {
+    return createFormattingResults(context);
   }
 
   @NotNull
   private List<? extends TextEdit> createFormattingResults(@NotNull ExecutorContext context) {
     LOG.info(getMessageSupplier().get());
-    return EditorUtil.differenceAfterAction(context.getPsiFile(), (copy) -> {
-      var codeStyleSettings = CodeStyle.getSettings(copy);
-      var indentOptions = codeStyleSettings.getIndentOptionsByFile(copy);
-      indentOptions.TAB_SIZE = formattingOptions.getTabSize();
-      indentOptions.INDENT_SIZE = formattingOptions.getTabSize();
-      indentOptions.USE_TAB_CHARACTER = !formattingOptions.isInsertSpaces();
-      CodeStyle.doWithTemporarySettings(context.getProject(), codeStyleSettings, () -> {
-        var doc = MiscUtil.getDocument(context.getPsiFile());
-        assert doc != null;
-        TextRange textRange;
-        if (range != null) {
-          textRange = ManagedDocuments.toTextRange(doc, range);
-        } else {
-          textRange = new TextRange(0, copy.getTextLength());
-        }
-        ApplicationManager.getApplication().runWriteAction(() ->
-            CodeStyleManager.getInstance(copy.getProject())
-                .reformatText(
-                    copy,
-                    textRange.getStartOffset(),
-                    textRange.getEndOffset()));
-      });
-      assert context.getCancelToken() != null;
-      context.getCancelToken().checkCanceled();
-      return copy;
-    });
+    return EditorUtil.differenceAfterAction(context.getPsiFile(), (copy) -> reformatCopy(context, copy));
+  }
+
+  @NotNull
+  public PsiFile reformatCopy(@NotNull ExecutorContext context, @NotNull PsiFile copy) {
+    CodeStyle.doWithTemporarySettings(
+        context.getProject(),
+        getConfiguredSettings(copy),
+        () -> doReformat(copy, getConfiguredTextRange(copy)));
+
+    assert context.getCancelToken() != null;
+    context.getCancelToken().checkCanceled();
+    return copy;
+  }
+
+  @NotNull
+  private TextRange getConfiguredTextRange(@NotNull PsiFile psiFile) {
+    var doc = MiscUtil.getDocument(psiFile);
+    assert doc != null;
+    TextRange textRange;
+    if (lspRange != null) {
+      textRange = ManagedDocuments.toTextRange(doc, lspRange);
+    } else {
+      textRange = new TextRange(0, psiFile.getTextLength());
+    }
+    return textRange;
+  }
+
+  @NotNull
+  private CodeStyleSettings getConfiguredSettings(@NotNull PsiFile copy) {
+    var codeStyleSettings =
+        CodeStyleSettingsManager.getInstance().cloneSettings(CodeStyle.getSettings(copy));
+    var indentOptions = codeStyleSettings.getIndentOptionsByFile(copy);
+
+    indentOptions.TAB_SIZE = formattingOptions.getTabSize();
+    indentOptions.INDENT_SIZE = formattingOptions.getTabSize();
+    indentOptions.USE_TAB_CHARACTER = !formattingOptions.isInsertSpaces();
+
+    return codeStyleSettings;
   }
 
   @NotNull
@@ -73,9 +104,4 @@ final public class FormattingCommand extends LspCommand<List<? extends TextEdit>
     return true;
   }
 
-  @NotNull
-  @Override
-  protected List<? extends TextEdit> execute(@NotNull ExecutorContext context) {
-    return createFormattingResults(context);
-  }
 }
