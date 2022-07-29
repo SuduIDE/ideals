@@ -23,19 +23,17 @@ import org.rri.server.LspPath;
 
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
+
 public class MiscUtil {
   private static final Logger LOG = Logger.getInstance(MiscUtil.class);
 
-  private MiscUtil() {
-  }
+  private MiscUtil() { }
 
   @NotNull
   public static <T> T with(@NotNull T object, @NotNull Consumer<T> block) {
     block.accept(object);
     return object;
   }
-
-
 
   @NotNull
   public static Position offsetToPosition(@NotNull Document doc, int offset) {
