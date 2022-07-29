@@ -109,9 +109,9 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
 //      it.setWorkspaceSymbolProvider(true);
 //      it.setCodeActionProvider(false);
 //      it.setCodeLensProvider(new CodeLensOptions(false));
-//      it.setDocumentFormattingProvider(true);
-//      it.setDocumentRangeFormattingProvider(true);
-//      it.setDocumentOnTypeFormattingProvider(null);
+      it.setDocumentFormattingProvider(true);
+      it.setDocumentRangeFormattingProvider(true);
+//      it.setDocumentOnTypeFormattingProvider(null); // todo find on type format in python plugin
 //      it.setRenameProvider(false);
 //      it.setDocumentLinkProvider(null);
 //      it.setExecuteCommandProvider(new ExecuteCommandOptions());

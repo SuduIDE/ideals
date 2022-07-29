@@ -8,12 +8,12 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.vfs.VirtualFileManager;
 import com.intellij.psi.PsiDocumentManager;
 import org.eclipse.lsp4j.*;
 import org.jetbrains.annotations.NotNull;
 import org.rri.server.util.MiscUtil;
+import org.rri.server.util.TextUtil;
 
 import java.util.Comparator;
 import java.util.List;
@@ -201,7 +201,7 @@ final public class ManagedDocuments {
       // Change is the full insertText of the document
       doc.setText(text);
     } else {
-      var textRange = toTextRange(doc, change.getRange());
+      var textRange = TextUtil.toTextRange(doc, change.getRange());
 
       doc.replaceString(textRange.getStartOffset(), textRange.getEndOffset(), text);
     }
@@ -210,13 +210,5 @@ final public class ManagedDocuments {
   @NotNull
   private static String normalizeText(@NotNull String text) {
     return text.replace("\r\n", "\n");
-  }
-
-  @NotNull
-  private static TextRange toTextRange(@NotNull Document doc, Range range) {
-    return new TextRange(
-        MiscUtil.positionToOffset(doc, range.getStart()),
-        MiscUtil.positionToOffset(doc, range.getEnd())
-    );
   }
 }

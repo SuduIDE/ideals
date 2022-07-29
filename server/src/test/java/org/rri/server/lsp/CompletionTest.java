@@ -17,11 +17,6 @@ import java.util.List;
 import java.util.Set;
 
 public class CompletionTest extends LspServerTestBase {
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
-    System.setProperty("idea.log.debug.categories", "#org.rri");
-  }
 
   @Override
   protected String getProjectRelativePath() {
@@ -42,9 +37,7 @@ public class CompletionTest extends LspServerTestBase {
 
     var params = new CompletionParams();
 
-    params.setTextDocument(
-        MiscUtil.with(new TextDocumentIdentifier(),
-            documentIdentifier -> documentIdentifier.setUri(filePath.toLspUri())));
+    params.setTextDocument(TestUtil.getDocumentIdentifier(filePath));
     params.setPosition(completionInvokePosition);
 
     Ref<Either<List<CompletionItem>, CompletionList>> completionResRef = new Ref<>();
@@ -76,10 +69,7 @@ public class CompletionTest extends LspServerTestBase {
           item.setLabel(label);
           item.setInsertText(label);
           item.setLabelDetails(MiscUtil.with(new CompletionItemLabelDetails(),
-              labelDetails -> {
-                labelDetails.setDetail(completionItemLabelDetail);
-                // labelDetails.setDescription(detail); TODO @Ramazan : test fails with this line uncommented
-              }));
+              labelDetails -> labelDetails.setDetail(completionItemLabelDetail)));
           item.setDetail(detail);
           item.setTags(new ArrayList<>());
         }

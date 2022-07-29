@@ -1,5 +1,7 @@
 package org.rri.server.completions;
 
+import com.intellij.openapi.project.Project;
+import com.intellij.psi.PsiFile;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemLabelDetails;
@@ -12,28 +14,65 @@ import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.rri.server.LspPath;
 import org.rri.server.TestUtil;
 import org.rri.server.util.MiscUtil;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @RunWith(JUnit4.class)
 public class CompletionServiceTest extends BasePlatformTestCase {
-
   @Test
   public void testCompletionForKeywordsThatContainsLetterD() {
     final var file = myFixture.configureByFile("only_d_file.py");
-    var completionItemList = TestUtil.getCompletionListAtPosition(
+    var completionItemList = getCompletionListAtPosition(
         getProject(), file, new Position(0, 1));
 
-    var correctSet = new HashSet<CompletionItem>();
-    correctSet.add(createCompletionItem("del", "", null, new ArrayList<>(), "del"));
-    correctSet.add(createCompletionItem("def", "", null, new ArrayList<>(), "def"));
-    correctSet.add(createCompletionItem("and", "", null, new ArrayList<>(), "and"));
-    correctSet.add(createCompletionItem("lambda", "", null, new ArrayList<>(), "lambda"));
+    var expected = new HashSet<CompletionItem>();
+    expected.add(createCompletionItem("del", "", null, new ArrayList<>(), "del"));
+    expected.add(createCompletionItem("def", "", null, new ArrayList<>(), "def"));
+    expected.add(createCompletionItem("and", "", null, new ArrayList<>(), "and"));
+    expected.add(createCompletionItem("lambda", "", null, new ArrayList<>(), "lambda"));
 
-    Assertions.assertEquals(correctSet, new HashSet<>(completionItemList));
+    Assertions.assertEquals(expected, new HashSet<>(completionItemList));
+  }
+
+  @Test
+  public void testCompletionForKeywordAndFunctionPython() {
+    var expected = Set.of(
+        createCompletionItem("for", "", null, new ArrayList<>(), "for"),
+        createCompletionItem("formula", "(x)", null, new ArrayList<>(), "formula"));
+
+    final var file = myFixture.configureByFile("function_and_keyword.py");
+
+    var completionItemList = getCompletionListAtPosition(
+        getProject(), file, new Position(3, 3)
+    );
+    Assert.assertNotNull(completionItemList);
+    Assert.assertEquals(expected, new HashSet<>(completionItemList));
+  }
+
+  @Test
+  public void testCompletionForKeywordAndFunctionJava() {
+    var expected = new HashSet<CompletionItem>();
+    expected.add(createCompletionItem("formula", "()", "void", new ArrayList<>(), "formula"));
+    expected.add(createCompletionItem("for", "", null, new ArrayList<>(), "for"));
+
+    final var file = myFixture.configureByFile("function_and_keyword.java");
+
+    var completionItemList = getCompletionListAtPosition(
+        getProject(), file, new Position(2, 7)
+    );
+    Assert.assertNotNull(completionItemList);
+    Assert.assertEquals(expected, new HashSet<>(completionItemList));
+  }
+
+  @Override
+  protected String getTestDataPath() {
+    return "test-data/completion/completion-project";
   }
 
   @SuppressWarnings("SameParameterValue")
@@ -41,7 +80,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   private CompletionItem createCompletionItem(@NotNull String label,
                                               @NotNull String labelDetail,
                                               @Nullable String detail,
-                                              @NotNull ArrayList<CompletionItemTag> completionItemTags,
+                                              @NotNull ArrayList<@NotNull CompletionItemTag> completionItemTags,
                                               @NotNull String insertText) {
     return MiscUtil.with(new CompletionItem(), item -> {
       item.setLabel(label);
@@ -51,38 +90,10 @@ public class CompletionServiceTest extends BasePlatformTestCase {
       item.setInsertText(insertText);
     });
   }
-
-  @Test
-  public void testCompletionForKeywordAndFunctionPython() {
-    var correctSet = new HashSet<CompletionItem>();
-    correctSet.add(createCompletionItem("for", "", null, new ArrayList<>(), "for"));
-    correctSet.add(createCompletionItem("formula", "(x)", null, new ArrayList<>(), "formula"));
-    final var file = myFixture.configureByFile("function_and_keyword.py");
-
-    var completionItemList = TestUtil.getCompletionListAtPosition(
-        getProject(), file, new Position(3, 3)
-    );
-    Assert.assertNotNull(completionItemList);
-    Assert.assertEquals(correctSet, new HashSet<>(completionItemList));
-  }
-
-  @Test
-  public void testCompletionForKeywordAndFunctionJava() {
-    var correctSet = new HashSet<CompletionItem>();
-    correctSet.add(createCompletionItem("formula", "()", "void", new ArrayList<>(), "formula"));
-    correctSet.add(createCompletionItem("for", "", null, new ArrayList<>(), "for"));
-
-    final var file = myFixture.configureByFile("function_and_keyword.java");
-
-    var completionItemList = TestUtil.getCompletionListAtPosition(
-        getProject(), file, new Position(2, 7)
-    );
-    Assert.assertNotNull(completionItemList);
-    Assert.assertEquals(correctSet, new HashSet<>(completionItemList));
-  }
-
-  @Override
-  protected String getTestDataPath() {
-    return "test-data/completion/completion-project";
+  @NotNull
+  private static List<@NotNull CompletionItem> getCompletionListAtPosition(
+      @NotNull Project project, @NotNull PsiFile file, @NotNull Position position) {
+    return TestUtil.getNonBlockingEdt(project.getService(CompletionService.class).startCompletionCalculation(
+        LspPath.fromVirtualFile(file.getVirtualFile()), position), 3000).getLeft();
   }
 }

@@ -1,16 +1,14 @@
 package org.rri.server;
 
 import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.project.Project;
-import com.intellij.psi.PsiFile;
 import com.intellij.testFramework.PlatformTestUtil;
-import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.Range;
+import org.eclipse.lsp4j.TextDocumentIdentifier;
+import org.eclipse.lsp4j.TextEdit;
 import org.jetbrains.annotations.NotNull;
-import org.rri.server.completions.CompletionService;
 import org.rri.server.util.MiscUtil;
 
-import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.TimeoutException;
@@ -42,9 +40,13 @@ public class TestUtil {
   }
 
   @NotNull
-  public static List<CompletionItem> getCompletionListAtPosition(
-          @NotNull Project project, @NotNull PsiFile file, @NotNull Position position) {
-    return TestUtil.getNonBlockingEdt(project.getService(CompletionService.class).startCompletionCalculation(
-            LspPath.fromVirtualFile(file.getVirtualFile()), position), 3000).getLeft();
+  public static TextDocumentIdentifier getDocumentIdentifier(@NotNull LspPath filePath) {
+    return MiscUtil.with(new TextDocumentIdentifier(),
+        documentIdentifier -> documentIdentifier.setUri(filePath.toLspUri()));
+  }
+
+  public static TextEdit createTextEdit(int startLine, int startCharacter, int endLine, int endCharacter, String newText) {
+    return new TextEdit(new Range(
+        new Position(startLine, startCharacter), new Position(endLine, endCharacter)), newText);
   }
 }
