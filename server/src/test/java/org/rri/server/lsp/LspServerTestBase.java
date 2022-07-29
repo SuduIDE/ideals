@@ -25,6 +25,12 @@ public abstract class LspServerTestBase extends HeavyPlatformTestCase {
 
   private MockLanguageClient client;
 
+  @Override
+  protected void setUp() throws Exception {
+    System.setProperty("idea.log.debug.categories", "#org.rri");
+    super.setUp();
+  }
+
   @NotNull
   protected Path getTestDataRoot() {
     return Paths.get("test-data").toAbsolutePath();

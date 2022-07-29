@@ -17,11 +17,6 @@ import java.util.List;
 import java.util.Set;
 
 public class CompletionTest extends LspServerTestBase {
-  @Override
-  protected void setUp() throws Exception {
-    super.setUp();
-    System.setProperty("idea.log.debug.categories", "#org.rri");
-  }
 
   @Override
   protected String getProjectRelativePath() {

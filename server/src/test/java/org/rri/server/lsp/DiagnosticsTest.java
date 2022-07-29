@@ -13,12 +13,6 @@ import java.util.List;
 public class DiagnosticsTest extends LspServerTestBase {
 
   @Override
-  protected void setUp() throws Exception {
-    System.setProperty("idea.log.debug.categories", "#org.rri");
-    super.setUp();
-  }
-
-  @Override
   protected String getProjectRelativePath() {
     return "lsp/project1";
   }

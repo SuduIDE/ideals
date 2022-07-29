@@ -4,6 +4,7 @@ import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import com.jetbrains.python.PythonFileType;
 import org.eclipse.lsp4j.TextEdit;
+import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
@@ -79,8 +80,8 @@ public class FormattingCommandTest extends BasePlatformTestCase {
                                                  @NotNull FileType fileType) {
     final var actualPsiFile = myFixture.configureByText(fileType, actualText);
 
-    var context = new ExecutorContext(actualPsiFile, getProject(), new FormattingDefaultConfigurations.DumbCancelChecker());
-    var command = new FormattingCommand(null, FormattingDefaultConfigurations.defaultOptions());
+    var context = new ExecutorContext(actualPsiFile, getProject(), new DumbCancelChecker());
+    var command = new FormattingCommand(null, FormattingTestUtil.defaultOptions());
 
     return MiscUtil.differenceAfterAction(actualPsiFile, (copy) -> {
       command.reformatPsiFile(context, copy);
@@ -93,5 +94,16 @@ public class FormattingCommandTest extends BasePlatformTestCase {
   @Override
   protected String getTestDataPath() {
     return "test-data/formatting/formatting-project";
+  }
+
+  private static class DumbCancelChecker implements CancelChecker {
+
+    @Override
+    public void checkCanceled() {}
+
+    @Override
+    public boolean isCanceled() {
+      return false;
+    }
   }
 }
