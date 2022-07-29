@@ -1,5 +1,6 @@
 package org.rri.server.util;
 
+import com.intellij.codeInsight.TargetElementUtil;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
@@ -7,10 +8,12 @@ import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.EditorFactory;
 import com.intellij.openapi.editor.LogicalPosition;
 import com.intellij.openapi.util.Disposer;
+import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import org.codehaus.plexus.util.ExceptionUtils;
 import org.eclipse.lsp4j.Position;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Consumer;
 
@@ -48,5 +51,9 @@ public class EditorUtil {
       LOG.error("Exception during editor callback: " + e
               + ExceptionUtils.getStackTrace(e));
     }
+  }
+
+  public static @Nullable PsiElement findTargetElement(@NotNull Editor editor) {
+    return TargetElementUtil.findTargetElement(editor, TargetElementUtil.getInstance().getAllAccepted());
   }
 }
