@@ -126,7 +126,7 @@ public class DocumentHighlightCommand extends LspCommand<List<? extends Document
   }
 
 
-  private @NotNull UsageTarget[] getUsageTargets(Editor editor, PsiFile file) {
+  private @NotNull UsageTarget @Nullable [] getUsageTargets(Editor editor, PsiFile file) {
     var usageTargets = UsageTargetUtil.findUsageTargets(editor, file);
     if (Arrays.equals(usageTargets, UsageTarget.EMPTY_ARRAY)) {
       usageTargets = getUsageTargetsFromNavItem(editor, file);

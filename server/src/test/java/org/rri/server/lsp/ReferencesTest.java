@@ -57,8 +57,9 @@ public class ReferencesTest extends LspServerTestBase {
 
   @Test
   public void documentHighlight() {
-    final var filePath = LspPath.fromLocalPath(getProjectPath().resolve("src/DocumentHighlightIntegratingTest.java"));
+    final var filePath = LspPath.fromLocalPath(getTestDataRoot().resolve("references/java/project2/src/DocumentHighlightIntegratingTest.java"));
     final var virtualFile = filePath.findVirtualFile();
+    System.out.println(filePath.toPath());
     assertNotNull(virtualFile);
     final var documentHighlightParams = new DocumentHighlightParams(new TextDocumentIdentifier(filePath.toLspUri()), new Position(2, 8));
     final var future = server().getTextDocumentService().documentHighlight(documentHighlightParams);
