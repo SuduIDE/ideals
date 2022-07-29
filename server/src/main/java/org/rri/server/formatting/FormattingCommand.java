@@ -33,7 +33,7 @@ final public class FormattingCommand extends LspCommand<List<? extends TextEdit>
     this.formattingOptions = formattingOptions;
   }
 
-  static public void doReformat(@NotNull PsiFile psiFile, @NotNull TextRange textRange) {
+  static private void doReformat(@NotNull PsiFile psiFile, @NotNull TextRange textRange) {
     ApplicationManager.getApplication().runWriteAction(() ->
         CodeStyleManager.getInstance(psiFile.getProject())
             .reformatText(
@@ -45,17 +45,14 @@ final public class FormattingCommand extends LspCommand<List<? extends TextEdit>
   @NotNull
   @Override
   protected List<? extends TextEdit> execute(@NotNull ExecutorContext context) {
-    return createFormattingResults(context);
-  }
-
-  @NotNull
-  private List<? extends TextEdit> createFormattingResults(@NotNull ExecutorContext context) {
+    // create reformat results
     LOG.info(getMessageSupplier().get());
-    return TextUtil.differenceAfterAction(context.getPsiFile(), (copy) -> reformatPsiFile(context,
-        copy));
+    return TextUtil.differenceAfterAction(
+        context.getPsiFile(),
+        (copy) -> reformatPsiFile(context, copy));
   }
 
-  public void reformatPsiFile(@NotNull ExecutorContext context, @NotNull PsiFile psiFile) {
+  void reformatPsiFile(@NotNull ExecutorContext context, @NotNull PsiFile psiFile) {
     CodeStyle.doWithTemporarySettings(
         context.getProject(),
         getConfiguredSettings(psiFile),
