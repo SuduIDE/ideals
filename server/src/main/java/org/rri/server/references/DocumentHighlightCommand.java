@@ -14,6 +14,7 @@ import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.IndexNotReadyException;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.Ref;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiElement;
@@ -61,13 +62,17 @@ public class DocumentHighlightCommand extends LspCommand<List<? extends Document
   @Override
   protected @NotNull List<? extends DocumentHighlight> execute(@NotNull ExecutorContext ctx) {
     final var ref = new Ref<List<DocumentHighlight>>();
-    EditorUtil.withEditor(this, ctx.getPsiFile(), pos, editor -> {
-      try {
-        ref.set(findHighlights(ctx.getProject(), editor, ctx.getPsiFile()));
-      } catch (IndexNotReadyException e) {
-        ref.set(List.of());
-      }
-    });
+    try {
+      EditorUtil.withEditor(this, ctx.getPsiFile(), pos, editor -> {
+        try {
+          ref.set(findHighlights(ctx.getProject(), editor, ctx.getPsiFile()));
+        } catch (IndexNotReadyException e) {
+          ref.set(List.of());
+        }
+      });
+    } finally {
+      Disposer.dispose(this);
+    }
 
     return ref.get();
   }
