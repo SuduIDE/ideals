@@ -1,7 +1,9 @@
 package org.rri.server.formatting;
 
+import com.intellij.CodeStyleBundle;
 import com.intellij.application.options.CodeStyle;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.command.CommandProcessor;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiFile;
@@ -38,8 +40,8 @@ final public class FormattingCommand extends LspCommand<List<? extends TextEdit>
         CodeStyleManager.getInstance(psiFile.getProject())
             .reformatText(
                 psiFile,
-                textRange.getStartOffset(),
-                textRange.getEndOffset()));
+                List.of(textRange))
+    );
   }
 
   @NotNull
@@ -53,10 +55,18 @@ final public class FormattingCommand extends LspCommand<List<? extends TextEdit>
   }
 
   void reformatPsiFile(@NotNull ExecutorContext context, @NotNull PsiFile psiFile) {
-    CodeStyle.doWithTemporarySettings(
-        context.getProject(),
-        getConfiguredSettings(psiFile),
-        () -> doReformat(psiFile, getConfiguredTextRange(psiFile)));
+    CommandProcessor
+        .getInstance()
+        .executeCommand(
+            context.getProject(),
+            () -> CodeStyle.doWithTemporarySettings(
+                context.getProject(),
+                getConfiguredSettings(psiFile),
+                () -> doReformat(psiFile, getConfiguredTextRange(psiFile))),
+            // this name is necessary for ideas blackbox TextRange formatting
+            CodeStyleBundle.message("process.reformat.code"),
+            null);
+
 
     assert context.getCancelToken() != null;
     context.getCancelToken().checkCanceled();

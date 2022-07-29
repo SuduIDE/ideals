@@ -3,9 +3,12 @@ package org.rri.server.formatting;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import com.jetbrains.python.PythonFileType;
+import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.runner.RunWith;
@@ -117,15 +120,60 @@ public class FormattingCommandTest extends BasePlatformTestCase {
 
   }
 
+  @Test
+  public void testTextRangeFormatInSelectFormatting() {
+    Assertions.assertEquals(
+        List.of(
+            TestUtil.createTextEdit(0, 0, 0, 4, "")
+        ),
+        getEditsByTextAndSelectRange(
+            """
+                    x = 1
+                    x = 1
+                """,
+            """
+                x = 1
+                    x = 1
+                """,
+            PythonFileType.INSTANCE,
+            new Range(new Position(0, 0), new Position(0, 13)))
+    );
+
+    Assertions.assertEquals(
+        List.of(
+            TestUtil.createTextEdit(0, 0, 0, 4, ""),
+            TestUtil.createTextEdit(1, 0, 1, 4, "")
+        ),
+        getEditsByTextAndSelectRange(
+            """
+                    x = 1
+                    x = 1
+                """,
+            """
+                x = 1
+                x = 1
+                """,
+            PythonFileType.INSTANCE,
+            new Range(new Position(0, 0), new Position(0, 14)))
+    );
+  }
+
   @SuppressWarnings("SameParameterValue")
   @NotNull
   private List<@NotNull TextEdit> getEditsByText(@NotNull String actualText,
                                                  @NotNull String expectedText,
                                                  @NotNull FileType fileType) {
+    return getEditsByTextAndSelectRange(actualText, expectedText, fileType, null);
+  }
+
+  private List<@NotNull TextEdit> getEditsByTextAndSelectRange(@NotNull String actualText,
+                                                               @NotNull String expectedText,
+                                                               @NotNull FileType fileType,
+                                                               @Nullable Range lspRange) {
     final var actualPsiFile = myFixture.configureByText(fileType, actualText);
 
     var context = new ExecutorContext(actualPsiFile, getProject(), new DumbCancelChecker());
-    var command = new FormattingCommand(null, FormattingTestUtil.defaultOptions());
+    var command = new FormattingCommand(lspRange, FormattingTestUtil.defaultOptions());
 
     return TextUtil.differenceAfterAction(actualPsiFile, (copy) -> {
       command.reformatPsiFile(context, copy);
