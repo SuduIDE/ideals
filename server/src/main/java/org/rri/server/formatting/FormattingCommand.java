@@ -16,6 +16,7 @@ import org.jetbrains.annotations.Nullable;
 import org.rri.server.commands.ExecutorContext;
 import org.rri.server.commands.LspCommand;
 import org.rri.server.util.MiscUtil;
+import org.rri.server.util.TextUtil;
 
 import java.util.List;
 import java.util.function.Supplier;
@@ -50,7 +51,8 @@ final public class FormattingCommand extends LspCommand<List<? extends TextEdit>
   @NotNull
   private List<? extends TextEdit> createFormattingResults(@NotNull ExecutorContext context) {
     LOG.info(getMessageSupplier().get());
-    return MiscUtil.differenceAfterAction(context.getPsiFile(), (copy) -> reformatPsiFile(context, copy));
+    return TextUtil.differenceAfterAction(context.getPsiFile(), (copy) -> reformatPsiFile(context,
+        copy));
   }
 
   public void reformatPsiFile(@NotNull ExecutorContext context, @NotNull PsiFile psiFile) {
@@ -69,7 +71,7 @@ final public class FormattingCommand extends LspCommand<List<? extends TextEdit>
     assert doc != null;
     TextRange textRange;
     if (lspRange != null) {
-      textRange = MiscUtil.toTextRange(doc, lspRange);
+      textRange = TextUtil.toTextRange(doc, lspRange);
     } else {
       textRange = new TextRange(0, psiFile.getTextLength());
     }

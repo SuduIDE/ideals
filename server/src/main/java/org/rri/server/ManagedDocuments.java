@@ -13,6 +13,7 @@ import com.intellij.psi.PsiDocumentManager;
 import org.eclipse.lsp4j.*;
 import org.jetbrains.annotations.NotNull;
 import org.rri.server.util.MiscUtil;
+import org.rri.server.util.TextUtil;
 
 import java.util.Comparator;
 import java.util.List;
@@ -200,7 +201,7 @@ final public class ManagedDocuments {
       // Change is the full insertText of the document
       doc.setText(text);
     } else {
-      var textRange = MiscUtil.toTextRange(doc, change.getRange());
+      var textRange = TextUtil.toTextRange(doc, change.getRange());
 
       doc.replaceString(textRange.getStartOffset(), textRange.getEndOffset(), text);
     }

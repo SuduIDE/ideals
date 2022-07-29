@@ -12,7 +12,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.rri.server.TestUtil;
 import org.rri.server.commands.ExecutorContext;
-import org.rri.server.util.MiscUtil;
+import org.rri.server.util.TextUtil;
 
 import java.util.List;
 
@@ -37,39 +37,83 @@ public class FormattingCommandTest extends BasePlatformTestCase {
 
   @Test
   public void testExtraSpacesAndNewlinesVarDec() {
-    Assertions.assertEquals(getEditsByText("\n     x=10", "x = 10", PythonFileType.INSTANCE),
+    Assertions.assertEquals(
         List.of(
             TestUtil.createTextEdit(0, 0, 1, 5, ""),
             TestUtil.createTextEdit(1, 6, 1, 6, " "),
-            TestUtil.createTextEdit(1, 7, 1, 7, " ")));
+            TestUtil.createTextEdit(1, 7, 1, 7, " ")),
+        getEditsByText(
+            """
+                                
+                     x=10
+                """,
+            """
+                x = 10
+                """,
+            PythonFileType.INSTANCE)
+    );
   }
 
   @Test
   public void testExtraSpaceBetweenFuncDecAndOtherStatements() {
-    Assertions.assertEquals(getEditsByText(
-            "def  foo  (x)   : x = 1\nx = 1", "def foo(x): x = 1\n\n\nx = 1", PythonFileType.INSTANCE),
+    Assertions.assertEquals(
         List.of(
             TestUtil.createTextEdit(0, 4, 0, 5, ""),
             TestUtil.createTextEdit(0, 8, 0, 10, ""),
             TestUtil.createTextEdit(0, 13, 0, 16, ""),
             TestUtil.createTextEdit(1, 0, 1, 0, "\n\n")
-        ));
+        ),
+        getEditsByText(
+            """
+                def  foo  (x)   : x = 1
+                x = 1
+                """,
+            """
+                def foo(x): x = 1
+                                
+                                
+                x = 1
+                """,
+            PythonFileType.INSTANCE)
+    );
   }
 
   @Test
   public void testEmptyForStatement() {
-    Assertions.assertEquals(getEditsByText(
-        "for i in range(10):\ni += 1", "for i in range(10):\n    i += 1", PythonFileType.INSTANCE), List.of(
-        TestUtil.createTextEdit(1, 0, 1, 0, "    ")
-    ));
+    Assertions.assertEquals(
+        List.of(
+            TestUtil.createTextEdit(1, 0, 1, 0, "    ")
+        ),
+        getEditsByText(
+            """
+                for i in range(10):
+                i += 1
+                """,
+            """
+                for i in range(10):
+                    i += 1
+                """,
+            PythonFileType.INSTANCE));
   }
 
   @Test
   public void testExtraSpaceBetweenImportListAndOtherStatements() {
-    Assertions.assertEquals(getEditsByText(
-        "import sys x = 1", "import sys\n\nx = 1", PythonFileType.INSTANCE), List.of(
-        TestUtil.createTextEdit(0, 10, 0, 11, "\n\n")
-    ));
+    Assertions.assertEquals(
+        List.of(
+            TestUtil.createTextEdit(0, 10, 0, 11, "\n\n")
+        ),
+        getEditsByText(
+            """
+                import sys x = 1
+                """,
+            """
+                import sys
+                        
+                x = 1
+                """,
+            PythonFileType.INSTANCE)
+
+    );
 
   }
 
@@ -83,7 +127,7 @@ public class FormattingCommandTest extends BasePlatformTestCase {
     var context = new ExecutorContext(actualPsiFile, getProject(), new DumbCancelChecker());
     var command = new FormattingCommand(null, FormattingTestUtil.defaultOptions());
 
-    return MiscUtil.differenceAfterAction(actualPsiFile, (copy) -> {
+    return TextUtil.differenceAfterAction(actualPsiFile, (copy) -> {
       command.reformatPsiFile(context, copy);
       Assertions.assertNotEquals(actualPsiFile, copy);
       Assertions.assertEquals(expectedText, copy.getText());
