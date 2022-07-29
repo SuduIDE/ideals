@@ -1,5 +1,7 @@
 package org.rri.server.completions;
 
+import com.intellij.openapi.project.Project;
+import com.intellij.psi.PsiFile;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemLabelDetails;
@@ -12,18 +14,21 @@ import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.rri.server.LspPath;
 import org.rri.server.TestUtil;
 import org.rri.server.util.MiscUtil;
 
 import java.util.ArrayList;
 import java.util.HashSet;
+import java.util.List;
+import java.util.Set;
 
 @RunWith(JUnit4.class)
 public class CompletionServiceTest extends BasePlatformTestCase {
   @Test
   public void testCompletionForKeywordsThatContainsLetterD() {
     final var file = myFixture.configureByFile("only_d_file.py");
-    var completionItemList = TestUtil.getCompletionListAtPosition(
+    var completionItemList = getCompletionListAtPosition(
         getProject(), file, new Position(0, 1));
 
     var expected = new HashSet<CompletionItem>();
@@ -37,12 +42,13 @@ public class CompletionServiceTest extends BasePlatformTestCase {
 
   @Test
   public void testCompletionForKeywordAndFunctionPython() {
-    var expected = new HashSet<CompletionItem>();
-    expected.add(createCompletionItem("for", "", null, new ArrayList<>(), "for"));
-    expected.add(createCompletionItem("formula", "(x)", null, new ArrayList<>(), "formula"));
+    var expected = Set.of(
+        createCompletionItem("for", "", null, new ArrayList<>(), "for"),
+        createCompletionItem("formula", "(x)", null, new ArrayList<>(), "formula"));
+
     final var file = myFixture.configureByFile("function_and_keyword.py");
 
-    var completionItemList = TestUtil.getCompletionListAtPosition(
+    var completionItemList = getCompletionListAtPosition(
         getProject(), file, new Position(3, 3)
     );
     Assert.assertNotNull(completionItemList);
@@ -57,7 +63,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
 
     final var file = myFixture.configureByFile("function_and_keyword.java");
 
-    var completionItemList = TestUtil.getCompletionListAtPosition(
+    var completionItemList = getCompletionListAtPosition(
         getProject(), file, new Position(2, 7)
     );
     Assert.assertNotNull(completionItemList);
@@ -83,5 +89,11 @@ public class CompletionServiceTest extends BasePlatformTestCase {
       item.setTags(completionItemTags);
       item.setInsertText(insertText);
     });
+  }
+  @NotNull
+  private static List<@NotNull CompletionItem> getCompletionListAtPosition(
+      @NotNull Project project, @NotNull PsiFile file, @NotNull Position position) {
+    return TestUtil.getNonBlockingEdt(project.getService(CompletionService.class).startCompletionCalculation(
+        LspPath.fromVirtualFile(file.getVirtualFile()), position), 3000).getLeft();
   }
 }

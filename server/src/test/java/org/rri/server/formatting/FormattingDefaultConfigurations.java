@@ -5,8 +5,8 @@ import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.jetbrains.annotations.NotNull;
 import org.rri.server.util.MiscUtil;
 
-public final class FormattingCommandTests {
-  private FormattingCommandTests() {
+public final class FormattingDefaultConfigurations {
+  private FormattingDefaultConfigurations() {
   }
 
   @NotNull

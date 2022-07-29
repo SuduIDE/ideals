@@ -7,7 +7,7 @@ import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.rri.server.LspPath;
 import org.rri.server.TestUtil;
-import org.rri.server.formatting.FormattingCommandTests;
+import org.rri.server.formatting.FormattingDefaultConfigurations;
 
 import java.util.HashSet;
 import java.util.List;
@@ -45,7 +45,7 @@ public class FormattingTest extends LspServerTestBase {
     var params = new DocumentFormattingParams();
 
     params.setTextDocument(TestUtil.getDocumentIdentifier(filePath));
-    params.setOptions(FormattingCommandTests.defaultOptions());
+    params.setOptions(FormattingDefaultConfigurations.defaultOptions());
 
     checkFormattingResult(expected, server().getTextDocumentService().formatting(params));
   }
@@ -54,7 +54,7 @@ public class FormattingTest extends LspServerTestBase {
     var params = new DocumentRangeFormattingParams();
 
     params.setTextDocument(TestUtil.getDocumentIdentifier(filePath));
-    params.setOptions(FormattingCommandTests.defaultOptions());
+    params.setOptions(FormattingDefaultConfigurations.defaultOptions());
     params.setRange(new Range(new Position(0, 0), new Position(2, 0)));
 
     checkFormattingResult(expected, server().getTextDocumentService().rangeFormatting(params));

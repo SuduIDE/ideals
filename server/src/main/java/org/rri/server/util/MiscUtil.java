@@ -27,7 +27,7 @@ import java.util.List;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
 import java.util.stream.Collectors;
-
+// todo TextUtil
 public class MiscUtil {
   private static final Logger LOG = Logger.getInstance(MiscUtil.class);
 
@@ -40,7 +40,15 @@ public class MiscUtil {
     return object;
   }
 
-  @NotNull //
+  @NotNull
+  public static TextRange toTextRange(@NotNull Document doc, Range range) {
+    return new TextRange(
+        MiscUtil.positionToOffset(doc, range.getStart()),
+        MiscUtil.positionToOffset(doc, range.getEnd())
+    );
+  }
+
+  @NotNull
   public static List<@NotNull TextEdit> differenceAfterAction(@NotNull PsiFile psiFile,
                                                               @NotNull Consumer<@NotNull PsiFile> action) {
     var copy = (PsiFile) psiFile.copy();

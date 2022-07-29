@@ -13,7 +13,6 @@ import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.TextEdit;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.rri.server.ManagedDocuments;
 import org.rri.server.commands.ExecutorContext;
 import org.rri.server.commands.LspCommand;
 import org.rri.server.util.MiscUtil;
@@ -70,7 +69,7 @@ final public class FormattingCommand extends LspCommand<List<? extends TextEdit>
     assert doc != null;
     TextRange textRange;
     if (lspRange != null) {
-      textRange = ManagedDocuments.toTextRange(doc, lspRange);
+      textRange = MiscUtil.toTextRange(doc, lspRange);
     } else {
       textRange = new TextRange(0, psiFile.getTextLength());
     }
