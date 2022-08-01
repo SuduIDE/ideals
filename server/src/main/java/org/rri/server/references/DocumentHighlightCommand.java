@@ -43,9 +43,10 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class DocumentHighlightCommand extends LspCommand<List<? extends DocumentHighlight>> {
+  @NotNull
   private final Position pos;
 
-  public DocumentHighlightCommand(Position pos) {
+  public DocumentHighlightCommand(@NotNull Position pos) {
     this.pos = pos;
   }
 
@@ -77,7 +78,9 @@ public class DocumentHighlightCommand extends LspCommand<List<? extends Document
     return ref.get();
   }
 
-  private @NotNull List<@NotNull DocumentHighlight> findHighlights(Project project, Editor editor, PsiFile file) {
+  private @NotNull List<@NotNull DocumentHighlight> findHighlights(@NotNull Project project,
+                                                                   @NotNull Editor editor,
+                                                                   @NotNull PsiFile file) {
     final HighlightUsagesHandlerBase<PsiElement> handler = HighlightUsagesHandler.createCustomHandler(editor, file);
     return handler != null ? getHighlightsFromHandler(handler, editor) : getHighlightsFromUsages(project, editor, file);
   }
@@ -103,7 +106,7 @@ public class DocumentHighlightCommand extends LspCommand<List<? extends Document
                                                                            @NotNull Editor editor,
                                                                            @NotNull DocumentHighlightKind kind) {
     return usages.stream().map(textRange -> new DocumentHighlight(textRangeToRange(editor, textRange), kind))
-            .collect(Collectors.toList());
+        .collect(Collectors.toList());
   }
 
   private @NotNull List<@NotNull DocumentHighlight> getHighlightsFromUsages(@NotNull Project project,
@@ -116,9 +119,9 @@ public class DocumentHighlightCommand extends LspCommand<List<? extends Document
         ref.set(List.of());
       } else {
         final var result = Arrays.stream(usageTargets)
-                .map(usage -> extractDocumentHighlightFromRaw(project, file, editor, usage))
-                .flatMap(Collection::stream)
-                .collect(Collectors.toList());
+            .map(usage -> extractDocumentHighlightFromRaw(project, file, editor, usage))
+            .flatMap(Collection::stream)
+            .collect(Collectors.toList());
         ref.set(result);
       }
     });
@@ -126,7 +129,7 @@ public class DocumentHighlightCommand extends LspCommand<List<? extends Document
   }
 
 
-  private @NotNull UsageTarget @Nullable [] getUsageTargets(Editor editor, PsiFile file) {
+  private @NotNull UsageTarget @Nullable [] getUsageTargets(@NotNull Editor editor, @NotNull PsiFile file) {
     var usageTargets = UsageTargetUtil.findUsageTargets(editor, file);
     if (Arrays.equals(usageTargets, UsageTarget.EMPTY_ARRAY)) {
       usageTargets = getUsageTargetsFromNavItem(editor, file);
@@ -175,7 +178,9 @@ public class DocumentHighlightCommand extends LspCommand<List<? extends Document
                                                                                     @NotNull UsageTarget usage) {
     if (usage instanceof PsiElement2UsageTargetAdapter) {
       final var target = ((PsiElement2UsageTargetAdapter) usage).getTargetElement();
-      if (target == null) { return List.of(); }
+      if (target == null) {
+        return List.of();
+      }
       final var refs = findRefsToElement(target, project, file);
       return refsToHighlights(target, file, editor, refs);
     } else {
@@ -194,8 +199,8 @@ public class DocumentHighlightCommand extends LspCommand<List<? extends Document
 
     final var searchScope = new LocalSearchScope(context);
     final var result = handler == null
-            ? ReferencesSearch.search(target, searchScope, false).findAll()
-            : handler.findReferencesToHighlight(target, searchScope);
+        ? ReferencesSearch.search(target, searchScope, false).findAll()
+        : handler.findReferencesToHighlight(target, searchScope);
     return result.stream().filter(Objects::nonNull).toList();
   }
 
@@ -225,8 +230,8 @@ public class DocumentHighlightCommand extends LspCommand<List<? extends Document
     final var range = HighlightUsagesHandler.getNameIdentifierRange(file, element);
     if (range != null) {
       final var kind = (detector != null && detector.isDeclarationWriteAccess(element))
-              ? DocumentHighlightKind.Write
-              : DocumentHighlightKind.Text;
+          ? DocumentHighlightKind.Write
+          : DocumentHighlightKind.Text;
       highlights.add(new DocumentHighlight(textRangeToRange(editor, range), kind));
     }
     return highlights;
@@ -241,7 +246,7 @@ public class DocumentHighlightCommand extends LspCommand<List<? extends Document
       HighlightUsagesHandler.collectRangesToHighlight(ref, textRanges);
     }
     final var toAdd = textRanges.stream()
-            .map(textRange -> new DocumentHighlight(textRangeToRange(editor, textRange), kind)).toList();
+        .map(textRange -> new DocumentHighlight(textRangeToRange(editor, textRange), kind)).toList();
     highlights.addAll(toAdd);
   }
 

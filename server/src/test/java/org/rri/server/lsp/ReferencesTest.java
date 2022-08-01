@@ -59,7 +59,6 @@ public class ReferencesTest extends LspServerTestBase {
   public void documentHighlight() {
     final var filePath = LspPath.fromLocalPath(getTestDataRoot().resolve("references/java/project2/src/DocumentHighlightIntegratingTest.java"));
     final var virtualFile = filePath.findVirtualFile();
-    System.out.println(filePath.toPath());
     assertNotNull(virtualFile);
     final var documentHighlightParams = new DocumentHighlightParams(new TextDocumentIdentifier(filePath.toLspUri()), new Position(2, 8));
     final var future = server().getTextDocumentService().documentHighlight(documentHighlightParams);
@@ -68,7 +67,7 @@ public class ReferencesTest extends LspServerTestBase {
     final var targetWriteRange = new Range(new Position(2, 8), new Position(2, 9));
     final var targetReadRange = new Range(new Position(3, 12), new Position(3, 13));
     final var answer = new HashSet<>(List.of(new DocumentHighlight(targetReadRange, DocumentHighlightKind.Read),
-            new DocumentHighlight(targetWriteRange, DocumentHighlightKind.Write)));
+        new DocumentHighlight(targetWriteRange, DocumentHighlightKind.Write)));
     assertEquals(answer, new HashSet<>(result));
   }
 }
