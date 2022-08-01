@@ -3,6 +3,7 @@ package org.rri.server.symbol;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiRecursiveElementVisitor;
+import com.jetbrains.python.psi.PyElement;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -28,11 +29,13 @@ public class DocumentSymbolPsiVisitor extends PsiRecursiveElementVisitor {
   }
 
   public void visitElement(@NotNull PsiElement element) {
-    if (cancelToken != null) {
-      cancelToken.checkCanceled();
+    if (element instanceof PyElement) {
+      if (cancelToken != null) {
+        cancelToken.checkCanceled();
+      }
+      onElement.accept(element);
+      super.visitElement(element);
     }
-    onElement.accept(element);
-    super.visitElement(element);
   }
 
   public void visitFile(@NotNull PsiFile file) {
