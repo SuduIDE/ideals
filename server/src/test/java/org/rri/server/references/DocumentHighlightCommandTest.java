@@ -65,7 +65,7 @@ public class DocumentHighlightCommandTest extends ReferencesCommandTestBase {
     checkHighlight(answers, new Position(15, 5), path);
   }
 
-  protected void checkHighlight(@NotNull Set<@NotNull DocumentHighlight> answers,
+  private void checkHighlight(@NotNull Set<@NotNull DocumentHighlight> answers,
                                 @NotNull Position pos,
                                 @NotNull LspPath path) {
     final var future = new DocumentHighlightCommand(pos).runAsync(getProject(), path);
