@@ -67,7 +67,6 @@ final public class FormattingCommand extends LspCommand<List<? extends TextEdit>
             CodeStyleBundle.message("process.reformat.code"),
             null);
 
-
     assert context.getCancelToken() != null;
     context.getCancelToken().checkCanceled();
   }
