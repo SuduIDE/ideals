@@ -14,7 +14,7 @@ import java.util.List;
 public class FindUsagesCommandPythonTest extends ReferencesCommandTestBase {
   @Before
   public void copyDirectoryToProject() {
-    projectFile = myFixture.copyDirectoryToProject("python/projectDefinition", "");
+    projectFile = myFixture.copyDirectoryToProject("python/project1", "");
   }
 
   @Test

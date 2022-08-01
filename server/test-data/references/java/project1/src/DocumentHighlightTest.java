@@ -1,12 +1,12 @@
 class DocumentHighlightTest {
   private int var;
-  private org.Another obj1;
-  private com.Another obj2;
-//  private org.Another obj2;
+  private org.ForHighlight obj1;
+  private com.ForHighlight obj2;
+//  private org.ForHighlight obj2;
 
   private final void foo() {
 //    foo();
-    obj = new org.Another(1, 2);
+    obj = new org.ForHighlight(1, 2);
   }
 
   public DocumentHighlightTest() {

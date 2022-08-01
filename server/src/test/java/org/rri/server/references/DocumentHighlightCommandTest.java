@@ -17,7 +17,7 @@ import java.util.Set;
 public class DocumentHighlightCommandTest extends ReferencesCommandTestBase {
   @Test
   public void testDocumentHighlightJava() {
-    var virtualFile = myFixture.copyDirectoryToProject("java/project2/src", "");
+    var virtualFile = myFixture.copyDirectoryToProject("java/project1/src", "");
     virtualFile = virtualFile.findChild("DocumentHighlightTest.java");
     assertNotNull(virtualFile);
     final var path = LspPath.fromVirtualFile(virtualFile);
@@ -36,15 +36,15 @@ public class DocumentHighlightCommandTest extends ReferencesCommandTestBase {
 
     // Test class
     answers = Set.of(
-        new DocumentHighlight(range(2, 14, 2, 21), DocumentHighlightKind.Read),
-        new DocumentHighlight(range(8, 18, 8, 25), DocumentHighlightKind.Read));
+        new DocumentHighlight(range(2, 14, 2, 26), DocumentHighlightKind.Read),
+        new DocumentHighlight(range(8, 18, 8, 30), DocumentHighlightKind.Read));
     checkHighlight(answers, new Position(2, 14), path);
   }
 
   @Test
   public void testDocumentHighlightPython() {
-    var virtualFile = myFixture.copyDirectoryToProject("python/project2", "");
-    virtualFile = virtualFile.findChild("DocumentHighlightTest.py");
+    var virtualFile = myFixture.copyDirectoryToProject("python/project1", "");
+    virtualFile = virtualFile.findChild("documentHighlightTest.py");
     assertNotNull(virtualFile);
     final var path = LspPath.fromVirtualFile(virtualFile);
 

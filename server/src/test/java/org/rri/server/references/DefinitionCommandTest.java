@@ -26,7 +26,7 @@ public class DefinitionCommandTest extends ReferencesCommandTestBase {
 
   @Test
   public void testDefinitionPython() {
-    var virtualFile = myFixture.copyDirectoryToProject("python/projectDefinition", "");
+    var virtualFile = myFixture.copyDirectoryToProject("python/project1", "");
     virtualFile = virtualFile.findChild("definitionPython.py");
     assertNotNull(virtualFile);
     final var path = LspPath.fromVirtualFile(virtualFile);
