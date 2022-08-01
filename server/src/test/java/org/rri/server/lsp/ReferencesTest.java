@@ -5,6 +5,9 @@ import org.junit.Test;
 import org.rri.server.LspPath;
 import org.rri.server.TestUtil;
 
+import java.util.HashSet;
+import java.util.List;
+
 public class ReferencesTest extends LspServerTestBase {
   @Override
   protected String getProjectRelativePath() {
@@ -50,5 +53,21 @@ public class ReferencesTest extends LspServerTestBase {
 
     assertEquals(1, result.size());
     assertEquals(new Location(filePath.toLspUri(), targetRange), result.get(0));
+  }
+
+  @Test
+  public void documentHighlight() {
+    final var filePath = LspPath.fromLocalPath(getTestDataRoot().resolve("references/java/project2/src/DocumentHighlightIntegratingTest.java"));
+    final var virtualFile = filePath.findVirtualFile();
+    assertNotNull(virtualFile);
+    final var documentHighlightParams = new DocumentHighlightParams(new TextDocumentIdentifier(filePath.toLspUri()), new Position(2, 8));
+    final var future = server().getTextDocumentService().documentHighlight(documentHighlightParams);
+    final var result = TestUtil.getNonBlockingEdt(future, 30000);
+    assertEquals(2, result.size());
+    final var targetWriteRange = new Range(new Position(2, 8), new Position(2, 9));
+    final var targetReadRange = new Range(new Position(3, 12), new Position(3, 13));
+    final var answer = new HashSet<>(List.of(new DocumentHighlight(targetReadRange, DocumentHighlightKind.Read),
+        new DocumentHighlight(targetWriteRange, DocumentHighlightKind.Write)));
+    assertEquals(answer, new HashSet<>(result));
   }
 }
