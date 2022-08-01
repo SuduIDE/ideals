@@ -34,7 +34,7 @@ public class TypeDefinitionCommandTest extends ReferencesCommandTestBase {
 
   @Test
   public void testTypeDefinitionPython() {
-    final var virtualFile = myFixture.copyDirectoryToProject("python/projectDefinition", "");
+    final var virtualFile = myFixture.copyDirectoryToProject("python/project1", "");
 
     final var secondUri = PREFIX_FILE + "second.py";
     final var class1Uri = PREFIX_FILE + "class1.py";

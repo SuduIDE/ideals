@@ -43,7 +43,7 @@ public class DocumentHighlightCommandTest extends ReferencesCommandTestBase {
 
   @Test
   public void testDocumentHighlightPython() {
-    var virtualFile = myFixture.copyDirectoryToProject("python/projectDefinition", "");
+    var virtualFile = myFixture.copyDirectoryToProject("python/project1", "");
     virtualFile = virtualFile.findChild("documentHighlightTest.py");
     assertNotNull(virtualFile);
     final var path = LspPath.fromVirtualFile(virtualFile);
