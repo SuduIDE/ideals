@@ -8,6 +8,7 @@ import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.fileEditor.impl.FileDocumentManagerImpl;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Ref;
+import com.intellij.openapi.util.Segment;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
@@ -166,7 +167,12 @@ public class MiscUtil {
     if (range == null) {
       range = elem.getTextRange();
     }
-    return range != null ? new Range(offsetToPosition(doc, range.getStartOffset()), offsetToPosition(doc, range.getEndOffset())) : null;
+    return range != null ? getRange(doc, range) : null;
+  }
+
+  @NotNull
+  public static Range getRange(@NotNull Document doc, @NotNull Segment segment) {
+    return new Range(offsetToPosition(doc, segment.getStartOffset()), offsetToPosition(doc, segment.getEndOffset()));
   }
 
   public static int positionToOffset(@NotNull Document doc, @NotNull Position pos) {

@@ -14,12 +14,13 @@ import org.rri.server.references.DocumentHighlightCommand;
 import org.rri.server.references.FindDefinitionCommand;
 import org.rri.server.references.FindTypeDefinitionCommand;
 import org.rri.server.references.FindUsagesCommand;
-import org.rri.server.symbol.DocumentSymbolCommand;
 import org.rri.server.util.Metrics;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 public class MyTextDocumentService implements TextDocumentService {
 
@@ -65,6 +66,7 @@ public class MyTextDocumentService implements TextDocumentService {
 
   @Override
   public void didClose(DidCloseTextDocumentParams params) {
+    diagnostics().haltDiagnostics(LspPath.fromLspUri(params.getTextDocument().getUri()));
     documents().stopManaging(params.getTextDocument());
   }
 
@@ -98,10 +100,21 @@ public class MyTextDocumentService implements TextDocumentService {
             .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
   }
 
-  @SuppressWarnings("deprecation")
   @Override
-  public CompletableFuture<List<Either<SymbolInformation, DocumentSymbol>>> documentSymbol(DocumentSymbolParams params) {
-    return new DocumentSymbolCommand().runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
+  public CompletableFuture<List<Either<Command, CodeAction>>> codeAction(CodeActionParams params) {
+    LOG.warn("codeAction invoked: " + params);
+    return CompletableFuture.completedFuture(
+        diagnostics().getCodeActions(
+            LspPath.fromLspUri(params.getTextDocument().getUri()),
+            params.getRange()
+        ).stream().map((Function<CodeAction, Either<Command, CodeAction>>) Either::forRight).collect(Collectors.toList())
+    );
+  }
+
+
+  @Override
+  public CompletableFuture<CodeAction> resolveCodeAction(CodeAction unresolved) {
+    return TextDocumentService.super.resolveCodeAction(unresolved);
   }
 
   public void refreshDiagnostics() {

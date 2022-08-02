@@ -16,6 +16,7 @@ import org.eclipse.lsp4j.services.LanguageServer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.server.util.Metrics;
+import org.rri.server.util.MiscUtil;
 
 import java.util.Arrays;
 import java.util.List;
@@ -120,6 +121,13 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
 //      it.setRenameProvider(false);
 //      it.setDocumentLinkProvider(null);
 //      it.setExecuteCommandProvider(new ExecuteCommandOptions());
+
+      it.setCodeActionProvider(
+          MiscUtil.with(
+              new CodeActionOptions(List.of(CodeActionKind.QuickFix)),
+              cao -> cao.setResolveProvider(true)
+          )
+      );
       it.setExperimental(null);
 
     });
