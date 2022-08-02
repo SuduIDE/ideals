@@ -63,12 +63,12 @@ final public class CompletionService implements Disposable {
           final Ref<Either<List<CompletionItem>, CompletionList>> ref = new Ref<>();
           // invokeAndWait is necessary for editor creation. We can create editor only inside EDT
           app.invokeAndWait(
-              // todo add version `withPsiFileInReadAction` that has return statement
-              () -> MiscUtil.withPsiFileInReadAction(
-                  project,
-                  path,
-                  (psiFile) ->
-                      ref.set(createCompletionResults(psiFile, position, cancelChecker))),
+              () -> ref.set(MiscUtil.produceWithPsiFileInReadAction(
+                      project,
+                      path,
+                      (psiFile) -> createCompletionResults(psiFile, position, cancelChecker)
+                  )
+              ),
               app.getDefaultModalityState()
           );
           return ref.get();

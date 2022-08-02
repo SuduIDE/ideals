@@ -53,11 +53,13 @@ public abstract class LspCommand<R> implements Disposable {
                                 @NotNull Project project,
                                 @Nullable CancelChecker cancelToken) {
     final AtomicReference<R> ref = new AtomicReference<>();
-    ApplicationManager.getApplication().invokeAndWait(() -> MiscUtil.withPsiFileInReadAction(
-            project,
-            path,
-            (psiFile) -> ref.set(execute(new ExecutorContext(psiFile, project, cancelToken)))
-    ));
+    ApplicationManager.getApplication()
+        .invokeAndWait(
+            () -> ref.set(MiscUtil.produceWithPsiFileInReadAction(
+                project,
+                path,
+                (psiFile) -> execute(new ExecutorContext(psiFile, project, cancelToken))
+            )));
     return ref.get();
   }
 }
