@@ -18,6 +18,7 @@ import org.jetbrains.annotations.Nullable;
 import org.rri.server.util.Metrics;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static org.rri.server.util.MiscUtil.with;
@@ -112,7 +113,7 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
       it.setDocumentFormattingProvider(true);
       it.setDocumentRangeFormattingProvider(true);
       it.setDocumentOnTypeFormattingProvider(
-          new DocumentOnTypeFormattingOptions(";", Arrays.asList("\n", "}")));
+          new DocumentOnTypeFormattingOptions(";", List.of("}", ")", "]", ">", ":")));
       // todo find on type format in Python
 
 //      it.setRenameProvider(false);
