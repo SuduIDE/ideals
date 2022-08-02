@@ -46,11 +46,7 @@ class DiagnosticsTask implements Runnable {
   @NotNull
   private final QuickFixRegistry quickFixRegistry;
 
-  @NotNull
-  private final LspPath path;
-
-  public DiagnosticsTask(@NotNull LspPath path, @NotNull PsiFile file, @NotNull Document document, @NotNull QuickFixRegistry quickFixRegistry) {
-    this.path = path;
+  public DiagnosticsTask(@NotNull PsiFile file, @NotNull Document document, @NotNull QuickFixRegistry quickFixRegistry) {
     this.file = file;
     this.document = document;
     this.quickFixRegistry = quickFixRegistry;
@@ -94,7 +90,7 @@ class DiagnosticsTask implements Runnable {
           .map(it -> toDiagnostic(it, document, quickFixRegistry))
           .filter(Objects::nonNull)
           .collect(Collectors.toList());
-      client.publishDiagnostics(new PublishDiagnosticsParams(path.toLspUri(), diags));
+      client.publishDiagnostics(new PublishDiagnosticsParams(LspPath.fromVirtualFile(file.getVirtualFile()).toLspUri(), diags));
     } finally {
       client.notifyProgress(new ProgressParams(Either.forLeft(token), Either.forLeft(new WorkDoneProgressEnd())));
     }
