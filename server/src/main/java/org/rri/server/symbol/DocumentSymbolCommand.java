@@ -37,8 +37,8 @@ public class DocumentSymbolCommand extends LspCommand<List<Either<SymbolInformat
     }
     final var symbols = new ArrayList<DocumentSymbol>();
     new DocumentSymbolPsiVisitor(ctx.getPsiFile(), ctx.getCancelToken(), elem -> {
-      final var kind = MiscUtil.symbolKind(elem);
-      final var name = MiscUtil.symbolName(elem);
+      final var kind = TypeUtil.symbolKind(elem);
+      final var name = TypeUtil.symbolName(elem);
       if (kind != null && name != null) {
         final var range = MiscUtil.getPsiElementRange(document, elem);
         symbols.add(new DocumentSymbol(name, kind, range, range));
