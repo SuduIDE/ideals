@@ -1,5 +1,6 @@
 package org.rri.server.symbol;
 
+import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.eclipse.lsp4j.DocumentSymbol;
 import org.eclipse.lsp4j.Position;
@@ -7,12 +8,14 @@ import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.SymbolKind;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.rri.server.LspPath;
 import org.rri.server.TestUtil;
 
+import java.lang.String;
 import java.nio.file.Paths;
 import java.util.List;
 
@@ -24,8 +27,6 @@ import static org.eclipse.lsp4j.SymbolKind.Number;
 import static org.eclipse.lsp4j.SymbolKind.Package;
 import static org.eclipse.lsp4j.SymbolKind.String;
 import static org.eclipse.lsp4j.SymbolKind.*;
-
-import java.lang.String;
 
 @RunWith(JUnit4.class)
 public class DocumentSymbolCommandTest extends BasePlatformTestCase {
@@ -40,14 +41,6 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
     var virtualFile = myFixture.copyDirectoryToProject("java/project1/src", "");
     virtualFile = virtualFile.findChild("org");
     assertNotNull(virtualFile);
-    virtualFile = virtualFile.findChild("DocumentSymbol.java");
-    assertNotNull(virtualFile);
-    final var path = LspPath.fromVirtualFile(virtualFile);
-    final var future = new DocumentSymbolCommand().runAsync(getProject(), path);
-    final var lstEither = TestUtil.getNonBlockingEdt(future, 50000);
-    assertNotNull(lstEither);
-    final var result = lstEither.stream().map(Either::getRight).toList();
-
     final var answers = List.of(
         documentSymbol("DocumentSymbol.java", File, range(0, 0, 28, 1)),
         documentSymbol("org", Package, range(0, 0, 0 , 12)),
@@ -75,27 +68,18 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
         documentSymbol("A", EnumMember, range(26, 4, 26, 5)),
         documentSymbol("B", EnumMember, range(26, 7, 26, 8))
     );
-
-    assertEquals(answers, result);
+    checkDocumentSymbols(answers, virtualFile.findChild("DocumentSymbol.java"));
   }
 
   @Test
   public void testDocumentSymbolPython() {
-    var virtualFile = myFixture.copyDirectoryToProject("python/project1", "");
-    virtualFile = virtualFile.findChild("documentSymbol.py");
-    assertNotNull(virtualFile);
-    final var path = LspPath.fromVirtualFile(virtualFile);
-    final var future = new DocumentSymbolCommand().runAsync(getProject(), path);
-    final var lstEither = TestUtil.getNonBlockingEdt(future, 50000);
-    assertNotNull(lstEither);
-    final var result = lstEither.stream().map(Either::getRight).toList();
-
+    final var virtualFile = myFixture.copyDirectoryToProject("python/project1", "");
     final var answers = List.of(
         documentSymbol("documentSymbol.py", File, range(0, 0, 24, 0)),
-        documentSymbol("from funcs import *", Module, range(0, 0, 0, 19)),
-        documentSymbol("class1", Module, range(1, 0, 1, 13)),
-        documentSymbol("class2", Module, range(2, 0, 2, 21)),
-        documentSymbol("cls2", Variable, range(2, 17, 2, 21)),
+        documentSymbol("class1", Module, range(0, 0, 0, 13)),
+        documentSymbol("class2", Module, range(1, 0, 1, 21)),
+        documentSymbol("cls2", Variable, range(1, 17, 1, 21)),
+        documentSymbol("from funcs import *", Module, range(2, 0, 2, 19)),
         documentSymbol("p", Variable, range(4, 0, 4, 1)),
         documentSymbol("\"lsp\"", String, range(4, 4, 4, 9)),
         documentSymbol("b", Variable, range(5, 0, 5, 1)),
@@ -118,12 +102,21 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
         documentSymbol("x", Variable, range(22, 12, 22, 13)),
         documentSymbol("y", Variable, range(22, 15, 22, 16))
     );
+    checkDocumentSymbols(answers, virtualFile.findChild("documentSymbol.py"));
+  }
 
+  private void checkDocumentSymbols(@NotNull List<@NotNull DocumentSymbol> answers, @Nullable VirtualFile virtualFile) {
+    assertNotNull(virtualFile);
+    final var path = LspPath.fromVirtualFile(virtualFile);
+    final var future = new DocumentSymbolCommand().runAsync(getProject(), path);
+    final var lstEither = TestUtil.getNonBlockingEdt(future, 50000);
+    assertNotNull(lstEither);
+    final var result = lstEither.stream().map(Either::getRight).toList();
     assertEquals(answers, result);
   }
 
   @NotNull
-  private static DocumentSymbol documentSymbol(String name, SymbolKind kind, Range range) {
+  private static DocumentSymbol documentSymbol(@NotNull String name, @Nullable SymbolKind kind, @NotNull Range range) {
     return new DocumentSymbol(name, kind, range, range);
   }
 

@@ -29,10 +29,9 @@ public class DocumentSymbolCommand extends LspCommand<List<Either<SymbolInformat
   }
 
   @Override
-  protected List<Either<SymbolInformation, DocumentSymbol>> execute(@NotNull ExecutorContext ctx) {
+  protected @NotNull List<Either<SymbolInformation, @NotNull DocumentSymbol>> execute(@NotNull ExecutorContext ctx) {
     final var document = MiscUtil.getDocument(ctx.getPsiFile());
     if (document == null) {
-      // TODO need to throw exception
       Log.error("No document found.");
       return List.of();
     }
