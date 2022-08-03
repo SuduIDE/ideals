@@ -52,45 +52,35 @@ public class OnTypeFormatting extends FormattingCommandBase {
     LOG.info(getMessageSupplier().get());
     return TextUtil.differenceAfterAction(
         ctx.getPsiFile(),
-        copy -> {
-          try {
-            EditorUtil.withEditor(
-                this,
-                copy,
-                position,
-                editor -> performTypeAndReformatIfNeededInFile(copy, editor));
-          } finally {
-            Disposer.dispose(this);
-          }
-        }
+        this::typeAndReformatIfNeededInFile
     );
   }
 
-  private void performTypeAndReformatIfNeededInFile(@NotNull PsiFile psiFile,
-                                                    @NotNull Editor editor) {
-    assert psiFile.getVirtualFile() == null;
-    var doc = MiscUtil.getDocument(psiFile);
-    assert doc != null;
+  void typeAndReformatIfNeededInFile(@NotNull PsiFile psiFile) {
+    try {
+      EditorUtil.withEditor(this, psiFile, position, editor -> {
+        assert psiFile.getVirtualFile() == null;
+        var doc = MiscUtil.getDocument(psiFile);
+        assert doc != null;
+        ApplicationManager.getApplication().runWriteAction(() -> {
+          deleteTypedChar(editor, doc);
+          PsiDocumentManager.getInstance(psiFile.getProject()).commitDocument(doc);
 
-    ApplicationManager.getApplication().runWriteAction(() -> {
-      deleteTypedChar(editor, doc);
-      PsiDocumentManager.getInstance(psiFile.getProject()).commitDocument(doc);
-
-      if (editor instanceof EditorEx) {
-        ((EditorEx) editor).setHighlighter(
-
-            HighlighterFactory.createHighlighter(
-                psiFile.getProject(),
-                psiFile.getFileType())
-        );
-      }
-      doWithTemporaryCodeStyleSettingsForFile(
-          psiFile,
-          () -> TypedAction.getInstance().actionPerformed(
-              editor,
-              triggerCharacter.charAt(0),
-              com.intellij.openapi.editor.ex.util.EditorUtil.getEditorDataContext(editor)));
-    });
+          if (editor instanceof EditorEx) {
+            ((EditorEx) editor).setHighlighter(
+                HighlighterFactory.createHighlighter(psiFile.getProject(), psiFile.getFileType()));
+          }
+          doWithTemporaryCodeStyleSettingsForFile(
+              psiFile,
+              () -> TypedAction.getInstance().actionPerformed(
+                  editor,
+                  triggerCharacter.charAt(0),
+                  com.intellij.openapi.editor.ex.util.EditorUtil.getEditorDataContext(editor)));
+        });
+      });
+    } finally {
+      Disposer.dispose(this);
+    }
   }
 
   private void deleteTypedChar(@NotNull Editor editor, @NotNull Document doc) {

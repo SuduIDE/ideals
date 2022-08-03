@@ -127,7 +127,6 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
   private static DocumentOnTypeFormattingOptions defaultOnTypeFormattingOptions() {
     return new DocumentOnTypeFormattingOptions(";",
         List.of( // "{", "(", "<",  "\"", "'", "[", todo decide how to handle this cases
-                // "\n", todo write issue to implement by using EnterHandlers
             "}", ")", "]", ">", ":", ",", ".", "@", "#", "?", "=", "!", " ",
             "|", "&", "$", "^", "%", "*", "/")
     );

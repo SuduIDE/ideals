@@ -52,6 +52,22 @@ public class FormattingTest extends LspServerTestBase {
     checkFormattingResult(expected, server().getTextDocumentService().rangeFormatting(params));
   }
 
+  @Test
+  public void onTypeFormatting() {
+    final var expected = Set.of(
+        TestUtil.createTextEdit(0, 10, 0, 11, "")
+    );
+    final var filePath = LspPath.fromLocalPath(getProjectPath().resolve("util.py"));
+
+    var params = new DocumentOnTypeFormattingParams();
+    params.setTextDocument(TestUtil.getDocumentIdentifier(filePath));
+    params.setOptions(FormattingTestUtil.defaultOptions());
+    params.setCh(":");
+    params.setPosition(new Position(0, 10));
+
+    checkFormattingResult(expected, server().getTextDocumentService().onTypeFormatting(params));
+  }
+
   private void checkFormattingResult(@NotNull Set<? extends TextEdit> expected,
                                      @NotNull CompletableFuture<List<? extends TextEdit>> formattingResultFuture) {
     Ref<List<? extends TextEdit>> formattingResRef = new Ref<>();
