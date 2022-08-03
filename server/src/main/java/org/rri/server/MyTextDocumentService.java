@@ -9,8 +9,8 @@ import org.jetbrains.annotations.NotNull;
 import org.rri.server.completions.CompletionService;
 import org.rri.server.diagnostics.DiagnosticsService;
 import org.rri.server.formatting.FormattingCommand;
-import org.rri.server.references.DocumentHighlightCommand;
 import org.rri.server.formatting.OnTypeFormatting;
+import org.rri.server.references.DocumentHighlightCommand;
 import org.rri.server.references.FindDefinitionCommand;
 import org.rri.server.references.FindTypeDefinitionCommand;
 import org.rri.server.references.FindUsagesCommand;
@@ -152,24 +152,6 @@ public class MyTextDocumentService implements TextDocumentService {
 
   @Override
   public CompletableFuture<List<? extends TextEdit>> onTypeFormatting(DocumentOnTypeFormattingParams params) {
-
-//    var typedAction = TypedAction.getInstance();
-//    var dis = Disposer.newDisposable();
-//    var psiFile = MiscUtil.resolvePsiFile(session.getProject(),
-//        LspPath.fromLspUri(params.getTextDocument().getUri()));
-//    assert psiFile != null;
-////    var copy = (PsiFile) psiFile.copy();
-//    var res = TextUtil.differenceAfterAction(psiFile, copy -> {
-//      EditorUtil.withEditor(dis,
-//          copy, params.getPosition(),
-//          editor -> {
-//            typedAction.actionPerformed(editor, params.getCh().charAt(0),
-//                com.intellij.openapi.editor.ex.util.EditorUtil.getEditorDataContext(editor));
-//          }
-//      );
-//    });
-
-
     return new OnTypeFormatting(params.getPosition(), params.getOptions(), params.getCh()).runAsync(
         session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri())
     );
