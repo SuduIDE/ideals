@@ -8,6 +8,7 @@ import org.jetbrains.annotations.NotNull;
 import org.rri.server.commands.ExecutorContext;
 import org.rri.server.commands.LspCommand;
 import org.rri.server.util.MiscUtil;
+import org.rri.server.util.SymbolUtil;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -37,8 +38,8 @@ public class DocumentSymbolCommand extends LspCommand<List<Either<SymbolInformat
     }
     final var symbols = new ArrayList<DocumentSymbol>();
     new DocumentSymbolPsiVisitor(ctx.getPsiFile(), ctx.getCancelToken(), elem -> {
-      final var kind = TypeUtil.symbolKind(elem);
-      final var name = TypeUtil.symbolName(elem);
+      final var kind = SymbolUtil.symbolKind(elem);
+      final var name = SymbolUtil.symbolName(elem);
       if (kind != null && name != null) {
         final var range = MiscUtil.getPsiElementRange(document, elem);
         symbols.add(new DocumentSymbol(name, kind, range, range));

@@ -1,6 +1,7 @@
-package org.rri.server.symbol;
+package org.rri.server.util;
 
 import com.intellij.lang.jvm.JvmModifier;
+import com.intellij.navigation.NavigationItem;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.IndexNotReadyException;
 import com.intellij.psi.*;
@@ -9,14 +10,13 @@ import com.jetbrains.python.psi.impl.PyFunctionImpl;
 import org.eclipse.lsp4j.SymbolKind;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.rri.server.util.MiscUtil;
 
 import java.util.Arrays;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class TypeUtil {
+public class SymbolUtil {
   private static final Logger LOG = Logger.getInstance(MiscUtil.class);
 
   @SuppressWarnings("UnstableApiUsage")
@@ -30,8 +30,7 @@ public class TypeUtil {
       return SymbolKind.Package;
     } else if (elem instanceof PsiImportStatement) {
       return SymbolKind.Module;
-    } else if (elem instanceof PsiClass) {
-      final var elemClass = (PsiClass) elem;
+    } else if (elem instanceof final PsiClass elemClass) {
       if (elemClass.isAnnotationType() || elemClass.isInterface()) {
         return SymbolKind.Interface;
       } else if (elemClass.isEnum()) {
@@ -45,16 +44,14 @@ public class TypeUtil {
       return ((PsiMethod) elem).isConstructor() ? SymbolKind.Constructor : SymbolKind.Method;
     } else if (elem instanceof PsiEnumConstant) {
       return SymbolKind.EnumMember;
-    } else if (elem instanceof PsiField) {
-      final var elemField = (PsiField) elem;
+    } else if (elem instanceof final PsiField elemField) {
       return elemField.hasModifier(JvmModifier.STATIC) && elemField.hasModifier(JvmModifier.FINAL)
           ? SymbolKind.Constant : SymbolKind.Field;
     } else if (elem instanceof PsiVariable) {
       return SymbolKind.Variable;
     } else if (elem instanceof PsiAnnotation) {
       return SymbolKind.Property;
-    } else if (elem instanceof PsiLiteralExpression) {
-      final var elemLiteral = (PsiLiteralExpression) elem;
+    } else if (elem instanceof final PsiLiteralExpression elemLiteral) {
       final var type = elemLiteral.getType();
       if (type == null) {
         return SymbolKind.Null;
@@ -102,8 +99,7 @@ public class TypeUtil {
         return SymbolKind.Function;
       }
       return Objects.equals(elem.getName(), "__init__") ? SymbolKind.Constructor : SymbolKind.Method;
-    } else if (elem instanceof PyTargetExpression) {
-      final var targetElem = (PyTargetExpression) elem;
+    } else if (elem instanceof final PyTargetExpression targetElem) {
       final var name = targetElem.asQualifiedName();
       if (name != null && name.getLastComponent() != null) {
         final var lstComp = name.getLastComponent();
@@ -141,8 +137,7 @@ public class TypeUtil {
     } else if (elem instanceof PsiImportStatement) {
       final var qualifiedName = ((PsiImportStatement) elem).getQualifiedName();
       return qualifiedName == null ? "<error>" : qualifiedName;
-    } else if (elem instanceof PsiClass) {
-      final var elemClass = (PsiClass) elem;
+    } else if (elem instanceof final PsiClass elemClass) {
       if (elemClass.getName() != null) {
         return elemClass.getName();
       }
@@ -171,7 +166,7 @@ public class TypeUtil {
   @NotNull
   private static String methodLabel(@NotNull PsiMethod method) {
     return method.getName() + Arrays.stream(method.getParameterList().getParameters())
-        .map(TypeUtil::methodParameterLabel)
+        .map(SymbolUtil::methodParameterLabel)
         .collect(Collectors.joining(", ", "(", ")"));
   }
 
@@ -193,8 +188,7 @@ public class TypeUtil {
                                   boolean useShortNames,
                                   boolean generateLink) {
     var typeToGen = type;
-    if (typeToGen instanceof PsiPrimitiveType) {
-      final var primitiveType = (PsiPrimitiveType) typeToGen;
+    if (typeToGen instanceof final PsiPrimitiveType primitiveType) {
       final var text = useShortNames ? primitiveType.getPresentableText() : primitiveType.getCanonicalText();
       buffer.append(text);
       return text.length();
@@ -215,8 +209,7 @@ public class TypeUtil {
       typeToGen = ((PsiCapturedWildcardType) typeToGen).getWildcard();
     }
 
-    if (typeToGen instanceof PsiWildcardType) {
-      final var wt = (PsiWildcardType) typeToGen;
+    if (typeToGen instanceof final PsiWildcardType wt) {
       buffer.append("?");
       final var bound = wt.getBound();
       if (bound != null) {
@@ -228,9 +221,8 @@ public class TypeUtil {
       }
     }
 
-    if (typeToGen instanceof PsiClassType) {
+    if (typeToGen instanceof final PsiClassType classTypeToGen) {
       PsiClassType.ClassResolveResult result;
-      final var classTypeToGen = (PsiClassType) typeToGen;
       try {
         result = classTypeToGen.resolveGenerics();
       } catch (IndexNotReadyException e) {
@@ -316,18 +308,30 @@ public class TypeUtil {
   @Nullable
   private static String pySymbolName(PyElement elem) {
     if (elem instanceof PyFile
-        || elem instanceof PyLiteralExpression
         || elem instanceof PyParameter
         || elem instanceof PyReferenceExpression
         || elem instanceof PyTargetExpression) {
       return elem.getName();
+    } else if (elem instanceof PyNoneLiteralExpression) {
+      return "None";
+    } else if (elem instanceof final PyNumericLiteralExpression number) {
+      if (number.isIntegerLiteral()) {
+        return number.getBigIntegerValue() == null ? null : number.getBigIntegerValue().toString();
+      } else {
+        return number.getBigDecimalValue() == null ? null : number.getBigDecimalValue().toPlainString();
+      }
+    } else if (elem instanceof PyStringLiteralExpression) {
+      return "\"" + ((PyStringLiteralExpression) elem).getStringValue() + "\"";
+    } else if (elem instanceof PyBoolLiteralExpression) {
+      return ((PyBoolLiteralExpression) elem).getValue() ? "True" : "False";
     } else if (elem instanceof PyDecorator) {
       return pyDecoratorLabel((PyDecorator) elem);
-    } else if (elem instanceof PyImportStatementBase) {
-      final var qName = ((PyImportStatementBase) elem).getFullyQualifiedObjectNames();
+    } else if (elem instanceof PyImportStatement) {
+      final var qName = ((PyImportStatement) elem).getFullyQualifiedObjectNames();
       return qName.isEmpty() ? "<error>" : String.join(".", qName);
-    } else if (elem instanceof PyClass) {
-      final var elemClass = (PyClass) elem;
+    } else if (elem instanceof PyFromImportStatement) {
+      return pyFromImportLabel((PyFromImportStatement) elem);
+    } else if (elem instanceof final PyClass elemClass) {
       return elemClass.getName() != null ? elemClass.getName() : elemClass.getQualifiedName();
     } else if (elem instanceof PyFunction) {
       return pyFunctionLabel((PyFunction) elem);
@@ -337,7 +341,9 @@ public class TypeUtil {
 
   @NotNull
   private static String pyFunctionLabel(@NotNull PyFunction function) {
-    return function.getName() + (function.getParameterList().getParameters().length > 0 ? "(*args, **kwargs)" : "()");
+    return function.getName() + Arrays.stream(function.getParameterList().getParameters())
+        .map(NavigationItem::getName)
+        .collect(Collectors.joining(", ", "(", ")"));
   }
 
   @NotNull
@@ -345,5 +351,17 @@ public class TypeUtil {
     final var name = decorator.getName() == null
         ? decorator.getQualifiedName() : decorator.getName();
     return name == null ? "<unknown>" : "@" + name;
+  }
+
+  @Nullable
+  private static String pyFromImportLabel(@NotNull PyFromImportStatement statement) {
+    if (statement.getImportSource() == null) {
+      return null;
+    }
+    return "from " + statement.getImportSource().getName() + " import "
+        + (statement.isStarImport() ? "*" : Arrays.stream(statement.getImportElements())
+            .map(PyImportElement::getAsName)
+            .filter(Objects::nonNull)
+            .collect(Collectors.joining(", ")));
   }
 }
