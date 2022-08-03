@@ -7,6 +7,7 @@ import com.intellij.openapi.project.IndexNotReadyException;
 import com.intellij.psi.*;
 import com.jetbrains.python.psi.*;
 import com.jetbrains.python.psi.impl.PyFunctionImpl;
+import com.jetbrains.python.psi.types.TypeEvalContext;
 import org.eclipse.lsp4j.SymbolKind;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -86,7 +87,7 @@ public class SymbolUtil {
       return SymbolKind.String;
     } else if (elem instanceof PyBoolLiteralExpression) {
       return SymbolKind.Boolean;
-    } else if (elem instanceof PyParameter) {
+    } else if (elem instanceof PyNamedParameter || elem instanceof PyTupleParameter) {
       return ((PyParameter) elem).isSelf() ? SymbolKind.Field : SymbolKind.Variable;
     } else if (elem instanceof PyDecorator) {
       return SymbolKind.Property;
@@ -127,7 +128,7 @@ public class SymbolUtil {
   }
 
   @Nullable
-  public static String symbolName(PsiElement elem) {
+  public static String symbolName(@NotNull PsiElement elem) {
     if (elem instanceof PyElement) {
       return pySymbolName((PyElement) elem);
     } else if (elem instanceof PsiFile) {
@@ -177,7 +178,8 @@ public class SymbolUtil {
     return buffer.toString();
   }
 
-  private static String annotationLabel(PsiAnnotation annotation) {
+  @NotNull
+  private static String annotationLabel(@NotNull PsiAnnotation annotation) {
     final var name = annotation.getNameReferenceElement() == null
         ? annotation.getQualifiedName() : annotation.getNameReferenceElement().getText();
     return name == null ? "<unknown>" : "@" + name;
@@ -306,9 +308,8 @@ public class SymbolUtil {
   }
 
   @Nullable
-  private static String pySymbolName(PyElement elem) {
+  private static String pySymbolName(@NotNull PyElement elem) {
     if (elem instanceof PyFile
-        || elem instanceof PyParameter
         || elem instanceof PyReferenceExpression
         || elem instanceof PyTargetExpression) {
       return elem.getName();
@@ -333,6 +334,8 @@ public class SymbolUtil {
       return pyFromImportLabel((PyFromImportStatement) elem);
     } else if (elem instanceof final PyClass elemClass) {
       return elemClass.getName() != null ? elemClass.getName() : elemClass.getQualifiedName();
+    } else if (elem instanceof PyParameter) {
+      return pyFunctionParameterLabel((PyParameter) elem);
     } else if (elem instanceof PyFunction) {
       return pyFunctionLabel((PyFunction) elem);
     }
@@ -342,8 +345,33 @@ public class SymbolUtil {
   @NotNull
   private static String pyFunctionLabel(@NotNull PyFunction function) {
     return function.getName() + Arrays.stream(function.getParameterList().getParameters())
-        .map(NavigationItem::getName)
+        .map(SymbolUtil::pyFunctionParameterLabel)
+        .filter(Objects::nonNull)
         .collect(Collectors.joining(", ", "(", ")"));
+  }
+
+  @Nullable
+  private static String pyFunctionParameterLabel(@NotNull PyParameter param) {
+    if (param instanceof final PyNamedParameter namedParameter) {
+      var prefix = namedParameter.isPositionalContainer() ? "*" : "";
+      if (namedParameter.isKeywordContainer()) {
+        prefix = "**";
+      }
+      final var type = ((PyNamedParameter) param).getArgumentType(TypeEvalContext.codeAnalysis(param.getProject(), param.getContainingFile()));
+      if (type != null && namedParameter.getName() != null && !namedParameter.getName().equals("self")) {
+        return prefix + param.getName() + ": " + type.getName();
+      }
+      return prefix + param.getName();
+    } else if (param instanceof PySingleStarParameter) {
+      return "*";
+    } else if (param instanceof PySlashParameter) {
+      return "/";
+    } else if (param instanceof PyTupleParameter) {
+      return Arrays.stream(((PyTupleParameter) param).getContents())
+          .map(SymbolUtil::pyFunctionParameterLabel)
+          .collect(Collectors.joining(", ", "(", ")"));
+    }
+    return null;
   }
 
   @NotNull
@@ -360,7 +388,7 @@ public class SymbolUtil {
     }
     return "from " + statement.getImportSource().getName() + " import "
         + (statement.isStarImport() ? "*" : Arrays.stream(statement.getImportElements())
-            .map(PyImportElement::getAsName)
+            .map(NavigationItem::getName)
             .filter(Objects::nonNull)
             .collect(Collectors.joining(", ")));
   }

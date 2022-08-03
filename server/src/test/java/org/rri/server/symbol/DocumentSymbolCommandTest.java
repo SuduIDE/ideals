@@ -95,12 +95,15 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
         documentSymbol("self", Field, range(14, 12, 14, 16)),
         documentSymbol("x", Variable, range(14, 18, 14, 19)),
         documentSymbol("y", Variable, range(14, 21, 14, 22)),
-        documentSymbol("bar(self)", Method, range(17, 8, 17, 11)),
+        documentSymbol("bar(self, *args, **kwargs)", Method, range(17, 8, 17, 11)),
         documentSymbol("self", Field, range(17, 12, 17, 16)),
+        documentSymbol("*args", Variable, range(17, 19, 17, 23)),
+        documentSymbol("**kwargs", Variable, range(17, 27, 17, 33)),
         documentSymbol("@do_twice", Property, range(21, 0, 21, 9)),
-        documentSymbol("foo_bar(x, y)", Function, range(22, 4, 22, 11)),
+        documentSymbol("foo_bar(x, /, y, *, z)", Function, range(22, 4, 22, 11)),
         documentSymbol("x", Variable, range(22, 12, 22, 13)),
-        documentSymbol("y", Variable, range(22, 15, 22, 16))
+        documentSymbol("y", Variable, range(22, 18, 22, 19)),
+        documentSymbol("z", Variable, range(22, 24, 22, 25))
     );
     checkDocumentSymbols(answers, virtualFile.findChild("documentSymbol.py"));
   }

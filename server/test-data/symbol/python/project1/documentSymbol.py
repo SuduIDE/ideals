@@ -15,10 +15,10 @@ class Document_symbol(cls2.Class2):
     def foo(self, x, y):
         pass
 
-    def bar(self):
+    def bar(self, *args, **kwargs):
         pass
 
 
 @do_twice
-def foo_bar(x, y):
+def foo_bar(x, /, y, *, z):
     return class1.Class1()
