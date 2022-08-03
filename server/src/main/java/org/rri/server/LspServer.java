@@ -113,7 +113,6 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
       it.setDocumentFormattingProvider(true);
       it.setDocumentRangeFormattingProvider(true);
       it.setDocumentOnTypeFormattingProvider(defaultOnTypeFormattingOptions());
-      // todo find on type format in Python
 
 //      it.setRenameProvider(false);
 //      it.setDocumentLinkProvider(null);
