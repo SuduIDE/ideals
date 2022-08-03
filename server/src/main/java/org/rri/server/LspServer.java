@@ -112,8 +112,7 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
 //      it.setCodeLensProvider(new CodeLensOptions(false));
       it.setDocumentFormattingProvider(true);
       it.setDocumentRangeFormattingProvider(true);
-      it.setDocumentOnTypeFormattingProvider(
-          new DocumentOnTypeFormattingOptions(";", List.of("}", ")", "]", ">", ":")));
+      it.setDocumentOnTypeFormattingProvider(defaultOnTypeFormattingOptions());
       // todo find on type format in Python
 
 //      it.setRenameProvider(false);
@@ -122,6 +121,16 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
       it.setExperimental(null);
 
     });
+  }
+
+  @NotNull
+  private static DocumentOnTypeFormattingOptions defaultOnTypeFormattingOptions() {
+    return new DocumentOnTypeFormattingOptions(";",
+        List.of( // "{", "(", "<",  "\"", "'", "[", todo decide how to handle this cases
+                // "\n", todo write issue to implement by using EnterHandlers
+            "}", ")", "]", ">", ":", ",", ".", "@", "#", "?", "=", "!", " ",
+            "|", "&", "$", "^", "%", "*", "/")
+    );
   }
 
   public CompletableFuture<Object> shutdown() {
