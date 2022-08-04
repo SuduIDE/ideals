@@ -152,7 +152,8 @@ public class MyTextDocumentService implements TextDocumentService {
 
   @Override
   public CompletableFuture<List<? extends TextEdit>> onTypeFormatting(DocumentOnTypeFormattingParams params) {
-    return new OnTypeFormattingCommand(params.getPosition(), params.getOptions(), params.getCh()).runAsync(
+    return new OnTypeFormattingCommand(params.getPosition(), params.getOptions(),
+        params.getCh().charAt(0)).runAsync(
         session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri())
     );
   }

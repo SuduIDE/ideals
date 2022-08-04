@@ -192,7 +192,8 @@ public class OnTypeFormattingCommandTest extends BasePlatformTestCase {
                                                                           @NotNull Position caretPosition) {
     final var actualPsiFile = myFixture.configureByText(fileType, actualText);
     var triggerCh = getInsertedChar(actualPsiFile, caretPosition);
-    var command = new OnTypeFormattingCommand(caretPosition, FormattingTestUtil.defaultOptions(), triggerCh);
+    var command = new OnTypeFormattingCommand(
+        caretPosition, FormattingTestUtil.defaultOptions(), triggerCh);
 
     return TextUtil.differenceAfterAction(actualPsiFile, (copy) -> {
       command.typeAndReformatIfNeededInFile(copy);
@@ -206,12 +207,11 @@ public class OnTypeFormattingCommandTest extends BasePlatformTestCase {
     });
   }
 
-  @NotNull
-  private String getInsertedChar(@NotNull PsiFile psiFile, @NotNull Position caretPosition) {
+  private char getInsertedChar(@NotNull PsiFile psiFile, @NotNull Position caretPosition) {
     var doc = MiscUtil.getDocument(psiFile);
     assert doc != null;
     var caretOffset = MiscUtil.positionToOffset(doc, caretPosition);
-    return psiFile.getText().substring(caretOffset - 1, caretOffset);
+    return psiFile.getText().charAt(caretOffset - 1);
   }
 
 }

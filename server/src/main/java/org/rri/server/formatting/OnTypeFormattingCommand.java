@@ -30,10 +30,10 @@ public class OnTypeFormattingCommand extends FormattingCommandBase {
 
   public OnTypeFormattingCommand(@NotNull Position position,
                                  @NotNull FormattingOptions formattingOptions,
-                                 @NotNull String character) {
+                                 char character) {
     super(formattingOptions);
     this.position = position;
-    this.triggerCharacter = character.charAt(0);
+    this.triggerCharacter = character;
   }
 
   @Override
