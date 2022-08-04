@@ -148,7 +148,7 @@ public class SymbolUtil {
     return null;
   }
 
-  private static boolean ktIsInsideCompanion(KtFunction elem) {
+  private static boolean ktIsInsideCompanion(@NotNull KtFunction elem) {
     final var objDeclaration = KtPsiUtilKt.getContainingClassOrObject(elem);
     if (objDeclaration instanceof KtObjectDeclaration) {
       return ((KtObjectDeclaration) objDeclaration).isCompanion();
@@ -156,7 +156,7 @@ public class SymbolUtil {
     return false;
   }
 
-  private static boolean ktIsConstant(KtProperty elt) {
+  private static boolean ktIsConstant(@NotNull KtProperty elt) {
     if (elt.getModifierList() == null) {
       return false;
     }
@@ -534,7 +534,7 @@ public class SymbolUtil {
         .collect(Collectors.joining(", ")));
   }
 
-  public static boolean isDeprecated(PsiElement elem) {
+  public static boolean isDeprecated(@NotNull PsiElement elem) {
     if (elem instanceof PsiDocCommentOwner) {
       return ((PsiDocCommentOwner) elem).isDeprecated();
     }
