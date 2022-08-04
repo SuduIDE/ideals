@@ -18,6 +18,7 @@ import org.jetbrains.annotations.Nullable;
 import org.rri.server.util.Metrics;
 
 import java.util.Arrays;
+import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static org.rri.server.util.MiscUtil.with;
@@ -111,13 +112,23 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
 //      it.setCodeLensProvider(new CodeLensOptions(false));
       it.setDocumentFormattingProvider(true);
       it.setDocumentRangeFormattingProvider(true);
-//      it.setDocumentOnTypeFormattingProvider(null); // todo find on type format in python plugin
+      it.setDocumentOnTypeFormattingProvider(defaultOnTypeFormattingOptions());
+
 //      it.setRenameProvider(false);
 //      it.setDocumentLinkProvider(null);
 //      it.setExecuteCommandProvider(new ExecuteCommandOptions());
       it.setExperimental(null);
 
     });
+  }
+
+  @NotNull
+  private static DocumentOnTypeFormattingOptions defaultOnTypeFormattingOptions() {
+    return new DocumentOnTypeFormattingOptions(";",
+        List.of( // "{", "(", "<",  "\"", "'", "[", todo decide how to handle this cases
+            "}", ")", "]", ">", ":", ",", ".", "@", "#", "?", "=", "!", " ",
+            "|", "&", "$", "^", "%", "*", "/")
+    );
   }
 
   public CompletableFuture<Object> shutdown() {
