@@ -23,18 +23,17 @@ import org.rri.server.util.TextUtil;
 import java.util.List;
 import java.util.function.Supplier;
 
-public class OnTypeFormatting extends FormattingCommandBase {
+public class OnTypeFormattingCommand extends FormattingCommandBase {
   @NotNull
   private final Position position;
-  @NotNull
-  private final String triggerCharacter;
+  private final char triggerCharacter;
 
-  public OnTypeFormatting(@NotNull Position position,
-                          @NotNull FormattingOptions formattingOptions,
-                          @NotNull String character) {
+  public OnTypeFormattingCommand(@NotNull Position position,
+                                 @NotNull FormattingOptions formattingOptions,
+                                 @NotNull String character) {
     super(formattingOptions);
     this.position = position;
-    this.triggerCharacter = character;
+    this.triggerCharacter = character.charAt(0);
   }
 
   @Override
@@ -63,7 +62,9 @@ public class OnTypeFormatting extends FormattingCommandBase {
         var doc = MiscUtil.getDocument(psiFile);
         assert doc != null;
         ApplicationManager.getApplication().runWriteAction(() -> {
-          deleteTypedChar(editor, doc);
+          if (!deleteTypedChar(editor, doc)) {
+            return;
+          }
           PsiDocumentManager.getInstance(psiFile.getProject()).commitDocument(doc);
 
           if (editor instanceof EditorEx) {
@@ -74,7 +75,7 @@ public class OnTypeFormatting extends FormattingCommandBase {
               psiFile,
               () -> TypedAction.getInstance().actionPerformed(
                   editor,
-                  triggerCharacter.charAt(0),
+                  triggerCharacter,
                   com.intellij.openapi.editor.ex.util.EditorUtil.getEditorDataContext(editor)));
         });
       });
@@ -83,12 +84,13 @@ public class OnTypeFormatting extends FormattingCommandBase {
     }
   }
 
-  private void deleteTypedChar(@NotNull Editor editor, @NotNull Document doc) {
+  private boolean deleteTypedChar(@NotNull Editor editor, @NotNull Document doc) {
     var insertedCharPos = MiscUtil.positionToOffset(doc, position) - 1;
 
-    if (!doc.getText().substring(insertedCharPos, insertedCharPos + 1).equals(triggerCharacter)) {
+    if (doc.getText().charAt(insertedCharPos) != triggerCharacter) {
       // if triggered character and actual are not the same
-      throw new RuntimeException("Inserted and triggered characters are not the same");
+      LOG.warn("Inserted and triggered characters are not the same");
+      return false;
     }
 
     editor.getSelectionModel().setSelection(
@@ -98,5 +100,6 @@ public class OnTypeFormatting extends FormattingCommandBase {
 
     editor.getCaretModel().moveToLogicalPosition(
         new LogicalPosition(position.getLine(), position.getCharacter() - 1));
+    return true;
   }
 }

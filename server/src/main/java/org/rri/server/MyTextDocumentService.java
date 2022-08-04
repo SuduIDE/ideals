@@ -9,7 +9,7 @@ import org.jetbrains.annotations.NotNull;
 import org.rri.server.completions.CompletionService;
 import org.rri.server.diagnostics.DiagnosticsService;
 import org.rri.server.formatting.FormattingCommand;
-import org.rri.server.formatting.OnTypeFormatting;
+import org.rri.server.formatting.OnTypeFormattingCommand;
 import org.rri.server.references.DocumentHighlightCommand;
 import org.rri.server.references.FindDefinitionCommand;
 import org.rri.server.references.FindTypeDefinitionCommand;
@@ -152,7 +152,7 @@ public class MyTextDocumentService implements TextDocumentService {
 
   @Override
   public CompletableFuture<List<? extends TextEdit>> onTypeFormatting(DocumentOnTypeFormattingParams params) {
-    return new OnTypeFormatting(params.getPosition(), params.getOptions(), params.getCh()).runAsync(
+    return new OnTypeFormattingCommand(params.getPosition(), params.getOptions(), params.getCh()).runAsync(
         session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri())
     );
   }

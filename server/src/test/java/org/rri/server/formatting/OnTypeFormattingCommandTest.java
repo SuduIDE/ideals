@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Objects;
 
 @RunWith(JUnit4.class)
-public class OnTypeFormattingTest extends BasePlatformTestCase {
+public class OnTypeFormattingCommandTest extends BasePlatformTestCase {
   @Test
   public void testFormatAfterClosedBlockJava() {
     Assertions.assertEquals(List.of(
@@ -158,6 +158,32 @@ public class OnTypeFormattingTest extends BasePlatformTestCase {
         ));
   }
 
+  @Test
+  public void testInsertDocstringOnSpace() {
+    Assertions.assertEquals(List.of(
+            TestUtil.createTextEdit(2, 0, 2, 0,
+                """
+                        :param first:\s
+                        :return:\s
+                        '''
+                    """)
+        ),
+        getEditsByTextAndInsertedCharAtPosition(
+            """
+                def foo(first):
+                    '''\s
+                """,
+            """
+                def foo(first):
+                    '''\s
+                    :param first:\s
+                    :return:\s
+                    '''
+                """,
+            PythonFileType.INSTANCE, new Position(1, 8)
+        ));
+  }
+
 
   @NotNull
   private List<@NotNull TextEdit> getEditsByTextAndInsertedCharAtPosition(@NotNull String actualText,
@@ -166,7 +192,7 @@ public class OnTypeFormattingTest extends BasePlatformTestCase {
                                                                           @NotNull Position caretPosition) {
     final var actualPsiFile = myFixture.configureByText(fileType, actualText);
     var triggerCh = getInsertedChar(actualPsiFile, caretPosition);
-    var command = new OnTypeFormatting(caretPosition, FormattingTestUtil.defaultOptions(), triggerCh);
+    var command = new OnTypeFormattingCommand(caretPosition, FormattingTestUtil.defaultOptions(), triggerCh);
 
     return TextUtil.differenceAfterAction(actualPsiFile, (copy) -> {
       command.typeAndReformatIfNeededInFile(copy);
