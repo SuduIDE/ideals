@@ -11,6 +11,13 @@ import com.jetbrains.python.psi.types.TypeEvalContext;
 import org.eclipse.lsp4j.SymbolKind;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.kotlin.KtNodeTypes;
+import org.jetbrains.kotlin.asJava.classes.KtLightClassForFacade;
+import org.jetbrains.kotlin.asJava.elements.KtLightMethod;
+import org.jetbrains.kotlin.idea.refactoring.memberInfo.MemberInfoUtilsKt;
+import org.jetbrains.kotlin.lexer.KtTokens;
+import org.jetbrains.kotlin.psi.*;
+import org.jetbrains.kotlin.psi.psiUtil.KtPsiUtilKt;
 
 import java.util.Arrays;
 import java.util.List;
@@ -23,7 +30,12 @@ public class SymbolUtil {
   @SuppressWarnings("UnstableApiUsage")
   @Nullable
   public static SymbolKind symbolKind(@NotNull PsiElement elem) {
-    if (elem instanceof PyElement) {
+    if (elem instanceof KtElement) {
+      return ktSymbolKind((KtElement) elem);
+    } else if (elem instanceof KtLightMethod) {
+      return (elem.getContainingFile() instanceof KtLightClassForFacade)
+          ? SymbolKind.Function : SymbolKind.Method;
+    } else if (elem instanceof PyElement) {
       return pySymbolKind((PyElement) elem);
     } else if (elem instanceof PsiFile) {
       return SymbolKind.File;
@@ -76,7 +88,83 @@ public class SymbolUtil {
   }
 
   @Nullable
-  public static SymbolKind pySymbolKind(@NotNull PyElement elem) {
+  private static SymbolKind ktSymbolKind(@NotNull KtElement elem) {
+    if (elem instanceof KtFile) {
+      return SymbolKind.File;
+    } else if (elem instanceof KtPackageDirective) {
+      return SymbolKind.Package;
+    } else if (elem instanceof KtImportDirective) {
+      return SymbolKind.Module;
+    } else if (elem instanceof final KtClass elemClass) {
+      if (elemClass.isInterface()) {
+        return SymbolKind.Interface;
+      } else if (elemClass.isEnum()) {
+        return SymbolKind.Enum;
+      } else {
+        return SymbolKind.Class;
+      }
+    } else if (elem instanceof KtConstructor<?>) {
+      return SymbolKind.Constructor;
+    } else if (elem instanceof final KtFunction elemFunc) {
+      if (ktIsInsideCompanion(elemFunc)) {
+        return SymbolKind.Function;
+      } else if (KtPsiUtilKt.containingClass(elem) != null) {
+        return SymbolKind.Method;
+      } else {
+        return SymbolKind.Function;
+      }
+    } else if (elem instanceof KtLightMethod) {
+      return ((KtLightMethod) elem).getContainingClass() instanceof KtLightClassForFacade
+          ? SymbolKind.Method : SymbolKind.Function;
+    } else if (elem instanceof final KtProperty property) {
+      if (ktIsConstant(property)) {
+        return SymbolKind.Constant;
+      } else if (property.isMember()) {
+        return SymbolKind.Field;
+      } else {
+        return SymbolKind.Variable;
+      }
+    } else if (elem instanceof KtVariableDeclaration
+        || elem instanceof KtParameter) {
+      return SymbolKind.Variable;
+    } else if (elem instanceof KtAnnotationEntry) {
+      return SymbolKind.Property;
+    } else if (elem instanceof KtObjectDeclaration) {
+      return SymbolKind.Class;
+    } else if (elem instanceof KtConstantExpression) {
+      final var type = elem.getNode().getElementType();
+      if (type.equals(KtNodeTypes.BOOLEAN_CONSTANT)) {
+        return SymbolKind.Boolean;
+      } else if (type.equals(KtNodeTypes.INTEGER_CONSTANT) || type.equals(KtNodeTypes.FLOAT_CONSTANT)) {
+        return SymbolKind.Number;
+      } else if (type.equals(KtNodeTypes.STRING_TEMPLATE)) {
+        return SymbolKind.String;
+      } else {
+        return SymbolKind.Constant;
+      }
+    } else if (elem instanceof KtStringTemplateExpression) {
+      return SymbolKind.String;
+    }
+    return null;
+  }
+
+  private static boolean ktIsInsideCompanion(KtFunction elem) {
+    final var objDeclaration = KtPsiUtilKt.getContainingClassOrObject(elem);
+    if (objDeclaration instanceof KtObjectDeclaration) {
+      return ((KtObjectDeclaration) objDeclaration).isCompanion();
+    }
+    return false;
+  }
+
+  private static boolean ktIsConstant(KtProperty elt) {
+    if (elt.getModifierList() == null) {
+      return false;
+    }
+    return elt.getModifierList().getModifier(KtTokens.CONST_KEYWORD) != null;
+  }
+
+  @Nullable
+  private static SymbolKind pySymbolKind(@NotNull PyElement elem) {
     if (elem instanceof PyFile) {
       return SymbolKind.File;
     } else if (elem instanceof PyNoneLiteralExpression) {
@@ -129,7 +217,9 @@ public class SymbolUtil {
 
   @Nullable
   public static String symbolName(@NotNull PsiElement elem) {
-    if (elem instanceof PyElement) {
+    if (elem instanceof KtElement) {
+      return ktSymbolName((KtElement) elem);
+    } else if (elem instanceof PyElement) {
       return pySymbolName((PyElement) elem);
     } else if (elem instanceof PsiFile) {
       return ((PsiFile) elem).getName();
@@ -308,6 +398,57 @@ public class SymbolUtil {
   }
 
   @Nullable
+  private static String ktSymbolName(@NotNull KtElement elem) {
+    if (elem instanceof KtFile) {
+      return elem.getName();
+    } else if (elem instanceof KtPackageDirective) {
+      return ((KtPackageDirective) elem).getQualifiedName();
+    } else if (elem instanceof KtClass) {
+      return elem.getName() == null
+          ? MemberInfoUtilsKt.qualifiedClassNameForRendering((KtClass) elem) : elem.getName();
+    } else if (elem instanceof KtImportDirective) {
+      final var name = ((KtImportDirective) elem).getImportedFqName();
+      return name == null ? "<error>" : name.asString();
+    } else if (elem instanceof KtClassInitializer) {
+      return elem.getName() == null ? "<init>" : elem.getName();
+    } else if (elem instanceof KtFunction) {
+      return methodLabel((KtFunction) elem);
+    } else if (elem instanceof KtProperty) {
+      return elem.getName();
+    } else if (elem instanceof KtVariableDeclaration) {
+      return elem.getName();
+    } else if (elem instanceof KtParameter) {
+      return elem.getName();
+    } else if (elem instanceof KtAnnotationEntry) {
+      return annotationLabel((KtAnnotationEntry) elem);
+    } else if (elem instanceof KtObjectDeclaration) {
+      return elem.getName();
+    } else if (elem instanceof KtConstantExpression) {
+      return elem.getText();
+    } else if (elem instanceof KtStringTemplateExpression) {
+      return elem.getText();
+    } else if (elem instanceof KtLightMethod) {
+      return methodLabel((KtLightMethod) elem);
+    }
+    return null;
+  }
+
+  @NotNull
+  private static String methodLabel(@NotNull KtFunction method) {
+    return method.getName() + method.getValueParameters().stream()
+        .map(param -> param.getTypeReference() == null
+            ? "<unknown>" : param.getTypeReference().getText())
+        .collect(Collectors.joining(", ", "(", ")"));
+  }
+
+  @NotNull
+  private static String annotationLabel(@NotNull KtAnnotationEntry annotation) {
+    String name = annotation.getTypeReference() == null
+        ? annotation.getTypeReference().getText() : annotation.getName();
+    return name == null ? "<unknown>" : "@" + name;
+  }
+
+  @Nullable
   private static String pySymbolName(@NotNull PyElement elem) {
     if (elem instanceof PyFile
         || elem instanceof PyReferenceExpression
@@ -329,7 +470,7 @@ public class SymbolUtil {
       return pyDecoratorLabel((PyDecorator) elem);
     } else if (elem instanceof PyImportStatement) {
       final var qName = ((PyImportStatement) elem).getFullyQualifiedObjectNames();
-      return qName.isEmpty() ? "<error>" : String.join(".", qName);
+      return qName.isEmpty() ? "<error>" : "import " + String.join(", ", qName);
     } else if (elem instanceof PyFromImportStatement) {
       return pyFromImportLabel((PyFromImportStatement) elem);
     } else if (elem instanceof final PyClass elemClass) {
@@ -388,8 +529,15 @@ public class SymbolUtil {
     }
     return "from " + statement.getImportSource().getName() + " import "
         + (statement.isStarImport() ? "*" : Arrays.stream(statement.getImportElements())
-            .map(NavigationItem::getName)
-            .filter(Objects::nonNull)
-            .collect(Collectors.joining(", ")));
+        .map(NavigationItem::getName)
+        .filter(Objects::nonNull)
+        .collect(Collectors.joining(", ")));
+  }
+
+  public static boolean isDeprecated(PsiElement elem) {
+    if (elem instanceof PsiDocCommentOwner) {
+      return ((PsiDocCommentOwner) elem).isDeprecated();
+    }
+    return false;
   }
 }

@@ -23,7 +23,7 @@ public class DocumentSymbol extends BaseClass implements Interface {
     void foo();
   }
 
-  public enum Litter {
+  public enum Letter {
     A, B;
   }
 }

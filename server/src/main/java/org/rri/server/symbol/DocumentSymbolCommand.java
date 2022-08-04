@@ -1,6 +1,7 @@
 package org.rri.server.symbol;
 
 import com.esotericsoftware.minlog.Log;
+import com.intellij.openapi.util.Ref;
 import org.eclipse.lsp4j.DocumentSymbol;
 import org.eclipse.lsp4j.SymbolInformation;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -8,13 +9,9 @@ import org.jetbrains.annotations.NotNull;
 import org.rri.server.commands.ExecutorContext;
 import org.rri.server.commands.LspCommand;
 import org.rri.server.util.MiscUtil;
-import org.rri.server.util.SymbolUtil;
 
-import java.util.ArrayList;
-import java.util.Comparator;
 import java.util.List;
 import java.util.function.Supplier;
-import java.util.stream.Collectors;
 
 @SuppressWarnings("deprecation")
 public class DocumentSymbolCommand extends LspCommand<List<Either<SymbolInformation, DocumentSymbol>>> {
@@ -35,16 +32,8 @@ public class DocumentSymbolCommand extends LspCommand<List<Either<SymbolInformat
       Log.error("No document found.");
       return List.of();
     }
-    final var symbols = new ArrayList<DocumentSymbol>();
-    new DocumentSymbolPsiVisitor(ctx.getPsiFile(), ctx.getCancelToken(), elem -> {
-      final var kind = SymbolUtil.symbolKind(elem);
-      final var name = SymbolUtil.symbolName(elem);
-      if (kind != null && name != null) {
-        final var range = MiscUtil.getPsiElementRange(document, elem);
-        symbols.add(new DocumentSymbol(name, kind, range, range));
-      }
-    }).visit();
-    symbols.sort(Comparator.comparingInt(docSym -> MiscUtil.positionToOffset(document, docSym.getRange().getStart())));
-    return symbols.stream().map(Either::<SymbolInformation, DocumentSymbol>forRight).collect(Collectors.toList());
+    final var root = new Ref<DocumentSymbol>();
+    new DocumentSymbolPsiVisitor(ctx.getPsiFile(), ctx.getCancelToken(), document, root).visit();
+    return List.of(Either.forRight(root.get()));
   }
 }

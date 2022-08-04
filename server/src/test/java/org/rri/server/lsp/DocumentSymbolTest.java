@@ -3,10 +3,12 @@ package org.rri.server.lsp;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 import org.rri.server.LspPath;
 import org.rri.server.TestUtil;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -25,19 +27,22 @@ public class DocumentSymbolTest extends LspServerTestBase {
         .map(Either::getRight)
         .collect(Collectors.toList());
 
-    final var answer = List.of(
-        documentSymbol("DocumentSymbolIntegratingTest.java", SymbolKind.File, range(0, 0, 2, 1)),
-        documentSymbol("DocumentSymbolIntegratingTest", SymbolKind.Class, range(0, 13, 0, 42)),
-        documentSymbol("DocumentSymbolIntegratingTest(int)", SymbolKind.Constructor, range(1, 9, 1, 38)),
-        documentSymbol("x", SymbolKind.Variable, range(1, 43, 1, 44))
-    );
+    final var x = documentSymbol("x", SymbolKind.Variable, range(1, 43, 1, 44), null);
+    final var DSITConstructor = documentSymbol("DocumentSymbolIntegratingTest(int)", SymbolKind.Constructor, range(1, 9, 1, 38), List.of(x));
+    final var DSITClass = documentSymbol("DocumentSymbolIntegratingTest", SymbolKind.Class, range(0, 13, 0, 42), List.of(DSITConstructor));
+    final var DSITFile = documentSymbol("DocumentSymbolIntegratingTest.java", SymbolKind.File, range(0, 0, 2, 1), List.of(DSITClass));
+
+    final var answer = List.of(DSITFile);
 
     assertEquals(answer, result);
   }
 
   @NotNull
-  private static DocumentSymbol documentSymbol(String name, SymbolKind kind, Range range) {
-    return new DocumentSymbol(name, kind, range, range);
+  private static DocumentSymbol documentSymbol(@NotNull String name,
+                                               @NotNull SymbolKind kind,
+                                               @NotNull Range range,
+                                               @Nullable List<@NotNull DocumentSymbol> children) {
+    return new DocumentSymbol(name, kind, range, range, null, children == null ? null : new ArrayList<>(children));
   }
 
   @SuppressWarnings("SameParameterValue")
