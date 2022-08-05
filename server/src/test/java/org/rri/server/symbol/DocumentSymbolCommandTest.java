@@ -158,11 +158,10 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
     assertNotNull(virtualFile);
 
     final var packageOrg = documentSymbol("org", Package, range(0, 0, 0, 11));
-
     final var importComClass1 = documentSymbol("com.Class1", Module, range(2, 0, 2, 17));
 
-    final var enumMemberA = documentSymbol("A", Class, range(5, 2, 5, 3)); // TODO: Fix it
-    final var enumMemberB = documentSymbol("B", Class, range(5, 5, 5, 6)); // TODO: Fix it
+    final var enumMemberA = documentSymbol("A", EnumMember, range(5, 2, 5, 3));
+    final var enumMemberB = documentSymbol("B", EnumMember, range(5, 5, 5, 6));
     final var enumLetters = documentSymbol("Letter", Enum, range(4, 11, 4, 17),
         arrayList(enumMemberA, enumMemberB));
 
@@ -173,49 +172,47 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
     final var interInterface = documentSymbol("Interface", Interface, range(8, 10, 8, 19),
         arrayList(interMethodFoo));
 
-    final var annotationParam = documentSymbol("\"for test\"", String, range(12, 9, 12, 19));
-    final var annotationSpecial = documentSymbol("<unknown>", Property, range(12, 0, 12, 20),
-        arrayList(annotationParam)); // TODO: Fix it
+    final var annotationClassForTest = documentSymbol("ForTest", Class, range(12, 17, 12, 24));
 
-    final var constructorParamX = documentSymbol("x", Variable, range(13, 26, 13, 27));
-    final var DSConstructor = documentSymbol("DocumentSymbol(Int)", Constructor, range(13, 25, 13, 33),
+    final var annotationForTest = documentSymbol("@ForTest", Property, range(14, 0, 14, 8));
+    final var constructorParamX = documentSymbol("x", Variable, range(14, 35, 14, 36));
+    final var DSConstructor = documentSymbol("DocumentSymbol(Int)", Constructor, range(14, 34, 14, 42),
         arrayList(constructorParamX));
+    final var DSClassFieldX = documentSymbol("x", Field, range(15, 14, 15, 15));
+    final var DSCLassFieldCls = documentSymbol("cls", Field, range(16, 14, 16, 17));
 
-    final var DSClassFieldX = documentSymbol("x", Field, range(14, 14, 14, 15));
-    final var DSCLassFieldCls = documentSymbol("cls", Field, range(15, 14, 15, 17));
+    final var fooParamX = documentSymbol("x", Variable, range(18, 19, 18, 20));
+    final var fooParamStr = documentSymbol("str", Variable, range(18, 27, 18, 30));
 
-    final var fooParamX = documentSymbol("x", Variable, range(17, 19, 17, 20));
-    final var fooParamStr = documentSymbol("str", Variable, range(17, 27, 17, 30));
-
-    final var aLiter1 = documentSymbol("1", Number, range(18, 12, 18, 13));
-    final var fooVarA = documentSymbol("a", Variable, range(18, 8, 18, 9),
+    final var aLiter1 = documentSymbol("1", Number, range(19, 12, 19, 13));
+    final var fooVarA = documentSymbol("a", Variable, range(19, 8, 19, 9),
         arrayList(aLiter1));
 
-    final var clsLiterNull = documentSymbol("null", Constant, range(19, 14, 19, 18));
-    final var fooVarCls = documentSymbol("cls", Variable, range(19, 8, 19, 11),
+    final var clsLiterNull = documentSymbol("null", Constant, range(20, 14, 20, 18));
+    final var fooVarCls = documentSymbol("cls", Variable, range(20, 8, 20, 11),
         arrayList(clsLiterNull));
 
-    final var bLiterTrue = documentSymbol("true", Boolean, range(20, 12, 20, 16));
-    final var fooVarB = documentSymbol("b", Variable, range(20, 8, 20, 9),
+    final var bLiterTrue = documentSymbol("true", Boolean, range(21, 12, 21, 16));
+    final var fooVarB = documentSymbol("b", Variable, range(21, 8, 21, 9),
         arrayList(bLiterTrue));
 
-    final var methodFoo = documentSymbol("foo(Int, String)", Method, range(17, 15, 17, 18),
+    final var methodFoo = documentSymbol("foo(Int, String)", Method, range(18, 15, 18, 18),
         arrayList(fooParamX, fooParamStr, fooVarA, fooVarCls, fooVarB));
 
-    final var barLiter42 = documentSymbol("42", Number, range(24, 19, 24, 21));
-    final var methodBar = documentSymbol("bar()", Method, range(24, 6, 24, 9),
+    final var barLiter42 = documentSymbol("42", Number, range(25, 19, 25, 21));
+    final var methodBar = documentSymbol("bar()", Method, range(25, 6, 25, 9),
         arrayList(barLiter42));
 
-    final var DSClass = documentSymbol("DocumentSymbol", Class, range(13, 11, 13, 25),
-        arrayList(annotationSpecial, DSConstructor, DSClassFieldX, DSCLassFieldCls, methodFoo, methodBar));
+    final var DSClass = documentSymbol("DocumentSymbol", Class, range(14, 20, 14, 34),
+        arrayList(annotationForTest, DSConstructor, DSClassFieldX, DSCLassFieldCls, methodFoo, methodBar));
 
-    final var buzParamA = documentSymbol("a", Variable, range(27, 8, 27, 9));
-    final var buzLiter1 = documentSymbol("1", Number, range(27, 27, 27, 28));
-    final var funcBuz = documentSymbol("buz(Int)", Function, range(27, 4, 27, 7),
+    final var buzParamA = documentSymbol("a", Variable, range(28, 8, 28, 9));
+    final var buzLiter1 = documentSymbol("1", Number, range(28, 27, 28, 28));
+    final var funcBuz = documentSymbol("buz(Int)", Function, range(28, 4, 28, 7),
         arrayList(buzParamA, buzLiter1));
 
-    final var DSFile = documentSymbol("DocumentSymbol.kt", File, range(0, 0, 27, 28),
-        arrayList(packageOrg, importComClass1, enumLetters, interInterface, DSClass, funcBuz));
+    final var DSFile = documentSymbol("DocumentSymbol.kt", File, range(0, 0, 29, 0),
+        arrayList(packageOrg, importComClass1, enumLetters, interInterface, annotationClassForTest, DSClass, funcBuz));
 
     List<DocumentSymbol> answers = List.of(DSFile);
     checkDocumentSymbols(answers, virtualFile.findChild("DocumentSymbol.kt"));

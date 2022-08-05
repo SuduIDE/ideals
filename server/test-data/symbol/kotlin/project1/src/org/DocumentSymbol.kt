@@ -7,13 +7,14 @@ enum class Letter {
 }
 
 interface Interface {
-  fun foo(x: Int, str: String): Int;
+  fun foo(x: Int, str: String): Int
 }
 
-@Special("for test")
-open class DocumentSymbol(x: Int) : BaseClass(x), Interface {
-  private var x = x;
-  private val cls = Class1();
+annotation class ForTest
+
+@ForTest open class DocumentSymbol(x: Int) : BaseClass(x), Interface {
+  private var x = x
+  private val cls = Class1()
 
   override fun foo(x: Int, str: String): Int {
     val a = 1

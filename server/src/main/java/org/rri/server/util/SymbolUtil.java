@@ -96,7 +96,9 @@ public class SymbolUtil {
     } else if (elem instanceof KtImportDirective) {
       return SymbolKind.Module;
     } else if (elem instanceof final KtClass elemClass) {
-      if (elemClass.isInterface()) {
+      if (elemClass instanceof KtEnumEntry) {
+        return SymbolKind.EnumMember;
+      } else if (elemClass.isInterface()) {
         return SymbolKind.Interface;
       } else if (elemClass.isEnum()) {
         return SymbolKind.Enum;
@@ -130,7 +132,7 @@ public class SymbolUtil {
     } else if (elem instanceof KtAnnotationEntry) {
       return SymbolKind.Property;
     } else if (elem instanceof KtObjectDeclaration) {
-      return SymbolKind.Class;
+      return SymbolKind.Object;
     } else if (elem instanceof KtConstantExpression) {
       final var type = elem.getNode().getElementType();
       if (type.equals(KtNodeTypes.BOOLEAN_CONSTANT)) {
@@ -444,7 +446,7 @@ public class SymbolUtil {
   @NotNull
   private static String annotationLabel(@NotNull KtAnnotationEntry annotation) {
     String name = annotation.getTypeReference() == null
-        ? annotation.getTypeReference().getText() : annotation.getName();
+        ? annotation.getName() :  annotation.getTypeReference().getText();
     return name == null ? "<unknown>" : "@" + name;
   }
 
