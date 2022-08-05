@@ -1,7 +1,6 @@
 package org.rri.server.symbol;
 
 import com.intellij.openapi.editor.Document;
-import com.intellij.openapi.util.Ref;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiRecursiveElementVisitor;
@@ -13,7 +12,10 @@ import org.jetbrains.annotations.Nullable;
 import org.rri.server.util.MiscUtil;
 import org.rri.server.util.SymbolUtil;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.List;
+import java.util.Stack;
 
 public class DocumentSymbolPsiVisitor extends PsiRecursiveElementVisitor {
   @NotNull
@@ -22,24 +24,19 @@ public class DocumentSymbolPsiVisitor extends PsiRecursiveElementVisitor {
   private final CancelChecker cancelToken;
   @NotNull
   private final Document document;
+  @Nullable
+  private DocumentSymbol root;
   @NotNull
-  private final Ref<@NotNull DocumentSymbol> root;
-  @NotNull
-  private final Stack<@NotNull PsiElement> ancestors;
-  @NotNull
-  private final Map<@NotNull PsiElement, @NotNull List<@NotNull DocumentSymbol>> children;
+  private final Stack<@NotNull List<@NotNull DocumentSymbol>> children;
 
   public DocumentSymbolPsiVisitor(@NotNull PsiFile psiFile,
                                   @Nullable CancelChecker cancelToken,
-                                  @NotNull Document document,
-                                  @NotNull Ref<@NotNull DocumentSymbol> root) {
+                                  @NotNull Document document) {
     super();
     this.psiFile = psiFile;
     this.cancelToken = cancelToken;
     this.document = document;
-    this.root = root;
-    ancestors = new Stack<>();
-    children = new HashMap<>();
+    children = new Stack<>();
   }
 
   public void visit() {
@@ -61,26 +58,29 @@ public class DocumentSymbolPsiVisitor extends PsiRecursiveElementVisitor {
         docSym.setTags(List.of(SymbolTag.Deprecated));
       }
 
-      if (ancestors.empty()) {
-        root.set(docSym);
+      if (children.empty()) {
+        root = docSym;
       } else {
-        children.get(ancestors.peek()).add(docSym);
+        children.peek().add(docSym);
       }
 
-      children.put(elem, new ArrayList<>());
-      ancestors.add(elem);
+      children.add(new ArrayList<>());
     }
 
     super.visitElement(elem);
 
     if (docSym != null) {
-      final var lst = children.get(elem);
-      lst.sort(Comparator.comparingInt(sym -> MiscUtil.positionToOffset(document, sym.getRange().getStart())));
-      ancestors.pop();
+      final var lst = children.pop();
       if (lst.size() > 0) {
+        lst.sort(Comparator.comparingInt(sym -> MiscUtil.positionToOffset(document, sym.getRange().getStart())));
         docSym.setChildren(lst);
       }
     }
+  }
+
+  @Nullable
+  public DocumentSymbol getRoot() {
+    return root;
   }
 
   public void visitFile(@NotNull PsiFile file) {

@@ -1,7 +1,6 @@
 package org.rri.server.symbol;
 
 import com.esotericsoftware.minlog.Log;
-import com.intellij.openapi.util.Ref;
 import org.eclipse.lsp4j.DocumentSymbol;
 import org.eclipse.lsp4j.SymbolInformation;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -32,8 +31,8 @@ public class DocumentSymbolCommand extends LspCommand<List<Either<SymbolInformat
       Log.error("No document found.");
       return List.of();
     }
-    final var root = new Ref<DocumentSymbol>();
-    new DocumentSymbolPsiVisitor(ctx.getPsiFile(), ctx.getCancelToken(), document, root).visit();
-    return List.of(Either.forRight(root.get()));
+    final var visitor = new DocumentSymbolPsiVisitor(ctx.getPsiFile(), ctx.getCancelToken(), document);
+    visitor.visit();
+    return visitor.getRoot() == null ? List.of() : List.of(Either.forRight(visitor.getRoot()));
   }
 }
