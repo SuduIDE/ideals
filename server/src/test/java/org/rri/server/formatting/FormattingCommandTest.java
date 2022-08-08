@@ -29,12 +29,13 @@ public class FormattingCommandTest extends BasePlatformTestCase {
 
   @Test
   public void testCorrectVarDecFormatting() {
-    Assertions.assertEquals(getEditsByText("x = 10", "x = 10", PythonFileType.INSTANCE), List.of());
+    Assertions.assertEquals(getEditsByText("x = 10\n", "x = 10\n", PythonFileType.INSTANCE),
+        List.of());
   }
 
   @Test
   public void testCorrectFuncDec() {
-    Assertions.assertEquals(getEditsByText("def foo(x): x = 1", "def foo(x): x = 1",
+    Assertions.assertEquals(getEditsByText("def foo(x): x = 1\n", "def foo(x): x = 1\n",
         PythonFileType.INSTANCE), List.of());
   }
 
