@@ -31,6 +31,7 @@ open class PlainIdeTask : RunIdeTask()
 tasks.register<PlainIdeTask>("plainIdea") {
   maxHeapSize = "4G"
   jvmArgs = listOf(
+    "--add-opens=java.desktop/sun.awt.X11=ALL-UNNAMED",
     "--add-exports=java.desktop/sun.awt.windows=ALL-UNNAMED",
     "--add-exports=java.desktop/sun.awt.X11=ALL-UNNAMED",
   )
