@@ -52,7 +52,7 @@ public class OnTypeFormattingCommand extends FormattingCommandBase {
   @Override
   protected List<? extends TextEdit> execute(@NotNull ExecutorContext ctx) {
     LOG.info(getMessageSupplier().get());
-    return TextUtil.differenceAfterActionOnCopy(
+    return TextUtil.differenceAfterAction(
         ctx.getPsiFile(),
         this::typeAndReformatIfNeededInFile
     );

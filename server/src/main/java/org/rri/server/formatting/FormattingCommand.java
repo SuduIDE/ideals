@@ -43,7 +43,7 @@ final public class FormattingCommand extends FormattingCommandBase {
   protected List<? extends TextEdit> execute(@NotNull ExecutorContext context) {
     // create reformat results
     LOG.info(getMessageSupplier().get());
-    return TextUtil.differenceAfterActionOnCopy(
+    return TextUtil.differenceAfterAction(
         context.getPsiFile(),
         (copy) -> reformatPsiFile(context, copy));
   }

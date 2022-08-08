@@ -176,7 +176,7 @@ public class FormattingCommandTest extends BasePlatformTestCase {
     var context = new ExecutorContext(actualPsiFile, getProject(), new DumbCancelChecker());
     var command = new FormattingCommand(lspRange, FormattingTestUtil.defaultOptions());
 
-    return TextUtil.differenceAfterActionOnCopy(actualPsiFile, (copy) -> {
+    return TextUtil.differenceAfterAction(actualPsiFile, (copy) -> {
       command.reformatPsiFile(context, copy);
       Assertions.assertNotEquals(actualPsiFile, copy);
       Assertions.assertEquals(expectedText, copy.getText());

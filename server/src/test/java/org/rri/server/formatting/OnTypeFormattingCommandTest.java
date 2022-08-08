@@ -195,7 +195,7 @@ public class OnTypeFormattingCommandTest extends BasePlatformTestCase {
     var command = new OnTypeFormattingCommand(
         caretPosition, FormattingTestUtil.defaultOptions(), triggerCh);
 
-    return TextUtil.differenceAfterActionOnCopy(actualPsiFile, (copy) -> {
+    return TextUtil.differenceAfterAction(actualPsiFile, (copy) -> {
       command.typeAndReformatIfNeededInFile(copy);
 
       // some insert calls are not committing file
