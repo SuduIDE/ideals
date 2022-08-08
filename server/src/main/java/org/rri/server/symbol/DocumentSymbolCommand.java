@@ -5,6 +5,7 @@ import org.eclipse.lsp4j.DocumentSymbol;
 import org.eclipse.lsp4j.SymbolInformation;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
+import org.rri.server.LspPath;
 import org.rri.server.commands.ExecutorContext;
 import org.rri.server.commands.LspCommand;
 import org.rri.server.util.MiscUtil;
@@ -30,7 +31,7 @@ public class DocumentSymbolCommand extends LspCommand<List<Either<SymbolInformat
   protected @NotNull List<Either<SymbolInformation, @NotNull DocumentSymbol>> execute(@NotNull ExecutorContext ctx) {
     final var document = MiscUtil.getDocument(ctx.getPsiFile());
     if (document == null) {
-      LOG.error("No document found.");
+      LOG.error("No document found:" + LspPath.fromVirtualFile(ctx.getPsiFile().getVirtualFile()).toLspUri());
       return List.of();
     }
     final var visitor = new DocumentSymbolPsiVisitor(ctx.getPsiFile(), ctx.getCancelToken(), document);
