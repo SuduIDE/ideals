@@ -41,7 +41,7 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
     final var fieldClass1Cls = documentSymbol("cls", Constant, range(6, 30, 6, 33));
 
     final var constructorParamX = documentSymbol("x", Variable, range(8, 28, 8, 29));
-    final var DSConstructor = documentSymbol("DocumentSymbol(int)", Constructor, range(8, 9, 8, 23),
+    final var docSymConstructor = documentSymbol("DocumentSymbol(int)", Constructor, range(8, 9, 8, 23),
         List.of(constructorParamX));
 
     final var paramFooX = documentSymbol("x", Variable, range(13, 21, 13, 22));
@@ -67,10 +67,10 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
     final var enumLetter = documentSymbol("Letter", Enum, range(25, 14, 25, 20),
         List.of(enumMemberA, enumMemberB));
 
-    final var DSClass = documentSymbol("DocumentSymbol", Class, range(4, 13, 4, 27),
-        List.of(fieldIntX, fieldClass1Cls, DSConstructor, methodFoo, entryInterface, enumLetter));
+    final var docSymClass = documentSymbol("DocumentSymbol", Class, range(4, 13, 4, 27),
+        List.of(fieldIntX, fieldClass1Cls, docSymConstructor, methodFoo, entryInterface, enumLetter));
 
-    final var answers = List.of(DSClass);
+    final var answers = List.of(docSymClass);
     checkDocumentSymbols(answers, virtualFile.findChild("DocumentSymbol.java"));
   }
 
@@ -84,10 +84,10 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
 
     final var barBoolB = documentSymbol("b", Variable, range(5, 0, 5, 1));
 
-    final var DSVarX = documentSymbol("x", Field, range(11, 13, 11, 14));
-    final var DSVar__const = documentSymbol("__CONST", Constant, range(12, 13, 12, 20));
-    final var DSConstructor = documentSymbol("__init__(self)", Constructor, range(10, 8, 10, 16),
-        List.of(DSVarX, DSVar__const));
+    final var docSymVarX = documentSymbol("x", Field, range(11, 13, 11, 14));
+    final var docSymVar__const = documentSymbol("__CONST", Constant, range(12, 13, 12, 20));
+    final var docSymConstructor = documentSymbol("__init__(self)", Constructor, range(10, 8, 10, 16),
+        List.of(docSymVarX, docSymVar__const));
 
     final var fooParamX = documentSymbol("x", Variable, range(14, 18, 14, 19));
     final var fooParamY = documentSymbol("y", Variable, range(14, 21, 14, 22));
@@ -99,8 +99,8 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
     final var methodBar = documentSymbol("bar(self, *args, **kwargs)", Method, range(17, 8, 17, 11),
         List.of(barParamArgs, barParamKwargs));
 
-    final var DSClass = documentSymbol("Document_symbol", Class, range(9, 6, 9, 21),
-        List.of(DSConstructor, methodFoo, methodBar));
+    final var docSymClass = documentSymbol("Document_symbol", Class, range(9, 6, 9, 21),
+        List.of(docSymConstructor, methodFoo, methodBar));
 
     final var varFooBarX = documentSymbol("x", Variable, range(22, 12, 22, 13));
     final var varFooBarY = documentSymbol("y", Variable, range(22, 18, 22, 19));
@@ -108,7 +108,7 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
     final var functionFooBar = documentSymbol("foo_bar(x, /, y, *, z)", Function, range(22, 4, 22, 11),
         List.of(varFooBarX, varFooBarY, varFooBarZ));
 
-    final var answers = List.of(asCls2, varStringP, barBoolB, DSClass, functionFooBar);
+    final var answers = List.of(asCls2, varStringP, barBoolB, docSymClass, functionFooBar);
     checkDocumentSymbols(answers, virtualFile.findChild("documentSymbol.py"));
   }
 
@@ -133,10 +133,10 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
     final var annotationClassForTest = documentSymbol("ForTest", Class, range(12, 17, 12, 24));
 
     final var constructorParamX = documentSymbol("x", Variable, range(14, 35, 14, 36));
-    final var DSConstructor = documentSymbol("DocumentSymbol(Int)", Constructor, range(14, 34, 14, 42),
+    final var docSymConstructor = documentSymbol("DocumentSymbol(Int)", Constructor, range(14, 34, 14, 42),
         List.of(constructorParamX));
-    final var DSClassFieldX = documentSymbol("x", Field, range(15, 14, 15, 15));
-    final var DSCLassFieldCls = documentSymbol("cls", Field, range(16, 14, 16, 17));
+    final var docSymClassFieldX = documentSymbol("x", Field, range(15, 14, 15, 15));
+    final var docSymCLassFieldCls = documentSymbol("cls", Field, range(16, 14, 16, 17));
 
     final var fooParamX = documentSymbol("x", Variable, range(18, 19, 18, 20));
     final var fooParamStr = documentSymbol("str", Variable, range(18, 27, 18, 30));
@@ -152,14 +152,14 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
 
     final var methodBar = documentSymbol("bar()", Method, range(25, 6, 25, 9));
 
-    final var DSClass = documentSymbol("DocumentSymbol", Class, range(14, 20, 14, 34),
-        List.of(DSConstructor, DSClassFieldX, DSCLassFieldCls, methodFoo, methodBar));
+    final var docSymClass = documentSymbol("DocumentSymbol", Class, range(14, 20, 14, 34),
+        List.of(docSymConstructor, docSymClassFieldX, docSymCLassFieldCls, methodFoo, methodBar));
 
     final var buzParamA = documentSymbol("a", Variable, range(28, 8, 28, 9));
     final var funcBuz = documentSymbol("buz(Int)", Function, range(28, 4, 28, 7),
         List.of(buzParamA));
 
-    List<DocumentSymbol> answers = List.of(enumLetters, interInterface, annotationClassForTest, DSClass, funcBuz);
+    List<DocumentSymbol> answers = List.of(enumLetters, interInterface, annotationClassForTest, docSymClass, funcBuz);
     checkDocumentSymbols(answers, virtualFile.findChild("DocumentSymbol.kt"));
   }
 

@@ -7,6 +7,7 @@ import com.intellij.find.findUsages.FindUsagesHandlerBase;
 import com.intellij.find.findUsages.FindUsagesHandlerFactory;
 import com.intellij.find.findUsages.FindUsagesOptions;
 import com.intellij.find.impl.FindManagerImpl;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.progress.ProcessCanceledException;
 import com.intellij.openapi.project.Project;
@@ -50,6 +51,7 @@ import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
 public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
+  private static final Logger LOG = Logger.getInstance(FindUsagesCommand.class);
   @NotNull
   private final Position pos;
 
@@ -112,8 +114,7 @@ public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
             return false;
           }
         }
-        if (usage instanceof UsageInfo2UsageAdapter) {
-          var ui2ua = (UsageInfo2UsageAdapter) usage;
+        if (usage instanceof UsageInfo2UsageAdapter ui2ua) {
           var elem = ui2ua.getElement();
           var loc = MiscUtil.psiElementToLocation(elem);
           if (loc != null) {

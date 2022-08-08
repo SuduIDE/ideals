@@ -28,10 +28,10 @@ public class DocumentSymbolTest extends LspServerTestBase {
         .collect(Collectors.toList());
 
     final var x = documentSymbol("x", SymbolKind.Variable, range(1, 43, 1, 44), null);
-    final var DSITConstructor = documentSymbol("DocumentSymbolIntegratingTest(int)", SymbolKind.Constructor, range(1, 9, 1, 38), List.of(x));
-    final var DSITClass = documentSymbol("DocumentSymbolIntegratingTest", SymbolKind.Class, range(0, 13, 0, 42), List.of(DSITConstructor));
+    final var testConstructor = documentSymbol("DocumentSymbolIntegratingTest(int)", SymbolKind.Constructor, range(1, 9, 1, 38), List.of(x));
+    final var testClass = documentSymbol("DocumentSymbolIntegratingTest", SymbolKind.Class, range(0, 13, 0, 42), List.of(testConstructor));
 
-    final var answer = List.of(DSITClass);
+    final var answer = List.of(testClass);
 
     assertEquals(answer, result);
   }
