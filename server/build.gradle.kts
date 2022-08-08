@@ -28,7 +28,13 @@ intellij {
 }
 
 open class PlainIdeTask : RunIdeTask()
-tasks.register<PlainIdeTask>("plainIdea")
+tasks.register<PlainIdeTask>("plainIdea") {
+  maxHeapSize = "4G"
+  jvmArgs = listOf(
+    "--add-exports=java.desktop/sun.awt.windows=ALL-UNNAMED",
+    "--add-exports=java.desktop/sun.awt.X11=ALL-UNNAMED",
+  )
+}
 
 tasks {
   test {
@@ -64,12 +70,9 @@ tasks {
     }
   }
 
-  runIde {
-    jvmArgs = listOf("-Xmx4G")
-  }
-
   getByName("runIde") {
     this as RunIdeTask
+    maxHeapSize = "4G"
     args = listOf("lsp-server")
     systemProperty("java.awt.headless", true)
   }
