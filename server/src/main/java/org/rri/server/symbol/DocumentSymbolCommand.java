@@ -32,7 +32,6 @@ public class DocumentSymbolCommand extends LspCommand<List<Either<SymbolInformat
       return List.of();
     }
     final var visitor = new DocumentSymbolPsiVisitor(ctx.getPsiFile(), ctx.getCancelToken(), document);
-    visitor.visit();
-    return visitor.getRoot() == null ? List.of() : List.of(Either.forRight(visitor.getRoot()));
+    return visitor.visit().stream().map(Either::<SymbolInformation, DocumentSymbol>forRight).toList();
   }
 }
