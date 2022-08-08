@@ -143,15 +143,14 @@ public class MyTextDocumentService implements TextDocumentService {
   }
 
   @NotNull
-  private CompletionService completions() {
+  private CompletionService completion() {
     return session.getProject().getService(CompletionService.class);
   }
 
   @Override
   @NotNull
   public CompletableFuture<CompletionItem> resolveCompletionItem(@NotNull CompletionItem unresolved) {
-    // todo currently "completion resolve" == "insert completion item label"
-    return CompletableFuture.completedFuture(unresolved);
+    return completion().startCompletionResolve(unresolved);
   }
 
   @Override
@@ -165,7 +164,7 @@ public class MyTextDocumentService implements TextDocumentService {
       // todo Maybe we need to throw exception
       return CompletableFuture.completedFuture(Either.forLeft(new ArrayList<>()));
     }
-    return completions().startCompletionCalculation(path, params.getPosition());
+    return completion().startCompletionCalculation(path, params.getPosition());
   }
 
   @Override

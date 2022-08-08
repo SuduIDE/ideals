@@ -8,6 +8,7 @@ import com.intellij.codeInsight.lookup.impl.LookupImpl;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ReadAction;
+import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
@@ -21,6 +22,7 @@ import com.intellij.openapi.util.Ref;
 import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiFile;
+import com.intellij.psi.impl.PsiFileFactoryImpl;
 import com.intellij.psi.impl.source.tree.injected.InjectedLanguageEditorUtil;
 import com.intellij.reference.SoftReference;
 import com.intellij.util.ObjectUtils;
@@ -35,6 +37,7 @@ import org.jetbrains.annotations.Nullable;
 import org.rri.server.LspPath;
 import org.rri.server.util.EditorUtil;
 import org.rri.server.util.MiscUtil;
+import org.rri.server.util.TextUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -47,6 +50,9 @@ final public class CompletionService implements Disposable {
   @NotNull
   private final Project project;
   private static final Logger LOG = Logger.getInstance(CompletionService.class);
+
+  private final @Nullable List<@NotNull LookupElement> cachedPrevResults = null;
+  private int cachedResultIndex = 0;
 
   public CompletionService(@NotNull Project project) {
     this.project = project;
@@ -87,49 +93,86 @@ final public class CompletionService implements Disposable {
     Ref<List<LookupElement>> sortedLookupElementsRef = new Ref<>(new ArrayList<>());
     VoidCompletionProcess process = new VoidCompletionProcess();
     try {
-      EditorUtil.withEditor(process, psiFile, position, (editor) -> {
-        var ideaCompletionResults = new ArrayList<CompletionResult>();
+      var generated = PsiFileFactoryImpl.getInstance(project).createFileFromText(
+          "completionCopy",
+          psiFile.getLanguage(),
+          psiFile.getText(),
+          true,
+          true,
+          true,
+          psiFile.getVirtualFile());
+      EditorUtil.withEditor(process, generated, position, (editor) -> {
+            var ideaCompletionResults = new ArrayList<CompletionResult>();
+            var initContext = CompletionInitializationUtil.createCompletionInitializationContext(
+                project,
+                editor,
+                editor.getCaretModel().getPrimaryCaret(),
+                1,
+                CompletionType.BASIC);
+            assert initContext != null;
 
-        var initContext = CompletionInitializationUtil.createCompletionInitializationContext(
-            project,
-            editor,
-            editor.getCaretModel().getPrimaryCaret(),
-            1,
-            CompletionType.BASIC);
-        assert initContext != null;
+            var topLevelOffsets =
+                new OffsetsInFile(initContext.getFile(), initContext.getOffsetMap()).toTopLevelFile();
+            PsiDocumentManager.getInstance(initContext.getProject()).commitAllDocuments();
+            var hostCopyOffsets =
+                insertDummyIdentifier(initContext, process, topLevelOffsets);
 
-        var topLevelOffsets =
-            new OffsetsInFile(initContext.getFile(), initContext.getOffsetMap()).toTopLevelFile();
-        PsiDocumentManager.getInstance(initContext.getProject()).commitAllDocuments();
-        var hostCopyOffsets =
-            insertDummyIdentifier(initContext, process, topLevelOffsets);
+            OffsetsInFile finalOffsets = CompletionInitializationUtil.toInjectedIfAny(initContext.getFile(), hostCopyOffsets);
+            CompletionParameters parameters = CompletionInitializationUtil.createCompletionParameters(
+                initContext,
+                process,
+                finalOffsets);
+            var arranger = new LookupArrangerImpl(parameters);
+            var lookup = new LookupImpl(project, editor, arranger);
 
-        OffsetsInFile finalOffsets = CompletionInitializationUtil.toInjectedIfAny(initContext.getFile(), hostCopyOffsets);
-        CompletionParameters parameters = CompletionInitializationUtil.createCompletionParameters(
-            initContext,
-            process,
-            finalOffsets);
-        var arranger = new LookupArrangerImpl(parameters);
-        var lookup = new LookupImpl(project, editor, arranger);
+            var prefix = CompletionUtil.findReferencePrefix(parameters);
 
-        var compService = com.intellij.codeInsight.completion.CompletionService.getCompletionService();
-        assert compService != null;
+            var ideaCompService = com.intellij.codeInsight.completion.CompletionService.getCompletionService();
+            assert ideaCompService != null;
 
-        compService.performCompletion(parameters,
-            (result) -> {
-              lookup.addItem(result.getLookupElement(),
-                  new CamelHumpMatcher("") /* todo compare with another PrefixMatchers */);
-              ideaCompletionResults.add(result);
+            ideaCompService.performCompletion(parameters,
+                (result) -> {
+                  lookup.addItem(result.getLookupElement(),
+                      new CamelHumpMatcher("") /* todo compare with another PrefixMatchers */);
+                  ideaCompletionResults.add(result);
+                });
+
+            ideaCompletionResults.forEach((it) -> {
+              try {
+                arranger.addElement(it);
+              } catch (Exception ignored) {
+              } // we just skip this element
             });
+            sortedLookupElementsRef.set(arranger.arrangeItems(lookup, false).first);
 
-        ideaCompletionResults.forEach((it) -> {
-          try {
-            arranger.addElement(it);
-          } catch (Exception ignored) {
-          } // we just skip this element
-        });
-        sortedLookupElementsRef.set(arranger.arrangeItems(lookup, false).first);
-      });
+            for (var lookUpElement : sortedLookupElementsRef.get()) {
+              ApplicationManager.getApplication().runWriteAction(() -> {
+                WriteCommandAction.runWriteCommandAction(project, () -> {
+
+                  var context =
+                      CompletionUtil.createInsertionContext(
+                          sortedLookupElementsRef.get(),
+                          lookUpElement,
+                          '\n',
+                          editor,
+                          generated,
+                          editor.getCaretModel().getOffset(),
+                          CompletionUtil.calcIdEndOffset(
+                              initContext.getOffsetMap(),
+                              editor,
+                              editor.getCaretModel().getOffset()),
+                          initContext.getOffsetMap()
+                      );
+                  lookUpElement.handleInsert(context);
+                });
+              });
+            }
+          }
+
+      );
+
+      LOG.warn(TextUtil.differenceBetweenPsiFiles(psiFile, generated).toString());
+      LOG.warn(generated.getText());
     } finally {
       Disposer.dispose(process);
     }
@@ -138,7 +181,6 @@ final public class CompletionService implements Disposable {
     var result = sortedLookupElementsRef.get().stream().map(
         CompletionService::createLSPCompletionItem
     ).collect(Collectors.toList());
-
     return Either.forLeft(result);
   }
 
@@ -170,6 +212,16 @@ final public class CompletionService implements Disposable {
 
     return resItem;
   }
+
+  @NotNull
+  public CompletableFuture<@NotNull CompletionItem> startCompletionResolve(@NotNull CompletionItem unresolved) {
+//    var resultIndex = (Integer)unresolved.getData();
+//    synchronized (cachedResults) {
+//
+//    }
+    return CompletableFuture.completedFuture(unresolved);
+  }
+
 
   /* todo
       Find an alternative way to find Indicator from project for completion
