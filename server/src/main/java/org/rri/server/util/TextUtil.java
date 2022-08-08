@@ -7,7 +7,9 @@ import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.progress.DumbProgressIndicator;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.util.TextRange;
+import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiFileFactory;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.TextEdit;
 import org.jetbrains.annotations.NotNull;
@@ -31,7 +33,18 @@ public class TextUtil {
   @NotNull
   public static List<@NotNull TextEdit> differenceAfterAction(@NotNull PsiFile psiFile,
                                                               @NotNull Consumer<@NotNull PsiFile> action) {
-    var copy = (PsiFile) psiFile.copy();
+    var manager = PsiDocumentManager.getInstance(psiFile.getProject());
+    var doc = MiscUtil.getDocument(psiFile);
+    assert doc != null;
+    assert  manager.isCommitted(doc);
+    var copy = PsiFileFactory.getInstance(psiFile.getProject()).createFileFromText(
+        "copy",
+        psiFile.getLanguage(),
+        doc.getText(),
+        true,
+        true,
+        true,
+        psiFile.getVirtualFile());
 
     action.accept(copy);
 

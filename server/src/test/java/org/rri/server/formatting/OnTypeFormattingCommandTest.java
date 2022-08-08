@@ -211,7 +211,7 @@ public class OnTypeFormattingCommandTest extends BasePlatformTestCase {
     var doc = MiscUtil.getDocument(psiFile);
     assert doc != null;
     var caretOffset = MiscUtil.positionToOffset(doc, caretPosition);
-    return psiFile.getText().charAt(caretOffset - 1);
+    return doc.getText().charAt(caretOffset - 1);
   }
 
 }

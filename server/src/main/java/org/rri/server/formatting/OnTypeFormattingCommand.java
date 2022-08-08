@@ -2,6 +2,7 @@ package org.rri.server.formatting;
 
 import com.intellij.ide.highlighter.HighlighterFactory;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.EditorModificationUtilEx;
@@ -58,7 +59,6 @@ public class OnTypeFormattingCommand extends FormattingCommandBase {
   void typeAndReformatIfNeededInFile(@NotNull PsiFile psiFile) {
     try {
       EditorUtil.withEditor(this, psiFile, position, editor -> {
-        assert psiFile.getVirtualFile() == null;
         var doc = MiscUtil.getDocument(psiFile);
         assert doc != null;
         ApplicationManager.getApplication().runWriteAction(() -> {
@@ -96,7 +96,11 @@ public class OnTypeFormattingCommand extends FormattingCommandBase {
     editor.getSelectionModel().setSelection(
         insertedCharPos,
         insertedCharPos + 1);
-    EditorModificationUtilEx.deleteSelectedText(editor);
+    ApplicationManager.getApplication().runWriteAction(
+        () -> WriteCommandAction.runWriteCommandAction(
+            editor.getProject(),
+            () -> EditorModificationUtilEx.deleteSelectedText(editor)
+        ));
 
     editor.getCaretModel().moveToLogicalPosition(
         new LogicalPosition(position.getLine(), position.getCharacter() - 1));

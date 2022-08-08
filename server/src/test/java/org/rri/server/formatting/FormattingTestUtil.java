@@ -13,6 +13,7 @@ public final class FormattingTestUtil {
     return MiscUtil.with(
         new FormattingOptions(),
         formattingOptions -> {
+          formattingOptions.setInsertFinalNewline(true);
           formattingOptions.setInsertSpaces(true);
           formattingOptions.setTabSize(4);
         });
