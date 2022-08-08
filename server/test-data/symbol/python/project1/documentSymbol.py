@@ -10,7 +10,7 @@ func()
 class Document_symbol(cls2.Class2):
     def __init__(self):
         self.x = 1
-        self.__const = None
+        self.__CONST = None
 
     def foo(self, x, y):
         pass
