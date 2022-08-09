@@ -13,7 +13,7 @@ import org.jetbrains.kotlin.psi.psiUtil.KtPsiUtilKt;
 
 import java.util.stream.Collectors;
 
-public class KtDocumentSymbolProvider extends DocumentSymbolProvider{
+public class KtDocumentSymbolProvider extends JVMDocumentSymbolProvider {
   @Override
   public @Nullable SymbolKind symbolKind(@NotNull PsiElement elem) {
     if (elem instanceof final KtClass elemClass) {

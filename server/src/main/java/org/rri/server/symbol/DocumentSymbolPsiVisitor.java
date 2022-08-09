@@ -11,6 +11,7 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.server.symbol.provider.DocumentSymbolProvider;
 import org.rri.server.util.MiscUtil;
+import org.rri.server.util.SymbolUtil;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -24,7 +25,7 @@ public class DocumentSymbolPsiVisitor extends PsiRecursiveElementVisitor {
   private final CancelChecker cancelToken;
   @NotNull
   private final Document document;
-  @NotNull
+  @Nullable
   private final DocumentSymbolProvider provider;
   @NotNull
   private final Stack<@NotNull List<@NotNull DocumentSymbol>> children;
@@ -36,12 +37,15 @@ public class DocumentSymbolPsiVisitor extends PsiRecursiveElementVisitor {
     this.psiFile = psiFile;
     this.cancelToken = cancelToken;
     this.document = document;
-    provider = DocumentSymbolProvider.getDocumentSymbolProvider(psiFile);
+    provider = SymbolUtil.getDocumentSymbolProvider(psiFile.getLanguage());
     children = new Stack<>();
-    children.add(new ArrayList<>());
   }
 
   public @NotNull List<@NotNull DocumentSymbol> visit() {
+    if (provider == null) {
+      return List.of();
+    }
+    children.add(new ArrayList<>());
     visitElement(psiFile);
     return children.pop();
   }
@@ -50,6 +54,7 @@ public class DocumentSymbolPsiVisitor extends PsiRecursiveElementVisitor {
     if (cancelToken != null) {
       cancelToken.checkCanceled();
     }
+    assert provider != null;
     final var kind = provider.symbolKind(elem);
     final var name = provider.symbolName(elem);
     DocumentSymbol docSym = null;

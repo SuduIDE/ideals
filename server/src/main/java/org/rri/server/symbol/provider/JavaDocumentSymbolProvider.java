@@ -6,7 +6,7 @@ import org.eclipse.lsp4j.SymbolKind;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
-public class JavaDocumentSymbolProvider extends DocumentSymbolProvider{
+public class JavaDocumentSymbolProvider extends JVMDocumentSymbolProvider {
   @SuppressWarnings("UnstableApiUsage")
   @Override
   public @Nullable SymbolKind symbolKind(@NotNull PsiElement elem) {
