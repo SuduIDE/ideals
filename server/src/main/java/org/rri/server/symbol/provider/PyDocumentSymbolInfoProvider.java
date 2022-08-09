@@ -15,7 +15,7 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.stream.Collectors;
 
-public class PyDocumentSymbolProvider extends DocumentSymbolProvider {
+public class PyDocumentSymbolInfoProvider implements DocumentSymbolInfoProvider {
   private final Set<QualifiedName> fields = new HashSet<>();
 
   @Override
@@ -92,7 +92,7 @@ public class PyDocumentSymbolProvider extends DocumentSymbolProvider {
   @NotNull
   private static String pyFunctionLabel(@NotNull PyFunction function) {
     return function.getName() + Arrays.stream(function.getParameterList().getParameters())
-        .map(PyDocumentSymbolProvider::pyFunctionParameterLabel)
+        .map(PyDocumentSymbolInfoProvider::pyFunctionParameterLabel)
         .filter(Objects::nonNull)
         .collect(Collectors.joining(", ", "(", ")"));
   }
@@ -115,7 +115,7 @@ public class PyDocumentSymbolProvider extends DocumentSymbolProvider {
       return "/";
     } else if (param instanceof PyTupleParameter) {
       return Arrays.stream(((PyTupleParameter) param).getContents())
-          .map(PyDocumentSymbolProvider::pyFunctionParameterLabel)
+          .map(PyDocumentSymbolInfoProvider::pyFunctionParameterLabel)
           .collect(Collectors.joining(", ", "(", ")"));
     }
     return null;

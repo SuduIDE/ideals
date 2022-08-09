@@ -1,5 +1,6 @@
 package org.rri.server.symbol.provider;
 
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.IndexNotReadyException;
 import com.intellij.psi.*;
 import org.jetbrains.annotations.NotNull;
@@ -9,12 +10,13 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public abstract class JVMDocumentSymbolProvider extends DocumentSymbolProvider {
+public abstract class JVMDocumentSymbolInfoProvider implements DocumentSymbolInfoProvider {
+  private static final Logger LOG = Logger.getInstance(JVMDocumentSymbolInfoProvider.class);
 
   @NotNull
   protected static String methodLabel(@NotNull PsiMethod method) {
     return method.getName() + Arrays.stream(method.getParameterList().getParameters())
-        .map(JVMDocumentSymbolProvider::methodParameterLabel)
+        .map(JVMDocumentSymbolInfoProvider::methodParameterLabel)
         .collect(Collectors.joining(", ", "(", ")"));
   }
 
