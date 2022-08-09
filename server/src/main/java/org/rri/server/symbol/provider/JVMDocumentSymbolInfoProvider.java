@@ -10,7 +10,7 @@ import java.util.Arrays;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public abstract class JVMDocumentSymbolInfoProvider implements DocumentSymbolInfoProvider {
+public abstract class JVMDocumentSymbolInfoProvider extends DocumentSymbolInfoProviderBase {
   private static final Logger LOG = Logger.getInstance(JVMDocumentSymbolInfoProvider.class);
 
   @NotNull

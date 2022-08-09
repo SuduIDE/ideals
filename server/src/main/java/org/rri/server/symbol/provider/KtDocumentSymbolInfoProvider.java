@@ -1,5 +1,6 @@
 package org.rri.server.symbol.provider;
 
+import com.intellij.openapi.util.Pair;
 import com.intellij.psi.PsiElement;
 import org.eclipse.lsp4j.SymbolKind;
 import org.jetbrains.annotations.NotNull;
@@ -15,41 +16,34 @@ import java.util.stream.Collectors;
 
 public class KtDocumentSymbolInfoProvider extends JVMDocumentSymbolInfoProvider {
   @Override
-  public @Nullable SymbolKind symbolKind(@NotNull PsiElement elem) {
-    if (elem instanceof final KtClass elemClass) {
-      if (elemClass instanceof KtEnumEntry) {
-        return SymbolKind.EnumMember;
-      } else if (elemClass.isInterface()) {
-        return SymbolKind.Interface;
-      } else if (elemClass.isEnum()) {
-        return SymbolKind.Enum;
-      } else {
-        return SymbolKind.Class;
+  public @Nullable Pair<@NotNull SymbolKind, @NotNull String> symbolInfo(@NotNull PsiElement psiElement) {
+    if (psiElement instanceof final KtLightMethod elemLM) {
+      return getPair(() -> elemLM.getContainingClass() instanceof KtLightClassForFacade
+              ? SymbolKind.Method : SymbolKind.Function,
+          () -> methodLabel(elemLM));
+    } else if (psiElement instanceof final KtElement elem) {
+      if (elem instanceof final KtClass elemClass) {
+        return getPair(() -> elemClass instanceof KtEnumEntry ? SymbolKind.EnumMember
+                : elemClass.isInterface() ? SymbolKind.Interface
+                : elemClass.isEnum() ? SymbolKind.Enum
+                : SymbolKind.Class,
+            () -> elemClass.getName() == null ? MemberInfoUtilsKt.qualifiedClassNameForRendering(elemClass)
+                : elemClass.getName());
+      } else if (elem instanceof KtConstructor<?>) {
+        return getPair(() -> SymbolKind.Constructor,
+            () -> methodLabel((KtConstructor<?>) elem));
+      } else if (elem instanceof final KtFunction elemFunc) {
+        return getPair(() -> ktIsInsideCompanion(elemFunc) ? SymbolKind.Function
+                : KtPsiUtilKt.containingClass(elemFunc) != null ? SymbolKind.Method
+                : SymbolKind.Function,
+            () -> methodLabel(elemFunc));
+      } else if (elem instanceof final KtProperty property) {
+        return getPair(() -> ktIsConstant(property) ? SymbolKind.Constant
+            : property.isMember() ? SymbolKind.Field
+            : SymbolKind.Variable, elem::getName);
+      } else if (elem instanceof KtVariableDeclaration || elem instanceof KtParameter) {
+        return getPair(() -> SymbolKind.Variable, elem::getName);
       }
-    } else if (elem instanceof KtConstructor<?>) {
-      return SymbolKind.Constructor;
-    } else if (elem instanceof final KtFunction elemFunc) {
-      if (ktIsInsideCompanion(elemFunc)) {
-        return SymbolKind.Function;
-      } else if (KtPsiUtilKt.containingClass((KtElement) elem) != null) {
-        return SymbolKind.Method;
-      } else {
-        return SymbolKind.Function;
-      }
-    } else if (elem instanceof KtLightMethod) {
-      return ((KtLightMethod) elem).getContainingClass() instanceof KtLightClassForFacade
-          ? SymbolKind.Method : SymbolKind.Function;
-    } else if (elem instanceof final KtProperty property) {
-      if (ktIsConstant(property)) {
-        return SymbolKind.Constant;
-      } else if (property.isMember()) {
-        return SymbolKind.Field;
-      } else {
-        return SymbolKind.Variable;
-      }
-    } else if (elem instanceof KtVariableDeclaration
-        || elem instanceof KtParameter) {
-      return SymbolKind.Variable;
     }
     return null;
   }
@@ -63,36 +57,8 @@ public class KtDocumentSymbolInfoProvider extends JVMDocumentSymbolInfoProvider 
   }
 
   private static boolean ktIsConstant(@NotNull KtProperty elt) {
-    if (elt.getModifierList() == null) {
-      return false;
-    }
-    return elt.getModifierList().getModifier(KtTokens.CONST_KEYWORD) != null;
-  }
-
-  @Override
-  public @Nullable String symbolName(@NotNull PsiElement psiElement) {
-    if (!(psiElement instanceof final KtElement elem)) {
-      return null;
-    }
-    if (elem instanceof KtClass) {
-      return elem.getName() == null
-          ? MemberInfoUtilsKt.qualifiedClassNameForRendering((KtClass) elem) : elem.getName();
-    } else if (elem instanceof KtClassInitializer) {
-      return elem.getName() == null ? "<init>" : elem.getName();
-    } else if (elem instanceof KtFunction) {
-      return methodLabel((KtFunction) elem);
-    } else if (elem instanceof KtProperty) {
-      return elem.getName();
-    } else if (elem instanceof KtVariableDeclaration) {
-      return elem.getName();
-    } else if (elem instanceof KtParameter) {
-      return elem.getName();
-    } else if (elem instanceof KtConstantExpression) {
-      return elem.getText();
-    } else if (elem instanceof KtLightMethod) {
-      return methodLabel((KtLightMethod) elem);
-    }
-    return null;
+    return elt.getModifierList() != null
+        && elt.getModifierList().getModifier(KtTokens.CONST_KEYWORD) != null;
   }
 
   @NotNull

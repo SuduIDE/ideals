@@ -1,7 +1,7 @@
 package org.rri.server.symbol.provider;
 
+import com.intellij.openapi.util.Pair;
 import com.intellij.psi.PsiElement;
-import com.intellij.psi.util.QualifiedName;
 import com.jetbrains.python.psi.*;
 import com.jetbrains.python.psi.impl.PyFunctionImpl;
 import com.jetbrains.python.psi.types.TypeEvalContext;
@@ -10,48 +10,31 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.Arrays;
-import java.util.HashSet;
 import java.util.Objects;
-import java.util.Set;
 import java.util.stream.Collectors;
 
-public class PyDocumentSymbolInfoProvider implements DocumentSymbolInfoProvider {
-  private final Set<QualifiedName> fields = new HashSet<>();
-
-  @Override
-  public @Nullable SymbolKind symbolKind(@NotNull PsiElement psiElement) {
+public class PyDocumentSymbolInfoProvider extends DocumentSymbolInfoProviderBase {
+  public @Nullable Pair<@NotNull SymbolKind, @NotNull String> symbolInfo(@NotNull PsiElement psiElement) {
     if (!(psiElement instanceof final PyElement elem)) {
       return null;
     }
     if (elem instanceof PyNamedParameter || elem instanceof PyTupleParameter) {
-      return ((PyParameter) elem).isSelf() || Objects.equals(elem.getName(), "_")
-          || elem.getParent().getParent() instanceof PyLambdaExpression
-          ? null : SymbolKind.Variable;
-    } else if (elem instanceof PyDecorator) {
-      return SymbolKind.Property;
-    } else if (elem instanceof PyClass) {
-      return isPyEnum((PyClass) elem) ? SymbolKind.Enum : SymbolKind.Class;
+      final var elemParam = (PyParameter) elem;
+      return getPair(() -> elemParam.isSelf() || Objects.equals(elem.getName(), "_")
+              || elem.getParent().getParent() instanceof PyLambdaExpression
+              ? null : SymbolKind.Variable,
+          () -> pyFunctionParameterLabel(elemParam));
+    } else if (elem instanceof final PyClass elemClass) {
+      return getPair(() -> isPyEnum((PyClass) elem) ? SymbolKind.Enum : SymbolKind.Class,
+          () -> elemClass.getName() == null ? elemClass.getQualifiedName() : elemClass.getName());
     } else if (elem instanceof PyFunction) {
-      if (elem instanceof PyFunctionImpl && ((PyFunctionImpl) elem).asMethod() == null) {
-        return SymbolKind.Function;
-      }
-      return Objects.equals(elem.getName(), "__init__") ? SymbolKind.Constructor : SymbolKind.Method;
+      return getPair(
+          () -> elem instanceof PyFunctionImpl && ((PyFunctionImpl) elem).asMethod() == null ? SymbolKind.Function
+              : Objects.equals(elem.getName(), "__init__") ? SymbolKind.Constructor
+              : SymbolKind.Method,
+          () -> pyFunctionLabel((PyFunction) elem));
     } else if (elem instanceof final PyTargetExpression targetElem) {
-      final var name = targetElem.asQualifiedName();
-      if (name != null && !fields.contains(name) && name.getLastComponent() != null) {
-        final var lastComp = name.getLastComponent();
-        if (lastComp.equals(lastComp.toUpperCase())) {
-          return SymbolKind.Constant;
-        } else if (lastComp.equals("_")) {
-          return null;
-        }
-        targetElem.getReference().resolve();
-        if (name.getComponents().contains("self")) {
-          fields.add(name);
-          return isPyEnum(targetElem.getContainingClass()) ? SymbolKind.EnumMember : SymbolKind.Field;
-        }
-        return SymbolKind.Variable;
-      }
+      return getPair(() -> pyTargetExprType(targetElem), elem::getName);
     }
     return null;
   }
@@ -63,31 +46,12 @@ public class PyDocumentSymbolInfoProvider implements DocumentSymbolInfoProvider 
     final var superClasses = elem.getSuperClasses(TypeEvalContext.codeAnalysis(elem.getProject(), elem.getContainingFile()));
     return Arrays.stream(superClasses)
         .filter(pyClass -> {
-          String name = pyClass.getQualifiedName();
-          if (name == null) { return false; }
-          return name.equals("Enum") || name.equals("enum.Enum");
+          String name;
+          return (name = pyClass.getQualifiedName()) != null
+              && (name.equals("Enum") || name.equals("enum.Enum"));
         })
         .findFirst().orElse(null) != null;
   }
-
-  @Override
-  public @Nullable String symbolName(@NotNull PsiElement psiElement) {
-    if (!(psiElement instanceof final PyElement elem)) {
-      return null;
-    }
-    if (elem instanceof PyReferenceExpression
-        || elem instanceof PyTargetExpression) {
-      return elem.getName();
-    } else if (elem instanceof final PyClass elemClass) {
-      return elemClass.getName() != null ? elemClass.getName() : elemClass.getQualifiedName();
-    } else if (elem instanceof PyParameter) {
-      return pyFunctionParameterLabel((PyParameter) elem);
-    } else if (elem instanceof PyFunction) {
-      return pyFunctionLabel((PyFunction) elem);
-    }
-    return null;
-  }
-
 
   @NotNull
   private static String pyFunctionLabel(@NotNull PyFunction function) {
@@ -100,23 +64,33 @@ public class PyDocumentSymbolInfoProvider implements DocumentSymbolInfoProvider 
   @Nullable
   private static String pyFunctionParameterLabel(@NotNull PyParameter param) {
     if (param instanceof final PyNamedParameter namedParameter) {
-      var prefix = namedParameter.isPositionalContainer() ? "*" : "";
-      if (namedParameter.isKeywordContainer()) {
-        prefix = "**";
-      }
+      var prefix = namedParameter.isPositionalContainer() ? "*"
+          : namedParameter.isKeywordContainer() ? "**" : "";
       final var type = ((PyNamedParameter) param).getArgumentType(TypeEvalContext.codeAnalysis(param.getProject(), param.getContainingFile()));
-      if (type != null && namedParameter.getName() != null && !namedParameter.getName().equals("self")) {
-        return prefix + param.getName() + ": " + type.getName();
-      }
-      return prefix + param.getName();
-    } else if (param instanceof PySingleStarParameter) {
-      return "*";
-    } else if (param instanceof PySlashParameter) {
-      return "/";
-    } else if (param instanceof PyTupleParameter) {
-      return Arrays.stream(((PyTupleParameter) param).getContents())
-          .map(PyDocumentSymbolInfoProvider::pyFunctionParameterLabel)
-          .collect(Collectors.joining(", ", "(", ")"));
+      return type != null
+          && namedParameter.getName() != null
+          && !namedParameter.getName().equals("self") ?
+          prefix + param.getName() + ": " + type.getName() : prefix + param.getName();
+    }
+    return param instanceof PySingleStarParameter ? "*"
+        : param instanceof PySlashParameter ? "/"
+        : param instanceof PyTupleParameter ?
+        Arrays.stream(((PyTupleParameter) param).getContents())
+            .map(PyDocumentSymbolInfoProvider::pyFunctionParameterLabel)
+            .collect(Collectors.joining(", ", "(", ")"))
+        : null;
+  }
+
+  @Nullable
+  private static SymbolKind pyTargetExprType(PyTargetExpression elem) {
+    final var name = elem.asQualifiedName();
+    if (name != null && name.getLastComponent() != null) {
+      final var lastComp = name.getLastComponent();
+      return lastComp.equals(lastComp.toUpperCase()) ? SymbolKind.Constant
+          : lastComp.equals("_") ? null
+          : name.getComponents().size() == 1 ? SymbolKind.Variable
+          : isPyEnum(elem.getContainingClass()) ? SymbolKind.EnumMember
+          : SymbolKind.Field;
     }
     return null;
   }

@@ -17,6 +17,7 @@ import org.rri.server.TestUtil;
 
 import java.lang.String;
 import java.nio.file.Paths;
+import java.util.ArrayList;
 import java.util.List;
 
 import static org.eclipse.lsp4j.SymbolKind.Class;
@@ -42,7 +43,7 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
 
     final var constructorParamX = documentSymbol("x", Variable, range(8, 28, 8, 29));
     final var docSymConstructor = documentSymbol("DocumentSymbol(int)", Constructor, range(8, 9, 8, 23),
-        List.of(constructorParamX));
+        arrayList(constructorParamX));
 
     final var paramFooX = documentSymbol("x", Variable, range(13, 21, 13, 22));
     final var paramFooStr = documentSymbol("str", Variable, range(13, 31, 13, 34));
@@ -56,21 +57,21 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
     final var varFooB = documentSymbol("b", Variable, range(17, 12, 17, 13));
 
     final var methodFoo = documentSymbol("foo(int, String)", Method, range(13, 13, 13, 16),
-        List.of(paramFooX, paramFooStr, varFooA, varFooProject, classFooCls, varFooB));
+        arrayList(paramFooX, paramFooStr, varFooA, varFooProject, classFooCls, varFooB));
 
     final var interMethodFoo = documentSymbol("foo()", Method, range(22, 9, 22, 12));
     final var entryInterface = documentSymbol("EntryInter", Interface, range(21, 19, 21, 29),
-        List.of(interMethodFoo));
+        arrayList(interMethodFoo));
 
     final var enumMemberA = documentSymbol("A", EnumMember, range(26, 4, 26, 5));
     final var enumMemberB = documentSymbol("B", EnumMember, range(26, 7, 26, 8));
     final var enumLetter = documentSymbol("Letter", Enum, range(25, 14, 25, 20),
-        List.of(enumMemberA, enumMemberB));
+        arrayList(enumMemberA, enumMemberB));
 
     final var docSymClass = documentSymbol("DocumentSymbol", Class, range(4, 13, 4, 27),
-        List.of(fieldIntX, fieldClass1Cls, docSymConstructor, methodFoo, entryInterface, enumLetter));
+        arrayList(fieldIntX, fieldClass1Cls, docSymConstructor, methodFoo, entryInterface, enumLetter));
 
-    final var answers = List.of(docSymClass);
+    final var answers = arrayList(docSymClass);
     checkDocumentSymbols(answers, virtualFile.findChild("DocumentSymbol.java"));
   }
 
@@ -87,28 +88,28 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
     final var docSymVarX = documentSymbol("x", Field, range(11, 13, 11, 14));
     final var docSymVar__const = documentSymbol("__CONST", Constant, range(12, 13, 12, 20));
     final var docSymConstructor = documentSymbol("__init__(self)", Constructor, range(10, 8, 10, 16),
-        List.of(docSymVarX, docSymVar__const));
+        arrayList(docSymVarX, docSymVar__const));
 
     final var fooParamX = documentSymbol("x", Variable, range(14, 18, 14, 19));
     final var fooParamY = documentSymbol("y", Variable, range(14, 21, 14, 22));
     final var methodFoo = documentSymbol("foo(self, x, y)", Method, range(14, 8, 14, 11),
-        List.of(fooParamX, fooParamY));
+        arrayList(fooParamX, fooParamY));
 
     final var barParamArgs = documentSymbol("*args", Variable, range(17, 19, 17, 23));
     final var barParamKwargs = documentSymbol("**kwargs", Variable, range(17, 27, 17, 33));
     final var methodBar = documentSymbol("bar(self, *args, **kwargs)", Method, range(17, 8, 17, 11),
-        List.of(barParamArgs, barParamKwargs));
+        arrayList(barParamArgs, barParamKwargs));
 
     final var docSymClass = documentSymbol("Document_symbol", Class, range(9, 6, 9, 21),
-        List.of(docSymConstructor, methodFoo, methodBar));
+        arrayList(docSymConstructor, methodFoo, methodBar));
 
     final var varFooBarX = documentSymbol("x", Variable, range(22, 12, 22, 13));
     final var varFooBarY = documentSymbol("y", Variable, range(22, 18, 22, 19));
     final var varFooBarZ = documentSymbol("z", Variable, range(22, 24, 22, 25));
     final var functionFooBar = documentSymbol("foo_bar(x, /, y, *, z)", Function, range(22, 4, 22, 11),
-        List.of(varFooBarX, varFooBarY, varFooBarZ));
+        arrayList(varFooBarX, varFooBarY, varFooBarZ));
 
-    final var answers = List.of(asCls2, varStringP, barBoolB, docSymClass, functionFooBar);
+    final var answers = arrayList(asCls2, varStringP, barBoolB, docSymClass, functionFooBar);
     checkDocumentSymbols(answers, virtualFile.findChild("documentSymbol.py"));
   }
 
@@ -121,20 +122,20 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
     final var enumMemberA = documentSymbol("A", EnumMember, range(5, 2, 5, 3));
     final var enumMemberB = documentSymbol("B", EnumMember, range(5, 5, 5, 6));
     final var enumLetters = documentSymbol("Letter", Enum, range(4, 11, 4, 17),
-        List.of(enumMemberA, enumMemberB));
+        arrayList(enumMemberA, enumMemberB));
 
     final var interFooParamX = documentSymbol("x", Variable, range(9, 10, 9, 11));
     final var interFooParamStr = documentSymbol("str", Variable, range(9, 18, 9, 21));
     final var interMethodFoo = documentSymbol("foo(Int, String)", Method, range(9, 6, 9, 9),
-        List.of(interFooParamX, interFooParamStr));
+        arrayList(interFooParamX, interFooParamStr));
     final var interInterface = documentSymbol("Interface", Interface, range(8, 10, 8, 19),
-        List.of(interMethodFoo));
+        arrayList(interMethodFoo));
 
     final var annotationClassForTest = documentSymbol("ForTest", Class, range(12, 17, 12, 24));
 
     final var constructorParamX = documentSymbol("x", Variable, range(14, 35, 14, 36));
     final var docSymConstructor = documentSymbol("DocumentSymbol(Int)", Constructor, range(14, 34, 14, 42),
-        List.of(constructorParamX));
+        arrayList(constructorParamX));
     final var docSymClassFieldX = documentSymbol("x", Field, range(15, 14, 15, 15));
     final var docSymCLassFieldCls = documentSymbol("cls", Field, range(16, 14, 16, 17));
 
@@ -148,18 +149,18 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
     final var fooVarB = documentSymbol("b", Variable, range(21, 8, 21, 9));
 
     final var methodFoo = documentSymbol("foo(Int, String)", Method, range(18, 15, 18, 18),
-        List.of(fooParamX, fooParamStr, fooVarA, fooVarCls, fooVarB));
+        arrayList(fooParamX, fooParamStr, fooVarA, fooVarCls, fooVarB));
 
     final var methodBar = documentSymbol("bar()", Method, range(25, 6, 25, 9));
 
     final var docSymClass = documentSymbol("DocumentSymbol", Class, range(14, 20, 14, 34),
-        List.of(docSymConstructor, docSymClassFieldX, docSymCLassFieldCls, methodFoo, methodBar));
+        arrayList(docSymConstructor, docSymClassFieldX, docSymCLassFieldCls, methodFoo, methodBar));
 
     final var buzParamA = documentSymbol("a", Variable, range(28, 8, 28, 9));
     final var funcBuz = documentSymbol("buz(Int)", Function, range(28, 4, 28, 7),
-        List.of(buzParamA));
+        arrayList(buzParamA));
 
-    List<DocumentSymbol> answers = List.of(enumLetters, interInterface, annotationClassForTest, docSymClass, funcBuz);
+    List<DocumentSymbol> answers = arrayList(enumLetters, interInterface, annotationClassForTest, docSymClass, funcBuz);
     checkDocumentSymbols(answers, virtualFile.findChild("DocumentSymbol.kt"));
   }
 
@@ -171,6 +172,11 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
     assertNotNull(lstEither);
     final var result = lstEither.stream().map(Either::getRight).toList();
     assertEquals(answers, result);
+  }
+
+  @NotNull
+  private static ArrayList<DocumentSymbol> arrayList(DocumentSymbol... symbols) {
+    return new ArrayList<>(List.of(symbols));
   }
 
   @NotNull

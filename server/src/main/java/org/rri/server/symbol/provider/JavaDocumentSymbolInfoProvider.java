@@ -1,6 +1,7 @@
 package org.rri.server.symbol.provider;
 
 import com.intellij.lang.jvm.JvmModifier;
+import com.intellij.openapi.util.Pair;
 import com.intellij.psi.*;
 import org.eclipse.lsp4j.SymbolKind;
 import org.jetbrains.annotations.NotNull;
@@ -9,50 +10,29 @@ import org.jetbrains.annotations.Nullable;
 public class JavaDocumentSymbolInfoProvider extends JVMDocumentSymbolInfoProvider {
   @SuppressWarnings("UnstableApiUsage")
   @Override
-  public @Nullable SymbolKind symbolKind(@NotNull PsiElement elem) {
+  public @Nullable Pair<@NotNull SymbolKind, @NotNull String> symbolInfo(@NotNull PsiElement elem) {
     if (elem instanceof final PsiClass elemClass) {
-      if (elemClass.isAnnotationType() || elemClass.isInterface()) {
-        return SymbolKind.Interface;
-      } else if (elemClass.isEnum()) {
-        return SymbolKind.Enum;
-      } else {
-        return SymbolKind.Class;
-      }
-    } else if (elem instanceof PsiClassInitializer) {
-      return SymbolKind.Constructor;
-    } else if (elem instanceof PsiMethod) {
-      return ((PsiMethod) elem).isConstructor() ? SymbolKind.Constructor : SymbolKind.Method;
+      return getPair(() -> elemClass.isAnnotationType() || elemClass.isInterface() ? SymbolKind.Interface
+              : elemClass.isEnum() ? SymbolKind.Enum
+              : SymbolKind.Class,
+          () -> elemClass.getName() != null ? elemClass.getName()
+              : elemClass.getQualifiedName() != null ? elemClass.getQualifiedName()
+              : "<anonymous>");
+    } else if (elem instanceof final PsiClassInitializer elemInit) {
+      return getPair(() -> SymbolKind.Constructor,
+          () -> elemInit.getName() == null ? "<init>" : elemInit.getName());
+    } else if (elem instanceof final PsiMethod elemMethod) {
+      return getPair(() -> elemMethod.isConstructor() ? SymbolKind.Constructor : SymbolKind.Method,
+          () -> methodLabel(elemMethod));
     } else if (elem instanceof PsiEnumConstant) {
-      return SymbolKind.EnumMember;
+      return getPair(() -> SymbolKind.EnumMember,
+          ((PsiEnumConstant) elem)::getName);
     } else if (elem instanceof final PsiField elemField) {
-      return elemField.hasModifier(JvmModifier.STATIC) && elemField.hasModifier(JvmModifier.FINAL)
-          ? SymbolKind.Constant : SymbolKind.Field;
-    } else if (elem instanceof PsiVariable) {
-      return SymbolKind.Variable;
-    }
-    return null;
-  }
-
-  @Override
-  @Nullable
-  public String symbolName(@NotNull PsiElement elem) {
-    if (elem instanceof final PsiClass elemClass) {
-      if (elemClass.getName() != null) {
-        return elemClass.getName();
-      }
-      return elemClass.getQualifiedName() == null ? "<anonymous>" : elemClass.getQualifiedName();
-    } else if (elem instanceof PsiClassInitializer) {
-      String name = ((PsiClassInitializer) elem).getName();
-      return name == null ? "<init>" : name;
-    } else if (elem instanceof PsiMethod) {
-      return methodLabel((PsiMethod) elem);
-    } else if (elem instanceof PsiEnumConstant) {
-      return ((PsiEnumConstant) elem).getName();
-    } else if (elem instanceof PsiField) {
-      return ((PsiField) elem).getName();
-    } else if (elem instanceof PsiVariable) {
-      String name = ((PsiVariable) elem).getName();
-      return name == null ? "<unknown>" : name;
+      return getPair(() -> elemField.hasModifier(JvmModifier.STATIC) && elemField.hasModifier(JvmModifier.FINAL)
+          ? SymbolKind.Constant : SymbolKind.Field, elemField::getName);
+    } else if (elem instanceof final PsiVariable elemVar) {
+      return getPair(() -> SymbolKind.Variable,
+          () -> elemVar.getName() == null ? "<unknown>" : elemVar.getName());
     }
     return null;
   }
