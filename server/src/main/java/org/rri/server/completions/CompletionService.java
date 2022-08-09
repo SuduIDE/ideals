@@ -56,10 +56,13 @@ final public class CompletionService implements Disposable {
   private LspPath cachedPath = null;
   @Nullable
   private OffsetMap cachedOffsetMap = null;
-  @NotNull
-  private Position cachedPosition = new Position();
+  private int cachedCarretOffset = 0;
+  @Nullable
+  private LookupImpl cachedLookup = null;
   private int cachedStartOffset = 0;
   private int cachedResultIndex = 0;
+  private String cachedPrefix = "";
+  private Position cachedPosition = new Position();
 
   public CompletionService(@NotNull Project project) {
     this.project = project;
@@ -101,8 +104,11 @@ final public class CompletionService implements Disposable {
     VoidCompletionProcess process = new VoidCompletionProcess();
     Ref<List<CompletionItem>> resultRef = new Ref<>();
     try {
-      var copy = TextUtil.getCopyByFileText(psiFile);
-      EditorUtil.withEditor(process, copy, position, (editor) -> {
+//      var copy = TextUtil.getCopyByFileText(psiFile);
+//      LOG.warn(
+      TextUtil.differenceAfterAction(psiFile, (copy) -> EditorUtil.withEditor(process, copy,
+          position,
+          (editor) -> {
             var ideaCompletionResults = new ArrayList<CompletionResult>();
             var initContext = CompletionInitializationUtil.createCompletionInitializationContext(
                 project,
@@ -135,7 +141,7 @@ final public class CompletionService implements Disposable {
             ideaCompService.performCompletion(parameters,
                 (result) -> {
                   lookup.addItem(result.getLookupElement(),
-                      new CamelHumpMatcher("") /* todo compare with another PrefixMatchers */);
+                      new CamelHumpMatcher(prefix) /* todo compare with another PrefixMatchers */);
                   ideaCompletionResults.add(result);
                 });
 
@@ -152,24 +158,60 @@ final public class CompletionService implements Disposable {
 
             synchronized (cachedLookupElements) {
               cachedOffsetMap = initContext.getOffsetMap();
+              cachedCarretOffset = editor.getCaretModel().getOffset();
               cachedPosition = position;
               cachedPath = path;
+              cachedLookup = lookup;
               currentResultIndex = ++cachedResultIndex;
               cachedStartOffset = editor.getCaretModel().getOffset() - prefix.length();
               cachedLookupElements.clear();
               cachedLookupElements.addAll(sortedLookupElements);
+              cachedPrefix = prefix;
             }
 
-            var result = sortedLookupElements.stream().map(
-                CompletionService::createLSPCompletionItem
+            var result = sortedLookupElements.stream().peek(lookupElement -> {
+//              if (!lookupElement.getLookupString().equals("bark")) {
+//                return;
+//              }
+////              LOG.warn("fuck you");
+//
+//              lookup.finishLookup('\n', lookupElement);
+//              int currentOffset = editor.getCaretModel().getOffset();
+//              ApplicationManager.getApplication().runWriteAction(() -> {
+//                WriteCommandAction.runWriteCommandAction(project, () -> {
+//
+//                  var context =
+//                      CompletionUtil.createInsertionContext(
+//                          cachedLookupElements,
+//                          lookupElement,
+//                          '\n',
+//                          editor,
+//                          copy,
+//                          currentOffset,
+//                          CompletionUtil.calcIdEndOffset(
+//                              cachedOffsetMap,
+//                              editor,
+//                              currentOffset),
+//                          cachedOffsetMap);
+//
+//                  lookupElement.handleInsert(context);
+////                  LOG.warn(copy.getText());
+//                });
+//              });
+            }).map((item) -> {
+                  var resItem = createLSPCompletionItem(item);
+                  resItem.setTextEdit(Either.forLeft(new TextEdit(new Range(position, position), item.getLookupString())));
+                  return resItem;
+                }
             ).toList();
+
             for (int i = 0; i < result.size(); i++) {
               var completionItem = result.get(i);
               completionItem.setData(new Pair<>(currentResultIndex, i));
             }
             resultRef.set(result);
           }
-      );
+      )).toString();
     } finally {
       Disposer.dispose(process);
     }
@@ -199,7 +241,8 @@ final public class CompletionService implements Disposable {
 
     resItem.setLabel(presentation.getItemText());
     resItem.setLabelDetails(lDetails);
-    resItem.setInsertText(lookupElement.getLookupString()); // todo replace with TextEdits in completion resolve
+
+//    resItem.setInsertText(lookupElement.getLookupString()); // todo replace with TextEdits in completion resolve
     resItem.setDetail(presentation.getTypeText());
     resItem.setTags(tagList);
 
@@ -210,63 +253,128 @@ final public class CompletionService implements Disposable {
   @NotNull
   public CompletableFuture<@NotNull CompletionItem> startCompletionResolve(@NotNull CompletionItem unresolved) {
 
-    JsonObject jsonObject = (JsonObject) unresolved.getData();
+    return CompletableFutures.computeAsync(
+        AppExecutorUtil.getAppExecutorService(),
+        (cancelChecker) -> {
+          LOG.warn("1");
+          ApplicationManager.getApplication().invokeAndWait(() -> {
+            JsonObject jsonObject = (JsonObject) unresolved.getData();
+            var resultIndex = jsonObject.get("first").getAsInt();
+            var lookupElementIndex = jsonObject.get("second").getAsInt();
 
-    synchronized (cachedLookupElements) {
-      assert cachedPath != null;
-      var resultIndex = jsonObject.get("first").getAsInt();
-      var lookupElementIndex = jsonObject.get("second").getAsInt();
+            synchronized (cachedLookupElements) {
+              assert cachedPath != null;
 
-      MiscUtil.produceWithPsiFileInReadAction(project, cachedPath, (psiFile) -> {
+              MiscUtil.invokeWithPsiFileInReadAction(project, cachedPath,
+                  (psiFile) -> {
+                    if (resultIndex != cachedResultIndex) {
+                      return;
+                    }
+//                        cachedLookupElements.get(lookupElementIndex);
 
-            if (resultIndex != cachedResultIndex) {
-              return CompletableFuture.completedFuture(unresolved);
-            }
-            var lookupElement = cachedLookupElements.get(lookupElementIndex);
+                    var disposable = Disposer.newDisposable();
 
-            var disposable = Disposer.newDisposable();
+                    assert cachedOffsetMap != null;
+                    try {
+                      var d = TextUtil.differenceAfterAction(psiFile, (copy) -> {
+                        var process = new VoidCompletionProcess();
+                        EditorUtil.withEditor(disposable, copy, new Position(0, 0), editor -> {
+                          Ref<LookupElement> lookupElement = new Ref<>();
+                          editor.getCaretModel().moveToOffset(cachedCarretOffset);
 
-            assert cachedOffsetMap != null;
-            try {
-              var d = TextUtil.differenceAfterAction(psiFile, (copy) -> {
-
-                EditorUtil.withEditor(disposable, copy, cachedPosition, editor -> {
-
-                  var currentOffset = editor.getCaretModel().getOffset();
-                  ApplicationManager.getApplication().runWriteAction(() -> {
-                    WriteCommandAction.runWriteCommandAction(project, () -> {
-
-                      var context =
-                          CompletionUtil.createInsertionContext(
-                              cachedLookupElements,
-                              '\n',
+                          var initContext = CompletionInitializationUtil.createCompletionInitializationContext(
+                              project,
                               editor,
-                              copy,
-                              cachedStartOffset,
-                              currentOffset,
-                              CompletionUtil.calcIdEndOffset(
-                                  cachedOffsetMap,
-                                  editor,
-                                  currentOffset),
-                              cachedOffsetMap);
+                              editor.getCaretModel().getPrimaryCaret(),
+                              1,
+                              CompletionType.BASIC);
+                          assert initContext != null;
 
-                      lookupElement.handleInsert(context);
-                    });
-                  });
+                          var topLevelOffsets =
+                              new OffsetsInFile(initContext.getFile(), initContext.getOffsetMap()).toTopLevelFile();
+                          PsiDocumentManager.getInstance(initContext.getProject()).commitAllDocuments();
+                          var hostCopyOffsets =
+                              insertDummyIdentifier(initContext, process, topLevelOffsets);
 
+                          OffsetsInFile finalOffsets = CompletionInitializationUtil.toInjectedIfAny(initContext.getFile(), hostCopyOffsets);
+                          CompletionParameters parameters = CompletionInitializationUtil.createCompletionParameters(
+                              initContext,
+                              process,
+                              finalOffsets);
+                          var arranger = new LookupArrangerImpl(parameters);
+                          var lookup = new LookupImpl(project, editor, arranger);
 
-                });
-              });
-              unresolved.setTextEdit(Either.forLeft(d.get(0)));
+                          var prefix = CompletionUtil.findReferencePrefix(parameters);
+                          assert prefix != null;
+                          var ideaCompService = com.intellij.codeInsight.completion.CompletionService.getCompletionService();
+                          assert ideaCompService != null;
+                          var ideaCompletionResults = new ArrayList<CompletionResult>();
 
-            } finally {
-              Disposer.dispose(disposable);
+                          ideaCompService.performCompletion(parameters,
+                              (result) -> {
+                                lookup.addItem(result.getLookupElement(),
+                                    new CamelHumpMatcher(prefix));
+                                ideaCompletionResults.add(result);
+                              });
+
+                          ideaCompletionResults.forEach((it) -> {
+                            try {
+                              if (it.getLookupElement().getLookupString().equals(cachedLookupElements
+                                  .get(lookupElementIndex).getLookupString())) {
+                                lookupElement.set(it.getLookupElement());
+                              }
+                              arranger.addElement(it);
+                            } catch (Exception ignored) {
+                            } // we just skip this element
+                          });
+                          lookup.finishLookup('\n', lookupElement.get());
+                          var currentOffset = editor.getCaretModel().getOffset();
+                          ApplicationManager.getApplication().runWriteAction(() -> {
+                            WriteCommandAction.runWriteCommandAction(project, () -> {
+
+                              var context =
+                                  CompletionUtil.createInsertionContext(
+                                      arranger.arrangeItems(lookup, false).first,
+                                      lookupElement.get(),
+                                      '\n',
+                                      editor,
+                                      copy,
+                                      editor.getCaretModel().getOffset(),
+                                      CompletionUtil.calcIdEndOffset(
+                                          cachedOffsetMap,
+                                          editor,
+                                          currentOffset),
+                                      initContext.getOffsetMap());
+
+                              lookupElement.get().handleInsert(context);
+                              LOG.warn(copy.getText());
+                            });
+                          });
+                        });
+                      });
+                      LOG.warn(d.toString());
+                      if (!d.isEmpty()) {
+                        var edit = d.get(0);
+//                        unresolved.setTextEdit(Either.forLeft((new TextEdit(new Range(new Position(0, 0),
+//                            new Position(0, 0)), ""))));
+                        var range = edit.getRange();
+//                        range.getStart().setCharacter(range.getStart().getCharacter() + 1);
+                        unresolved.setTextEdit(Either.forLeft(edit));
+//                        unresolved.setAdditionalTextEdits(d);
+//                        unresolved.setInsertText(cachedPrefix + edit);
+//                        LOG.warn(edit);
+                      }
+                    } finally {
+                      Disposer.dispose(disposable);
+                    }
+                  }
+              );
             }
-            return null;
-          }
-      );
-    }
-    return CompletableFuture.completedFuture(unresolved);
+            cancelChecker.checkCanceled();
+          });
+          return unresolved;
+        });
+
   }
 
 

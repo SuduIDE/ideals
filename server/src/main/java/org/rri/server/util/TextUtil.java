@@ -33,19 +33,7 @@ public class TextUtil {
   @NotNull
   public static List<@NotNull TextEdit> differenceAfterAction(@NotNull PsiFile psiFile,
                                                               @NotNull Consumer<@NotNull PsiFile> action) {
-    var manager = PsiDocumentManager.getInstance(psiFile.getProject());
-    var doc = MiscUtil.getDocument(psiFile);
-    assert doc != null;
-    assert  manager.isCommitted(doc);
-    var copy = PsiFileFactory.getInstance(psiFile.getProject()).createFileFromText(
-        "copy",
-        psiFile.getLanguage(),
-        doc.getText(),
-        true,
-        true,
-        true,
-        psiFile.getVirtualFile());
-
+    var copy = getCopyByFileText(psiFile);
     action.accept(copy);
 
     var oldDoc = MiscUtil.getDocument(psiFile);
@@ -74,5 +62,20 @@ public class TextUtil {
       var text = newDoc.getText(new TextRange(diffFragment.getStartOffset2(), diffFragment.getEndOffset2()));
       return new TextEdit(new Range(start, end), text);
     }).collect(Collectors.toList());
+  }
+
+  public static PsiFile getCopyByFileText(PsiFile psiFile) {
+    var manager = PsiDocumentManager.getInstance(psiFile.getProject());
+    var doc = MiscUtil.getDocument(psiFile);
+    assert doc != null;
+    assert  manager.isCommitted(doc);
+    return PsiFileFactory.getInstance(psiFile.getProject()).createFileFromText(
+        "copy",
+        psiFile.getLanguage(),
+        doc.getText(),
+        true,
+        true,
+        true,
+        psiFile.getVirtualFile());
   }
 }
