@@ -101,6 +101,12 @@ public class MyTextDocumentService implements TextDocumentService {
             .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
   }
 
+  @SuppressWarnings("deprecation")
+  @Override
+  public CompletableFuture<List<Either<SymbolInformation, DocumentSymbol>>> documentSymbol(DocumentSymbolParams params) {
+    return new DocumentSymbolCommand().runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
+  }
+
   @Override
   public CompletableFuture<List<Either<Command, CodeAction>>> codeAction(CodeActionParams params) {
     LOG.warn("codeAction invoked: " + params);
