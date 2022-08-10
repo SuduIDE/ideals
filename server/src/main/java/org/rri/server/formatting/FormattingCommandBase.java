@@ -4,6 +4,7 @@ import com.intellij.application.options.CodeStyle;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.codeStyle.CodeStyleSettings;
 import com.intellij.psi.codeStyle.CodeStyleSettingsManager;
+import com.jetbrains.python.PythonLanguage;
 import com.jetbrains.python.formatter.PyCodeStyleSettings;
 import org.eclipse.lsp4j.FormattingOptions;
 import org.eclipse.lsp4j.TextEdit;
@@ -25,8 +26,13 @@ public abstract class FormattingCommandBase extends LspCommand<List<? extends Te
     var codeStyleSettings =
         CodeStyleSettingsManager.getInstance().cloneSettings(CodeStyle.getSettings(copy));
     var indentOptions = codeStyleSettings.getIndentOptionsByFile(copy);
-    codeStyleSettings.getCustomSettings(PyCodeStyleSettings.class).BLANK_LINE_AT_FILE_END =
-        formattingOptions.isInsertFinalNewline();
+    try {
+      if (copy.getLanguage().equals(PythonLanguage.getInstance())) {
+        codeStyleSettings.getCustomSettings(PyCodeStyleSettings.class).BLANK_LINE_AT_FILE_END =
+            formattingOptions.isInsertFinalNewline();
+      }
+    } catch (NoClassDefFoundError ignored) {
+    }
 
     indentOptions.TAB_SIZE = formattingOptions.getTabSize();
     indentOptions.INDENT_SIZE = formattingOptions.getTabSize();

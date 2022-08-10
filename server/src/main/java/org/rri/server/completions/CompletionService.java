@@ -104,8 +104,6 @@ final public class CompletionService implements Disposable {
     VoidCompletionProcess process = new VoidCompletionProcess();
     Ref<List<CompletionItem>> resultRef = new Ref<>();
     try {
-//      var copy = TextUtil.getCopyByFileText(psiFile);
-//      LOG.warn(
       TextUtil.differenceAfterAction(psiFile, (copy) -> EditorUtil.withEditor(process, copy,
           position,
           (editor) -> {
@@ -168,7 +166,8 @@ final public class CompletionService implements Disposable {
               cachedLookupElements.addAll(sortedLookupElements);
               cachedPrefix = prefix;
             }
-
+//            LOG.warn(prefix);
+            LOG.warn("completion:" + initContext.getOffsetMap().toString());
             var result = sortedLookupElements.stream().peek(lookupElement -> {
 //              if (!lookupElement.getLookupString().equals("bark")) {
 //                return;
@@ -200,7 +199,16 @@ final public class CompletionService implements Disposable {
 //              });
             }).map((item) -> {
                   var resItem = createLSPCompletionItem(item);
-                  resItem.setTextEdit(Either.forLeft(new TextEdit(new Range(position, position), item.getLookupString())));
+                  resItem.setTextEdit(
+                      Either.forLeft(new TextEdit(new Range(MiscUtil.with(new Position(),
+                          positionIDStarts -> {
+                            positionIDStarts.setLine(position.getLine());
+                            positionIDStarts.setCharacter(position.getCharacter() - prefix.length());
+                          }),
+                          position),
+                      item.getLookupString())));
+//                  resItem.setInsertText(item.getLookupString());
+
                   return resItem;
                 }
             ).toList();
@@ -256,7 +264,7 @@ final public class CompletionService implements Disposable {
     return CompletableFutures.computeAsync(
         AppExecutorUtil.getAppExecutorService(),
         (cancelChecker) -> {
-          LOG.warn("1");
+//          LOG.warn("1");
           ApplicationManager.getApplication().invokeAndWait(() -> {
             JsonObject jsonObject = (JsonObject) unresolved.getData();
             var resultIndex = jsonObject.get("first").getAsInt();
@@ -331,7 +339,8 @@ final public class CompletionService implements Disposable {
                           var currentOffset = editor.getCaretModel().getOffset();
                           ApplicationManager.getApplication().runWriteAction(() -> {
                             WriteCommandAction.runWriteCommandAction(project, () -> {
-
+                              LOG.warn("cached: " + cachedOffsetMap.toString());
+                              LOG.warn("new: " + initContext.getOffsetMap().toString());
                               var context =
                                   CompletionUtil.createInsertionContext(
                                       arranger.arrangeItems(lookup, false).first,
@@ -347,12 +356,12 @@ final public class CompletionService implements Disposable {
                                       initContext.getOffsetMap());
 
                               lookupElement.get().handleInsert(context);
-                              LOG.warn(copy.getText());
+//                              LOG.warn(copy.getText());
                             });
                           });
                         });
                       });
-                      LOG.warn(d.toString());
+//                      LOG.warn(d.toString());
                       if (!d.isEmpty()) {
                         var edit = d.get(0);
 //                        unresolved.setTextEdit(Either.forLeft((new TextEdit(new Range(new Position(0, 0),
