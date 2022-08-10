@@ -27,7 +27,8 @@ import java.util.function.Consumer;
 public class MiscUtil {
   private static final Logger LOG = Logger.getInstance(MiscUtil.class);
 
-  private MiscUtil() { }
+  private MiscUtil() {
+  }
 
   @NotNull
   public static <T> T with(@NotNull T object, @NotNull Consumer<T> block) {
@@ -84,10 +85,10 @@ public class MiscUtil {
 
     if (doc == null) {
       FileDocumentManagerImpl.registerDocument(
-              new DocumentImpl(file.getViewProvider().getContents()),
-              virtualFile);
+          new DocumentImpl(file.getViewProvider().getContents()),
+          virtualFile);
       doc = FileDocumentManager.getInstance()
-              .getDocument(virtualFile);
+          .getDocument(virtualFile);
     }
 
     return doc;

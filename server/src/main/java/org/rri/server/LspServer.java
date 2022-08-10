@@ -106,7 +106,7 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
 //      it.setImplementationProvider(true);
       it.setReferencesProvider(true);
       it.setDocumentHighlightProvider(true);
-//      it.setDocumentSymbolProvider(true);
+      it.setDocumentSymbolProvider(true);
 //      it.setWorkspaceSymbolProvider(true);
 //      it.setCodeActionProvider(false);
 //      it.setCodeLensProvider(new CodeLensOptions(false));

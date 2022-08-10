@@ -10,7 +10,6 @@ import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.server.LspPath;
-import org.rri.server.MyTextDocumentService;
 import org.rri.server.util.MiscUtil;
 
 import java.util.concurrent.CompletableFuture;
@@ -19,7 +18,7 @@ import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
 public abstract class LspCommand<R> implements Disposable {
-  protected static final Logger LOG = Logger.getInstance(MyTextDocumentService.class);
+  private static final Logger LOG = Logger.getInstance(LspCommand.class);
 
   @NotNull
   protected abstract Supplier<@NotNull String> getMessageSupplier();

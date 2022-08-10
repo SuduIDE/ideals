@@ -3,6 +3,7 @@ package org.rri.server.formatting;
 import com.intellij.ide.highlighter.HighlighterFactory;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.command.WriteCommandAction;
+import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.EditorModificationUtilEx;
@@ -25,6 +26,7 @@ import java.util.List;
 import java.util.function.Supplier;
 
 public class OnTypeFormattingCommand extends FormattingCommandBase {
+  private static final Logger LOG = Logger.getInstance(OnTypeFormattingCommand.class);
   @NotNull
   private final Position position;
   private final char triggerCharacter;
