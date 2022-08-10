@@ -1,6 +1,5 @@
 package org.rri.server.symbol.provider;
 
-import com.intellij.openapi.util.Pair;
 import com.intellij.psi.PsiElement;
 import com.jetbrains.python.psi.*;
 import com.jetbrains.python.psi.impl.PyFunctionImpl;
@@ -13,28 +12,30 @@ import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-public class PyDocumentSymbolInfoProvider extends DocumentSymbolInfoProviderBase {
-  public @Nullable Pair<@NotNull SymbolKind, @NotNull String> symbolInfo(@NotNull PsiElement psiElement) {
+import static org.rri.server.symbol.provider.DocumentSymbolInfoProvider.Info.composeInfo;
+
+public class PyDocumentSymbolInfoProvider implements DocumentSymbolInfoProvider {
+  public @Nullable Info calculateSymbolInfo(@NotNull PsiElement psiElement) {
     if (!(psiElement instanceof final PyElement elem)) {
       return null;
     }
     if (elem instanceof PyNamedParameter || elem instanceof PyTupleParameter) {
       final var elemParam = (PyParameter) elem;
-      return getPair(() -> elemParam.isSelf() || Objects.equals(elem.getName(), "_")
+      return composeInfo(elemParam.isSelf() || Objects.equals(elem.getName(), "_")
               || elem.getParent().getParent() instanceof PyLambdaExpression
               ? null : SymbolKind.Variable,
           () -> pyFunctionParameterLabel(elemParam));
     } else if (elem instanceof final PyClass elemClass) {
-      return getPair(() -> isPyEnum((PyClass) elem) ? SymbolKind.Enum : SymbolKind.Class,
+      return composeInfo(isPyEnum((PyClass) elem) ? SymbolKind.Enum : SymbolKind.Class,
           () -> elemClass.getName() == null ? elemClass.getQualifiedName() : elemClass.getName());
     } else if (elem instanceof PyFunction) {
-      return getPair(
-          () -> elem instanceof PyFunctionImpl && ((PyFunctionImpl) elem).asMethod() == null ? SymbolKind.Function
+      return composeInfo(
+          elem instanceof PyFunctionImpl && ((PyFunctionImpl) elem).asMethod() == null ? SymbolKind.Function
               : Objects.equals(elem.getName(), "__init__") ? SymbolKind.Constructor
               : SymbolKind.Method,
           () -> pyFunctionLabel((PyFunction) elem));
     } else if (elem instanceof final PyTargetExpression targetElem) {
-      return getPair(() -> pyTargetExprType(targetElem), elem::getName);
+      return composeInfo(pyTargetExprType(targetElem), elem::getName);
     }
     return null;
   }

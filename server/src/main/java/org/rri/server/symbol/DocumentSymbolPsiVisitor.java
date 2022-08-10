@@ -79,12 +79,12 @@ class DocumentSymbolPsiVisitor extends PsiRecursiveElementVisitor {
       cancelToken.checkCanceled();
     }
     assert provider != null;
-    final var info = provider.symbolInfo(elem);
+    final var info = provider.calculateSymbolInfo(elem);
     DocumentSymbol docSym = null;
 
     if (info != null) {
       final var range = MiscUtil.getPsiElementRange(document, elem);
-      docSym = new DocumentSymbol(info.getSecond(), info.getFirst(), range, range);
+      docSym = new DocumentSymbol(info.getName(), info.getKind(), range, range);
       if (provider.isDeprecated(elem)) {
         docSym.setTags(List.of(SymbolTag.Deprecated));
       }
