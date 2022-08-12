@@ -18,7 +18,6 @@ import org.jetbrains.annotations.Nullable;
 import org.rri.server.util.Metrics;
 import org.rri.server.util.MiscUtil;
 
-import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
@@ -85,7 +84,7 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
 
   @NotNull
   private CompletionOptions defaultCompletionOptions() {
-    var completionOptions = new CompletionOptions(true, Arrays.asList(".", "@", "#"));
+    var completionOptions = new CompletionOptions(true, List.of(".", "@"));
     completionOptions.setResolveProvider(true);
     var completionItemOptions = new CompletionItemOptions();
     completionItemOptions.setLabelDetailsSupport(true);
