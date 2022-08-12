@@ -326,7 +326,7 @@ final public class CompletionService implements Disposable {
                     assert oldCopyDoc != null;
                     assert cleanFileDoc != null;
 
-                    var diff = TextUtil.textEditFromDocs(oldCopyDoc, insertedCopyDoc);
+                    var diff = TextUtil.textEditFromDocs(cleanFileDoc, insertedCopyDoc);
                     diff = diff.stream().sorted(
                         Comparator.comparingInt(
                             t -> MiscUtil.positionToOffset(oldCopyDoc, t.getRange().getStart()))).toList();
@@ -359,23 +359,64 @@ final public class CompletionService implements Disposable {
                           MiscUtil.positionToOffset(cleanFileDoc, range.getEnd())
                       );
                     }).toList();
-                    var builder = new StringBuilder();
-                    builder.append(diff.get(0).getNewText());
                     var deleteGarbage = new ArrayList<TextEdit>();
-                    int prevEnd = originalRangesInOffsets.get(0).second;
                     LOG.warn(diff.toString());
+
+                    var start =
+                        MiscUtil.positionToOffset(cleanFileDoc,
+                            unresolved.getTextEdit().getLeft().getRange().getStart());
+                    var end = MiscUtil.positionToOffset(cleanFileDoc,
+                        unresolved.getTextEdit().getLeft().getRange().getEnd());
+
+                    var builder = new StringBuilder();
+                    int prevEnd = originalRangesInOffsets.get(0).second;
+                    LOG.warn("fuck ========= " + unresolved.getTextEdit().getLeft().getRange());
+                    if (end < originalRangesInOffsets.get(0).first) {
+                      builder.append(cleanFileDoc.getText(), end,
+                          originalRangesInOffsets.get(0).first);
+
+                    }
+                    builder.append(diff.get(0).getNewText());
                     for (int i = 1; i < diff.size(); i++) {
                       var rangeOffset = originalRangesInOffsets.get(i);
                       var startOffset = rangeOffset.first;
                       var endOffset = rangeOffset.second;
                       builder.append(oldCopyDoc.getText(), prevEnd, startOffset);
+                      if (start >= startOffset) {
+                        deleteGarbage.add(new TextEdit(
+                            new Range(diff.get(i - 1).getRange().getEnd(),
+                                diff.get(i).getRange().getStart()), ""));
+                      }
+                      if (end <= prevEnd) {
+                        deleteGarbage.add(new TextEdit(
+                            new Range(diff.get(i - 1).getRange().getEnd(),
+                                diff.get(i).getRange().getStart()),
+                            ""
+                        ));
+                      }
                       prevEnd = endOffset;
                       builder.append(diff.get(i).getNewText());
                     }
-                    deleteGarbage.add(new TextEdit(new Range(diff.get(0).getRange().getStart(),
-                        unresolved.getTextEdit().getLeft().getRange().getStart()), ""));
-                    deleteGarbage.add(new TextEdit(new Range(unresolved.getTextEdit().getLeft().getRange().getStart(),
-                        diff.get(diff.size() - 1).getRange().getEnd()), ""));
+                    if (start > originalRangesInOffsets.get(diff.size() - 1).second) {
+                      builder.append(cleanFileDoc.getText(),
+                          originalRangesInOffsets.get(diff.size() - 1).second, start);
+                      deleteGarbage.add(new TextEdit(new Range(
+                          diff.get(diff.size() - 1).getRange().getEnd(),
+                          unresolved.getTextEdit().getLeft().getRange().getStart()),
+                          ""));
+                    }
+
+                    if (originalRangesInOffsets.get(0).first < start && originalRangesInOffsets.get(originalRangesInOffsets.size() - 1).second > end) {
+                      deleteGarbage.add(new TextEdit(new Range(diff.get(0).getRange().getStart(),
+                          unresolved.getTextEdit().getLeft().getRange().getStart()), ""));
+                      deleteGarbage.add(
+                          new TextEdit(new Range(
+                              unresolved.getTextEdit().getLeft().getRange().getEnd(),
+                              diff.get(diff.size() - 1).getRange().getEnd()
+                          ), "")
+                      );
+                    }
+
                     unresolved.getTextEdit().getLeft().setNewText(builder.toString());
                     unresolved.setAdditionalTextEdits(deleteGarbage);
                     LOG.warn(unresolved.getTextEdit().getLeft().getNewText());
