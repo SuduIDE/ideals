@@ -140,8 +140,8 @@ final public class CompletionService implements Disposable {
             var prefix = CompletionUtil.findReferencePrefix(parameters);
             if (prefix == null) {
               LOG.warn(psiFile.getText());
+              prefix = "";
             }
-            assert prefix != null;
 
             var ideaCompService = com.intellij.codeInsight.completion.CompletionService.getCompletionService();
             assert ideaCompService != null;
@@ -482,8 +482,9 @@ final public class CompletionService implements Disposable {
                     var sub = allEditsSorted.get(0).getNewText().length();
                     acc -= sub;
                     var textWithSnippetBuilder = new StringBuilder();
+
+                    textWithSnippetBuilder.append(unresolved.getTextEdit().getLeft().getNewText());
                     if (acc <= 0) {
-                      textWithSnippetBuilder.append(allEditsSorted.get(0).getNewText());
                       textWithSnippetBuilder.insert(acc + sub, "$0");
                     }
                     for (int i = 1; i < originalRangesInOffsets.size() && acc > 0; i++) {
@@ -491,14 +492,12 @@ final public class CompletionService implements Disposable {
                           (originalRangesInOffsets.get(i).first - originalRangesInOffsets.get(i - 1).second);
                       acc -= sub;
                       if (acc <= 0) {
-                        textWithSnippetBuilder.append(allEditsSorted.get(i - 1).getNewText());
                         textWithSnippetBuilder.insert(acc + sub, "$0");
                         break;
                       }
                       sub = allEditsSorted.get(i).getNewText().length();
                       acc -= sub;
                       if (acc <= 0) {
-                        textWithSnippetBuilder.append(allEditsSorted.get(i).getNewText());
                         textWithSnippetBuilder.insert(acc + sub, "$0");
                         break;
                       }
