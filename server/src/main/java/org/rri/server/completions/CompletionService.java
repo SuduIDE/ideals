@@ -137,10 +137,6 @@ final public class CompletionService implements Disposable {
                   item.setFilterText(
                       lookupElement.getLookupString()
                   );
-                  String docBuilder = "Documentation: \n" +
-                      "filter text: " + item.getFilterText() + "\n" +
-                      "sort text: " + item.getSortText() + "\n";
-                  item.setDocumentation(docBuilder);
                   return item;
                 })).toList();
             for (int i = 0; i < result.size(); i++) {
@@ -529,7 +525,7 @@ final public class CompletionService implements Disposable {
 
     ReadAction.run(() -> lookupElement.renderElement(presentation));
 
-    StringBuilder contextInfo = new StringBuilder("  tail fragments: ");
+    StringBuilder contextInfo = new StringBuilder();
     for (var textFragment : presentation.getTailFragments()) {
       contextInfo.append(textFragment.text);
     }
@@ -541,8 +537,6 @@ final public class CompletionService implements Disposable {
     if (presentation.isStrikeout()) {
       tagList.add(CompletionItemTag.Deprecated);
     }
-    resItem.setPreselect(false);
-    resItem.setKind(CompletionItemKind.Constant);
     resItem.setInsertTextFormat(InsertTextFormat.Snippet);
     resItem.setLabel(presentation.getItemText());
     resItem.setLabelDetails(lDetails);
@@ -556,7 +550,7 @@ final public class CompletionService implements Disposable {
             position),
             resItem.getLabel())));
 
-    resItem.setDetail("type: " + presentation.getTypeText());
+    resItem.setDetail(presentation.getTypeText());
     resItem.setTags(tagList);
 
     return resItem;
