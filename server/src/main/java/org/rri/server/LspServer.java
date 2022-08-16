@@ -20,6 +20,9 @@ import org.rri.server.util.Metrics;
 import java.util.Arrays;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeUnit;
+import java.util.concurrent.TimeoutException;
 
 import static org.rri.server.util.MiscUtil.with;
 
@@ -206,7 +209,13 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
         return;
 
       final String token = calculateUniqueToken(task);
-      client.createProgress(new WorkDoneProgressCreateParams(Either.forLeft(token))).join();
+      try {
+        client
+            .createProgress(new WorkDoneProgressCreateParams(Either.forLeft(token)))
+            .get(500, TimeUnit.MILLISECONDS);
+      } catch (InterruptedException | ExecutionException | TimeoutException e) {
+        LOG.warn("Could not get confirmation when creating work done progress; will act as if it's created", e);
+      }
 
       final var progressBegin = new WorkDoneProgressBegin();
       progressBegin.setTitle(task.getTitle());
