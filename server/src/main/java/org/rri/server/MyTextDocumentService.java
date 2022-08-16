@@ -150,7 +150,7 @@ public class MyTextDocumentService implements TextDocumentService {
   @Override
   @NotNull
   public CompletableFuture<CompletionItem> resolveCompletionItem(@NotNull CompletionItem unresolved) {
-    return completion().startCompletionResolve(unresolved);
+    return completion().startCompletionResolveCalculation(unresolved);
   }
 
   @Override

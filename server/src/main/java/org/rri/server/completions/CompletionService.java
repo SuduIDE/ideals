@@ -2,7 +2,8 @@ package org.rri.server.completions;
 
 import com.google.common.collect.Streams;
 import com.google.gson.JsonObject;
-import com.intellij.codeInsight.completion.*;
+import com.intellij.codeInsight.completion.CompletionResult;
+import com.intellij.codeInsight.completion.CompletionUtil;
 import com.intellij.codeInsight.completion.impl.CamelHumpMatcher;
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementPresentation;
@@ -15,27 +16,21 @@ import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
+import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.EditorModificationUtilEx;
-import com.intellij.openapi.editor.impl.DocumentImpl;
-import com.intellij.openapi.progress.util.AbstractProgressIndicatorExBase;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
-import com.intellij.openapi.util.Key;
 import com.intellij.openapi.util.Pair;
 import com.intellij.openapi.util.Ref;
-import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiFileFactory;
-import com.intellij.psi.impl.source.tree.injected.InjectedLanguageEditorUtil;
-import com.intellij.reference.SoftReference;
-import com.intellij.util.ObjectUtils;
 import com.intellij.util.concurrency.AppExecutorUtil;
+import jnr.ffi.annotations.Synchronized;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
-import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.server.LspPath;
@@ -46,8 +41,8 @@ import org.rri.server.util.TextUtil;
 import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.CompletableFuture;
-import java.util.function.Supplier;
 
 @Service(Service.Level.PROJECT)
 final public class CompletionService implements Disposable {
@@ -56,20 +51,8 @@ final public class CompletionService implements Disposable {
   private static final Logger LOG = Logger.getInstance(CompletionService.class);
 
   @NotNull
-  private final List<@NotNull LookupElement> cachedLookupElements = new ArrayList<>();
-  @Nullable
-  private LspPath cachedPath = null;
-  @Nullable
-  private OffsetMap cachedOffsetMap = null;
-  private int cachedCarretOffset = 0;
-  @Nullable
-  private LookupImpl cachedLookup = null;
-  private int cachedStartOffset = 0;
-  private int cachedResultIndex = 0;
-  private String cachedPrefix = "";
-  private Position cachedPosition = new Position();
-  private String cachedText;
-  private Language cachedLanguage;
+  @Synchronized
+  private final CachedCompletionResolveData cachedData = new CachedCompletionResolveData();
 
   public CompletionService(@NotNull Project project) {
     this.project = project;
@@ -79,6 +62,7 @@ final public class CompletionService implements Disposable {
   public CompletableFuture<Either<List<CompletionItem>, CompletionList>> startCompletionCalculation(
       @NotNull LspPath path,
       @NotNull Position position) {
+    LOG.info("start completion");
     var app = ApplicationManager.getApplication();
     return CompletableFutures.computeAsync(
         AppExecutorUtil.getAppExecutorService(),
@@ -89,7 +73,7 @@ final public class CompletionService implements Disposable {
               () -> ref.set(MiscUtil.produceWithPsiFileInReadAction(
                       project,
                       path,
-                  (psiFile) -> createCompletionResults(path, psiFile, position, cancelChecker)
+                  (psiFile) -> createCompletionResults(psiFile, position, cancelChecker)
                   )
               ),
               app.getDefaultModalityState()
@@ -104,8 +88,7 @@ final public class CompletionService implements Disposable {
   }
 
   @SuppressWarnings("UnstableApiUsage")
-  public @NotNull Either<List<CompletionItem>, CompletionList> createCompletionResults(@NotNull LspPath path,
-                                                                                       @NotNull PsiFile psiFile,
+  public @NotNull Either<List<CompletionItem>, CompletionList> createCompletionResults(@NotNull PsiFile psiFile,
                                                                                        @NotNull Position position,
                                                                                        @NotNull CancelChecker cancelChecker) {
     VoidCompletionProcess process = new VoidCompletionProcess();
@@ -115,70 +98,35 @@ final public class CompletionService implements Disposable {
           position,
           (editor) -> {
             var ideaCompletionResults = new ArrayList<CompletionResult>();
-            var initContext = CompletionInitializationUtil.createCompletionInitializationContext(
-                project,
-                editor,
-                editor.getCaretModel().getPrimaryCaret(),
-                1,
-                CompletionType.BASIC);
-            assert initContext != null;
-
-            var topLevelOffsets =
-                new OffsetsInFile(initContext.getFile(), initContext.getOffsetMap()).toTopLevelFile();
-            PsiDocumentManager.getInstance(initContext.getProject()).commitAllDocuments();
-            var hostCopyOffsets =
-                insertDummyIdentifier(initContext, process, topLevelOffsets);
-
-            OffsetsInFile finalOffsets = CompletionInitializationUtil.toInjectedIfAny(initContext.getFile(), hostCopyOffsets);
-            CompletionParameters parameters = CompletionInitializationUtil.createCompletionParameters(
-                initContext,
-                process,
-                finalOffsets);
-            var arranger = new LookupArrangerImpl(parameters);
-            var lookup = new LookupImpl(project, editor, arranger);
-
-            var prefix = CompletionUtil.findReferencePrefix(parameters);
-            if (prefix == null) {
-              LOG.warn(psiFile.getText());
-              prefix = "";
-            }
-
+            var compInfo = new CompletionInfo(editor, project);
             var ideaCompService = com.intellij.codeInsight.completion.CompletionService.getCompletionService();
             assert ideaCompService != null;
 
-            ideaCompService.performCompletion(parameters,
+            ideaCompService.performCompletion(compInfo.getParameters(),
                 (result) -> {
-                  lookup.addItem(result.getLookupElement(),
-                      result.getPrefixMatcher()
-//                      new PlainPrefixMatcher(prefix) /* todo compare with another PrefixMatchers */
-                  );
+                  compInfo.getLookup().addItem(result.getLookupElement(), result.getPrefixMatcher());
                   ideaCompletionResults.add(result);
                 });
 
             ideaCompletionResults.forEach((it) -> {
               try {
-                arranger.addElement(it);
+                compInfo.getArranger().addElement(it);
               } catch (Exception ignored) {
               } // we just skip this element
             });
-            List<LookupElement> sortedLookupElements = arranger.arrangeItems(lookup, false).first;
+            List<LookupElement> sortedLookupElements =
+                compInfo.getArranger().arrangeItems(compInfo.getLookup(), false).first;
 
             int currentResultIndex;
-            cancelChecker.checkCanceled();
-
-            synchronized (cachedLookupElements) {
-              cachedOffsetMap = initContext.getOffsetMap();
-              cachedCarretOffset = editor.getCaretModel().getOffset();
-              cachedPosition = position;
-              cachedPath = path;
-              cachedLookup = lookup;
-              cachedText = editor.getDocument().getText();
-              cachedLanguage = psiFile.getLanguage();
-              currentResultIndex = ++cachedResultIndex;
-              cachedStartOffset = editor.getCaretModel().getOffset() - prefix.length();
-              cachedLookupElements.clear();
-              cachedLookupElements.addAll(sortedLookupElements);
-              cachedPrefix = prefix;
+            synchronized (cachedData) {
+              cachedData.cachedCaretOffset = editor.getCaretModel().getOffset();
+              cachedData.cachedPosition = position;
+              cachedData.cachedLookup = compInfo.getLookup();
+              cachedData.cachedText = editor.getDocument().getText();
+              cachedData.cachedLanguage = psiFile.getLanguage();
+              currentResultIndex = ++cachedData.cachedResultIndex;
+              cachedData.cachedLookupElements.clear();
+              cachedData.cachedLookupElements.addAll(sortedLookupElements);
             }
             var result = Streams.zip(sortedLookupElements.stream(), ideaCompletionResults.stream(),
                 ((lookupElement, completionResult) -> {
@@ -188,18 +136,14 @@ final public class CompletionService implements Disposable {
                           compPrefix.length());
                   item.setFilterText(
                       compPrefix + item.getLabel()
-//                      item.getLabel()
                   );
-
                   return item;
                 })).toList();
             for (int i = 0; i < result.size(); i++) {
               var completionItem = result.get(i);
-              LOG.warn("filter text = " + completionItem.getLabel());
-//              completionItem.setSortText("1");
               completionItem.setData(new Pair<>(currentResultIndex, i));
             }
-            result.stream().map(CompletionItem::getLabel).forEach(LOG::warn);
+            cancelChecker.checkCanceled();
             resultRef.set(result);
           }
       );
@@ -210,11 +154,10 @@ final public class CompletionService implements Disposable {
     return Either.forLeft(resultRef.get());
   }
 
-  @SuppressWarnings({"unchecked", "UnstableApiUsage"})
   @NotNull
-  public CompletableFuture<@NotNull CompletionItem> startCompletionResolve(@NotNull CompletionItem unresolved) {
+  public CompletableFuture<@NotNull CompletionItem> startCompletionResolveCalculation(@NotNull CompletionItem unresolved) {
     var app = ApplicationManager.getApplication();
-
+    LOG.info("start completion resolve");
     return CompletableFutures.computeAsync(
         AppExecutorUtil.getAppExecutorService(),
         (cancelChecker) -> {
@@ -222,352 +165,350 @@ final public class CompletionService implements Disposable {
             JsonObject jsonObject = (JsonObject) unresolved.getData();
             var resultIndex = jsonObject.get("first").getAsInt();
             var lookupElementIndex = jsonObject.get("second").getAsInt();
-
-            var insertedCopy = PsiFileFactory.getInstance(project).createFileFromText(
-                "copy",
-                cachedLanguage,
-                cachedText,
-                true,
-                true,
-                true);
-            var oldCopy = (PsiFile) insertedCopy.copy();
-
-            PsiFile cleanFile = (PsiFile) oldCopy.copy();
-            synchronized (cachedLookupElements) {
-              app.runWriteAction(() -> WriteCommandAction.runWriteCommandAction(project,
-                  () -> {
-                    var tempDisp = Disposer.newDisposable();
-                    try {
-                      EditorUtil.withEditor(tempDisp, cleanFile, cachedPosition, (editor) -> {
-                        assert cachedLookup != null;
-                        var prefix =
-                            cachedLookup.itemPattern(cachedLookupElements.get(lookupElementIndex));
-                        editor.getSelectionModel().setSelection(cachedCarretOffset - prefix.length(),
-                            cachedCarretOffset);
-                        EditorModificationUtilEx.deleteSelectedText(editor);
-                      });
-                    } finally {
-                      Disposer.dispose(tempDisp);
-                    }
-                  }));
-            }
-            var oldCopyDoc = MiscUtil.getDocument(oldCopy);
-            var insertedCopyDoc = MiscUtil.getDocument(insertedCopy);
-            var cleanFileDoc = MiscUtil.getDocument(cleanFile);
-
-            synchronized (cachedLookupElements) {
-              if (resultIndex != cachedResultIndex) {
-                return;
-              }
-
-              var cachedLookupElement = cachedLookupElements.get(lookupElementIndex);
-
-              app.runReadAction(() -> {
-                var tempDisposable = Disposer.newDisposable();
-
-                try {
-                  var process = new VoidCompletionProcess();
-                  EditorUtil.withEditor(tempDisposable, insertedCopy, cachedPosition, editor -> {
-                    var initContext = CompletionInitializationUtil.createCompletionInitializationContext(
-                        project,
-                        editor,
-                        editor.getCaretModel().getPrimaryCaret(),
-                        1,
-                        CompletionType.BASIC);
-                    assert initContext != null;
-
-                    var topLevelOffsets =
-                        new OffsetsInFile(initContext.getFile(), initContext.getOffsetMap()).toTopLevelFile();
-                    PsiDocumentManager.getInstance(initContext.getProject()).commitAllDocuments();
-                    var hostCopyOffsets =
-                        insertDummyIdentifier(initContext, process, topLevelOffsets);
-
-                    OffsetsInFile finalOffsets = CompletionInitializationUtil.toInjectedIfAny(initContext.getFile(), hostCopyOffsets);
-                    CompletionParameters parameters = CompletionInitializationUtil.createCompletionParameters(
-                        initContext,
-                        process,
-                        finalOffsets);
-                    var arranger = new LookupArrangerImpl(parameters);
-                    var lookup = new LookupImpl(project, editor, arranger);
-
-                    assert cachedLookup != null;
-                    var prefix = cachedLookup.itemPattern(cachedLookupElement);
-
-                    lookup.addItem(cachedLookupElement, new CamelHumpMatcher(prefix));
-
-                    arranger.addElement(cachedLookupElement, new LookupElementPresentation());
-                    lookup.finishLookup('\n', cachedLookupElement);
-
-                    var currentOffset = editor.getCaretModel().getOffset();
-                    ApplicationManager.getApplication().runWriteAction(() -> {
-                      WriteCommandAction.runWriteCommandAction(project, () -> {
-                        var context =
-                            CompletionUtil.createInsertionContext(
-                                cachedLookupElements,
-                                cachedLookupElement,
-                                '\n',
-                                editor,
-                                insertedCopy,
-                                currentOffset,
-                                CompletionUtil.calcIdEndOffset(
-                                    initContext.getOffsetMap(),
-                                    editor,
-                                    currentOffset),
-                                initContext.getOffsetMap());
-
-                        cachedLookupElement.handleInsert(context);
-//                        LOG.warn(insertedCopy.getText());
-
-                      });
-                    });
-                    PsiDocumentManager.getInstance(project).commitAllDocuments();
-
-                    LOG.warn(insertedCopyDoc.getText());
-                    assert insertedCopyDoc != null;
-                    assert oldCopyDoc != null;
-                    assert cleanFileDoc != null;
-
-//                    if (cachedLookupElement instanceof LookupElement)
-                    var diff = TextUtil.textEditFromDocs(cleanFileDoc, insertedCopyDoc);
-                    diff = diff.stream().sorted(
-                        Comparator.comparingInt(
-                            t -> MiscUtil.positionToOffset(oldCopyDoc, t.getRange().getStart()))).toList();
-
-
-//                  Pair<TextEdit, List<TextEdit>> mainAndAdditionalTextEdits =
-//                      reformatTextEditsAfterInsert(diff,
-//                          MiscUtil.offsetToPosition(oldCopyDoc, cachedStartOffset),
-//                          MiscUtil.offsetToPosition(oldCopyDoc, cachedCarretOffset));
-//                  var mainEdit = mainAndAdditionalTextEdits.first;
-//                  var otherEdits = mainAndAdditionalTextEdits.second;
-
-//                  LOG.warn("main: " + mainEdit.toString());
-//                  LOG.warn("other: "+ otherEdits.toString());
-                    unresolved.getTextEdit().getLeft().setNewText("");
-
-
-                    if (diff.isEmpty()) {
-                      return;
-                    }
-
-                    var insertedOffset = editor.getCaretModel().getOffset();
-
-                    var originalRangesInOffsets = diff.stream().map(textEdit -> {
-                      var range = textEdit.getRange();
-                      return new Pair<>(
-                          MiscUtil.positionToOffset(cleanFileDoc, range.getStart()),
-                          MiscUtil.positionToOffset(cleanFileDoc, range.getEnd())
-                      );
-                    }).toList();
-                    var deleteGarbage = new ArrayList<TextEdit>();
-                    LOG.warn(diff.toString());
-
-                    var start =
-                        MiscUtil.positionToOffset(cleanFileDoc,
-                            unresolved.getTextEdit().getLeft().getRange().getStart());
-                    var end = MiscUtil.positionToOffset(cleanFileDoc,
-                        unresolved.getTextEdit().getLeft().getRange().getEnd());
-                    var foundEditWithCaretIndex = -1;
-                    var insertedRangesInOffsets = new ArrayList<Integer>();
-                    var acc = insertedOffset;
-                    var prev = originalRangesInOffsets.get(0);
-                    acc -= prev.first;
-                    acc -= diff.get(0).getNewText().length();
-                    if (acc <= 0) {
-                      foundEditWithCaretIndex = 0;
-                    }
-                    for (int i = 1; i < originalRangesInOffsets.size() && foundEditWithCaretIndex == -1; i++) {
-                      acc -= (originalRangesInOffsets.get(i).first - originalRangesInOffsets.get(i - 1).second);
-                      if (acc <= 0) {
-                        foundEditWithCaretIndex = i - 1;
-                        break;
-                      }
-                      acc -= diff.get(i).getNewText().length();
-                      if (acc <= 0) {
-                        foundEditWithCaretIndex = i;
-                        break;
-                      }
-                    }
-                    if (foundEditWithCaretIndex == -1) {
-                      unresolved.getTextEdit().getLeft().setNewText("");
-                      unresolved.setAdditionalTextEdits(diff);
-                      return;
-                    }
-                    var rangeWithCaretStartOffset =
-                        originalRangesInOffsets.get(foundEditWithCaretIndex).first;
-                    var rangeWithCaretEndOffset =
-                        originalRangesInOffsets.get(foundEditWithCaretIndex).second;
-
-                    var cycleEnd = Integer.max(end, rangeWithCaretEndOffset);
-                    var cycleStart = Integer.min(start, rangeWithCaretStartOffset);
-                    var editsToMerge = new ArrayList<TextEdit>();
-                    var editsToMergeOffsets = new ArrayList<Pair<Integer, Integer>>();
-                    for (int i = 0; i < originalRangesInOffsets.size(); i++) {
-                      var editStartOffset = originalRangesInOffsets.get(i).first;
-                      var editEndOffset = originalRangesInOffsets.get(i).second;
-                      if (editEndOffset >= cycleStart && editStartOffset <= cycleEnd) {
-                        editsToMerge.add(diff.get(i));
-                        editsToMergeOffsets.add(originalRangesInOffsets.get(i));
-                      }
-                    }
-
-                    var builder = new StringBuilder();
-                    int prevEnd = editsToMergeOffsets.get(0).second;
-                    LOG.warn("fuck ========= " + unresolved.getTextEdit().getLeft().getRange());
-                    if (end < editsToMergeOffsets.get(0).first) {
-                      builder.append(cleanFileDoc.getText(), end,
-                          editsToMergeOffsets.get(0).first);
-
-                    }
-                    builder.append(editsToMerge.get(0).getNewText());
-                    for (int i = 1; i < editsToMerge.size(); i++) {
-                      var rangeOffset = editsToMergeOffsets.get(i);
-                      var startOffset = rangeOffset.first;
-                      var endOffset = rangeOffset.second;
-                      builder.append(oldCopyDoc.getText(), prevEnd, startOffset);
-                      if (start >= startOffset) {
-                        deleteGarbage.add(new TextEdit(
-                            new Range(editsToMerge.get(i - 1).getRange().getEnd(),
-                                editsToMerge.get(i).getRange().getStart()), ""));
-                      }
-                      if (end <= prevEnd) {
-                        deleteGarbage.add(new TextEdit(
-                            new Range(editsToMerge.get(i - 1).getRange().getEnd(),
-                                editsToMerge.get(i).getRange().getStart()),
-                            ""
-                        ));
-                      }
-                      prevEnd = endOffset;
-                      builder.append(editsToMerge.get(i).getNewText());
-                    }
-                    if (start > editsToMergeOffsets.get(editsToMerge.size() - 1).second) {
-                      builder.append(cleanFileDoc.getText(),
-                          editsToMergeOffsets.get(editsToMerge.size() - 1).second, start);
-                      deleteGarbage.add(new TextEdit(new Range(
-                          editsToMerge.get(editsToMerge.size() - 1).getRange().getEnd(),
-                          unresolved.getTextEdit().getLeft().getRange().getStart()),
-                          ""));
-                    }
-
-                    if (editsToMergeOffsets.get(0).first < start && editsToMergeOffsets.get(editsToMergeOffsets.size() - 1).second > end) {
-                      deleteGarbage.add(new TextEdit(new Range(editsToMerge.get(0).getRange().getStart(),
-                          unresolved.getTextEdit().getLeft().getRange().getStart()), ""));
-                      deleteGarbage.add(
-                          new TextEdit(new Range(
-                              unresolved.getTextEdit().getLeft().getRange().getEnd(),
-                              editsToMerge.get(editsToMerge.size() - 1).getRange().getEnd()
-                          ), "")
-                      );
-                    }
-                    deleteGarbage.addAll(diff.stream().filter(
-                        textEdit -> !editsToMerge.contains(textEdit)).toList());
-                    unresolved.setAdditionalTextEdits(deleteGarbage);
-
-                    unresolved.getTextEdit().getLeft().setNewText(builder.toString());
-
-
-                    List<TextEdit> allEditsSorted = new ArrayList<>(deleteGarbage);
-                    allEditsSorted.add(unresolved.getTextEdit().getLeft());
-                    allEditsSorted = allEditsSorted.stream().sorted(
-                        Comparator.comparingInt(
-                            t -> MiscUtil.positionToOffset(oldCopyDoc, t.getRange().getStart()))).toList();
-                    originalRangesInOffsets = allEditsSorted.stream().map(textEdit -> {
-                      return new Pair<Integer, Integer>(MiscUtil.positionToOffset(cleanFileDoc,
-                          textEdit.getRange().getStart()), MiscUtil.positionToOffset(cleanFileDoc,
-                          textEdit.getRange().getEnd()));
-                    }).toList();
-                    acc = insertedOffset;
-                    prev = originalRangesInOffsets.get(0);
-                    acc -= prev.first;
-                    var sub = allEditsSorted.get(0).getNewText().length();
-                    acc -= sub;
-                    var textWithSnippetBuilder = new StringBuilder();
-
-                    textWithSnippetBuilder.append(unresolved.getTextEdit().getLeft().getNewText());
-                    if (acc <= 0) {
-                      textWithSnippetBuilder.insert(acc + sub, "$0");
-                    }
-                    for (int i = 1; i < originalRangesInOffsets.size() && acc > 0; i++) {
-                      sub =
-                          (originalRangesInOffsets.get(i).first - originalRangesInOffsets.get(i - 1).second);
-                      acc -= sub;
-                      if (acc <= 0) {
-                        textWithSnippetBuilder.insert(acc + sub, "$0");
-                        break;
-                      }
-                      sub = allEditsSorted.get(i).getNewText().length();
-                      acc -= sub;
-                      if (acc <= 0) {
-                        textWithSnippetBuilder.insert(acc + sub, "$0");
-                        break;
-                      }
-                    }
-                    unresolved.getTextEdit().getLeft().setNewText(textWithSnippetBuilder.toString());
-                    LOG.warn(unresolved.getTextEdit().getLeft().getNewText());
-                    LOG.warn(deleteGarbage.toString());
-
-//                    var upperBound = Collections.binarySearch(diff,
-//                        unresolved.getTextEdit().getLeft().getRange(), (first, second) -> {
-//                          var firstOffset = MiscUtil.positionToOffset(cleanFileDoc,
-//                              ((Range) first).getStart());
-//                          var secondOffset = MiscUtil.positionToOffset(cleanFileDoc,
-//                              ((Range) second).getStart());
-//                          return secondOffset - firstOffset;
-//                        });
-//
-//
-
-                  });
-                } finally {
-                  Disposer.dispose(tempDisposable);
-                }
-              });
-            }
-            cancelChecker.checkCanceled();
-
+            doResolve(resultIndex, lookupElementIndex, unresolved);
           });
+          cancelChecker.checkCanceled();
           return unresolved;
         });
-
   }
 
+  private void doResolve(int resultIndex, int lookupElementIndex, @NotNull CompletionItem unresolved) {
+    synchronized (cachedData) {
+      var cachedLookupElement = cachedData.cachedLookupElements.get(lookupElementIndex);
+
+      assert cachedData.cachedLanguage != null;
+      var copyToInsert = PsiFileFactory.getInstance(project).createFileFromText(
+          "copy",
+          cachedData.cachedLanguage,
+          cachedData.cachedText,
+          true,
+          true,
+          true);
+      var copyThatCalledCompletion = (PsiFile) copyToInsert.copy();
+      var copyToDeleteID = (PsiFile) copyToInsert.copy();
+
+      deleteID(copyToDeleteID, cachedLookupElement);
+
+      var completionCalledCopyDoc = MiscUtil.getDocument(copyThatCalledCompletion);
+      var insertedCopyDoc = MiscUtil.getDocument(copyToInsert);
+      var deletedIDFileCopyDoc = MiscUtil.getDocument(copyToDeleteID);
+
+      if (resultIndex != cachedData.cachedResultIndex) {
+        return;
+      }
+
+      ApplicationManager.getApplication().runReadAction(() -> {
+        var tempDisp = Disposer.newDisposable();
+        try {
+          EditorUtil.withEditor(tempDisp, copyToInsert, cachedData.cachedPosition,
+              editor -> {
+                CompletionInfo completionInfo = new CompletionInfo(editor, project);
+                assert insertedCopyDoc != null;
+                assert completionCalledCopyDoc != null;
+                assert deletedIDFileCopyDoc != null;
+
+                handleInsert(cachedLookupElement, editor, copyToInsert, completionInfo);
+                PsiDocumentManager.getInstance(project).commitDocument(insertedCopyDoc);
+
+                var diff = TextUtil.textEditFromDocs(deletedIDFileCopyDoc, insertedCopyDoc);
+                if (diff.isEmpty()) {
+                  return;
+                }
+                diff = sortTextEdits(diff, completionCalledCopyDoc);
+
+                var caretOffsetAfterInsert = editor.getCaretModel().getOffset();
+
+                var diffRangesAsOffsets = toListOfOffsets(diff, deletedIDFileCopyDoc);
+                var additionalEdits = new ArrayList<TextEdit>();
+                var unresolvedTextEdit = unresolved.getTextEdit().getLeft();
+
+                var replaceElementStart = MiscUtil.positionToOffset(deletedIDFileCopyDoc,
+                    unresolvedTextEdit.getRange().getStart());
+                var replaceElementEnd = MiscUtil.positionToOffset(deletedIDFileCopyDoc,
+                    unresolvedTextEdit.getRange().getEnd());
+
+                var foundEditWithCaretIndex =
+                    findIndexOfEditWithCaretAndCaretOffsetInsideEdit(
+                        caretOffsetAfterInsert, diff, diffRangesAsOffsets).first;
+                if (foundEditWithCaretIndex == -1) {
+                  unresolved.getTextEdit().getLeft().setNewText("");
+                  unresolved.setAdditionalTextEdits(diff);
+                  return;
+                }
+                var rangeWithCaretStartOffset =
+                    diffRangesAsOffsets.get(foundEditWithCaretIndex).first;
+                var rangeWithCaretEndOffset =
+                    diffRangesAsOffsets.get(foundEditWithCaretIndex).second;
+
+                var mergeRangeEndOffset = Integer.max(replaceElementEnd, rangeWithCaretEndOffset);
+                var mergeRangeStartOffset = Integer.min(replaceElementStart, rangeWithCaretStartOffset);
+
+                var editsToMerge = getRangeIntersectEdits(
+                    mergeRangeStartOffset, mergeRangeEndOffset, diff, diffRangesAsOffsets);
+                var editsToMergeRangesAsOffsets = toListOfOffsets(editsToMerge, deletedIDFileCopyDoc);
+
+                var newText = mergeOffsets(editsToMerge, editsToMergeRangesAsOffsets,
+                    unresolvedTextEdit.getRange(),
+                    deletedIDFileCopyDoc, completionCalledCopyDoc, additionalEdits);
+                var setOfEditsToMerge = Set.of(editsToMerge.toArray());
+                additionalEdits.addAll(diff.stream().filter(
+                    textEdit -> !setOfEditsToMerge.contains(textEdit)).toList());
+
+                unresolved.setAdditionalTextEdits(additionalEdits);
+                unresolved.getTextEdit().getLeft().setNewText(newText);
+
+                insertSnippet(unresolvedTextEdit, additionalEdits, completionCalledCopyDoc,
+                    deletedIDFileCopyDoc, caretOffsetAfterInsert);
+              });
+        } finally {
+          ApplicationManager.getApplication().runWriteAction(
+              () -> WriteCommandAction.runWriteCommandAction(project, () -> Disposer.dispose(tempDisp))
+          );
+        }
+      });
+    }
+  }
+
+  private static class CachedCompletionResolveData {
+    @NotNull
+    private final List<@NotNull LookupElement> cachedLookupElements = new ArrayList<>();
+
+    private int cachedCaretOffset = 0;
+    @Nullable
+    private LookupImpl cachedLookup = null;
+    private int cachedResultIndex = 0;
+    @NotNull
+    private Position cachedPosition = new Position();
+    @NotNull
+    private String cachedText = "";
+    @Nullable
+    private Language cachedLanguage = null;
+
+    public CachedCompletionResolveData() {
+    }
+  }
+
+
+  private void prepareCompletionInfoForInsert(@NotNull CompletionInfo completionInfo,
+                                              @NotNull LookupElement cachedLookupElement) {
+    assert cachedData.cachedLookup != null;
+    var prefix = cachedData.cachedLookup.itemPattern(cachedLookupElement);
+
+    completionInfo.getLookup().addItem(cachedLookupElement,
+        new CamelHumpMatcher(prefix));
+
+    completionInfo.getArranger().addElement(cachedLookupElement,
+        new LookupElementPresentation());
+  }
+
+  private void insertSnippet(@NotNull TextEdit unresolvedTextEdit,
+                             @NotNull List<@NotNull TextEdit> additionalEdits,
+                             @NotNull Document completionCalledDoc,
+                             @NotNull Document deletedIDFileDoc,
+                             int caretOffsetAfterInsert) {
+    List<TextEdit> allEditsSorted = new ArrayList<>(additionalEdits);
+    allEditsSorted.add(unresolvedTextEdit);
+    allEditsSorted = sortTextEdits(allEditsSorted, completionCalledDoc);
+
+    var allEditsRangesAsOffsets = toListOfOffsets(allEditsSorted, deletedIDFileDoc);
+    var caretOffsetInMainTextEdit =
+        findIndexOfEditWithCaretAndCaretOffsetInsideEdit(caretOffsetAfterInsert,
+            allEditsSorted, allEditsRangesAsOffsets).second;
+
+    var textWithSnippetBuilder = new StringBuilder();
+    textWithSnippetBuilder.append(unresolvedTextEdit.getNewText());
+    textWithSnippetBuilder.insert(caretOffsetInMainTextEdit, "$0");
+    unresolvedTextEdit.setNewText(textWithSnippetBuilder.toString());
+  }
+
+  private String mergeOffsets(
+      @NotNull List<@NotNull TextEdit> editsToMerge,
+      @NotNull List<@NotNull Pair<@NotNull Integer, @NotNull Integer>> editsToMergeOffsets,
+      @NotNull Range replaceElementRange,
+      @NotNull Document sourceDoc,
+      @NotNull Document insertedDoc,
+      @NotNull List<TextEdit> additionalEdits
+  ) {
+    int lastIndexEditsToMerge = editsToMerge.size() - 1;
+    var replaceElementStart = MiscUtil.positionToOffset(sourceDoc,
+        replaceElementRange.getStart());
+    var replaceElementEnd = MiscUtil.positionToOffset(sourceDoc,
+        replaceElementRange.getEnd());
+
+    var builder = new StringBuilder();
+    int prevEnd = editsToMergeOffsets.get(0).second;
+
+    if (replaceElementEnd < editsToMergeOffsets.get(0).first) {
+      builder.append(sourceDoc.getText(), replaceElementEnd,
+          editsToMergeOffsets.get(0).first);
+    }
+
+    builder.append(editsToMerge.get(0).getNewText());
+    for (int i = 1; i < editsToMerge.size(); i++) {
+      var rangeOffset = editsToMergeOffsets.get(i);
+      int startOffset = rangeOffset.first;
+      int endOffset = rangeOffset.second;
+      builder.append(insertedDoc.getText(), prevEnd, startOffset);
+      if (replaceElementStart >= startOffset) {
+        additionalEdits.add(
+            TextUtil.createDeleteTextEdit(new Range(
+                editsToMerge.get(i - 1).getRange().getEnd(),
+                editsToMerge.get(i).getRange().getStart()))
+        );
+      }
+      if (replaceElementEnd <= prevEnd) {
+        additionalEdits.add(
+            TextUtil.createDeleteTextEdit(
+                new Range(editsToMerge.get(i - 1).getRange().getEnd(),
+                    editsToMerge.get(i).getRange().getStart()))
+        );
+      }
+      prevEnd = endOffset;
+      builder.append(editsToMerge.get(i).getNewText());
+    }
+    if (replaceElementStart > editsToMergeOffsets.get(lastIndexEditsToMerge).second) {
+      builder.append(sourceDoc.getText(),
+          editsToMergeOffsets.get(lastIndexEditsToMerge).second, replaceElementStart);
+      additionalEdits.add(TextUtil.createDeleteTextEdit(new Range(
+          editsToMerge.get(lastIndexEditsToMerge).getRange().getEnd(),
+          replaceElementRange.getStart()))
+      );
+    }
+
+    if (editsToMergeOffsets.get(0).first < replaceElementStart && editsToMergeOffsets.get(editsToMergeOffsets.size() - 1).second > replaceElementEnd) {
+      additionalEdits.add(
+          TextUtil.createDeleteTextEdit(new Range(editsToMerge.get(0).getRange().getStart(),
+              replaceElementRange.getStart())));
+      additionalEdits.add(
+          TextUtil.createDeleteTextEdit(new Range(
+              replaceElementRange.getEnd(),
+              editsToMerge.get(lastIndexEditsToMerge).getRange().getEnd()
+          ))
+      );
+    }
+    return builder.toString();
+  }
 
   @NotNull
-  private Pair<@NotNull TextEdit, @NotNull List<@NotNull TextEdit>> reformatTextEditsAfterInsert(
-      @NotNull List<TextEdit> diff,
-      @NotNull Position startPos,
-      @NotNull Position endPos
-  ) {
-
-    TextEdit mainTextEdit = null;
-    assert startPos.getLine() == endPos.getLine();
-    Range mainRange = new Range(startPos, endPos);
-    for (TextEdit textEdit : diff) {
-      if (rangesCollision(mainRange, textEdit)) {
-        mainTextEdit = textEdit;
-        break;
+  private ArrayList<@NotNull TextEdit> getRangeIntersectEdits(
+      int mergeRangeStartOffset,
+      int mergeRangeEndOffset,
+      @NotNull List<@NotNull TextEdit> listOfEdits,
+      @NotNull List<@NotNull Pair<@NotNull Integer, @NotNull Integer>> listOfRangesAsOffsets) {
+    assert listOfEdits.size() == listOfRangesAsOffsets.size();
+    var intersectingEdits = new ArrayList<TextEdit>();
+    for (int i = 0; i < listOfRangesAsOffsets.size(); i++) {
+      var editStartOffset = listOfRangesAsOffsets.get(i).first;
+      var editEndOffset = listOfRangesAsOffsets.get(i).second;
+      if (editEndOffset >= mergeRangeStartOffset && editStartOffset <= mergeRangeEndOffset) {
+        intersectingEdits.add(listOfEdits.get(i));
       }
     }
-    if (mainTextEdit == null) {
-      mainTextEdit = new TextEdit(mainRange, "");
-    }
-    final TextEdit finalMainTextEdit = mainTextEdit;
-    return new Pair<>(mainTextEdit,
-        diff.stream().filter((textEdit -> !textEdit.equals(finalMainTextEdit))).toList());
+    return intersectingEdits;
   }
 
-  private boolean rangesCollision(Range mainRange, TextEdit edit) {
-    var editRange = edit.getRange();
-    if (mainRange.getStart().getLine() != editRange.getStart().getLine() ||
-        mainRange.getStart().getLine() != editRange.getEnd().getLine()) {
-      return false;
+  private Pair<Integer, Integer> findIndexOfEditWithCaretAndCaretOffsetInsideEdit(int caretOffset,
+                                                                                  @NotNull List<@NotNull TextEdit> listOfEdits,
+                                                                                  @NotNull List<@NotNull Pair<@NotNull Integer, @NotNull Integer>> listOfOffsets) {
+    synchronized (cachedData) {
+      int foundIndexOfEditWithCaret = -1;
+      var prev = listOfOffsets.get(0);
+      caretOffset -= prev.first;
+      int sub = listOfEdits.get(0).getNewText().length();
+      caretOffset -= sub;
+      if (caretOffset <= 0) {
+        foundIndexOfEditWithCaret = 0;
+      }
+      for (int i = 1; i < listOfOffsets.size() && foundIndexOfEditWithCaret == -1; i++) {
+        sub = (listOfOffsets.get(i).first - listOfOffsets.get(i - 1).second);
+        caretOffset -= sub;
+        if (caretOffset <= 0) {
+          foundIndexOfEditWithCaret = i - 1;
+          break;
+        }
+        sub = listOfEdits.get(i).getNewText().length();
+        caretOffset -= sub;
+        if (caretOffset <= 0) {
+          foundIndexOfEditWithCaret = i;
+          break;
+        }
+      }
+      return new Pair<>(foundIndexOfEditWithCaret, caretOffset + sub);
     }
-    // todo normal language
-    if (!editRange.getStart().equals(editRange.getEnd())) {
-      return false;
+  }
+
+  private List<Pair<Integer, Integer>> toListOfOffsets(List<TextEdit> list,
+                                                       Document document) {
+    return list.stream().map(textEdit -> {
+      var range = textEdit.getRange();
+      return new Pair<>(
+          MiscUtil.positionToOffset(document, range.getStart()),
+          MiscUtil.positionToOffset(document, range.getEnd())
+      );
+    }).toList();
+  }
+
+  private List<TextEdit> sortTextEdits(List<TextEdit> list, Document document) {
+    return list.stream().sorted(
+        Comparator.comparingInt(textEdit ->
+            MiscUtil.positionToOffset(document, textEdit.getRange().getStart()))).toList();
+  }
+
+  @SuppressWarnings("UnstableApiUsage")
+  private void handleInsert(LookupElement cachedLookupElement,
+                            Editor editor,
+                            PsiFile copyToInsert,
+                            CompletionInfo completionInfo) {
+    synchronized (cachedData) {
+      prepareCompletionInfoForInsert(completionInfo, cachedLookupElement);
+
+      completionInfo.getLookup().finishLookup('\n', cachedLookupElement);
+
+      var currentOffset = editor.getCaretModel().getOffset();
+
+      ApplicationManager.getApplication().runWriteAction(() ->
+          WriteCommandAction.runWriteCommandAction(project,
+              () -> {
+                var context =
+                    CompletionUtil.createInsertionContext(
+                        cachedData.cachedLookupElements,
+                        cachedLookupElement,
+                        '\n',
+                        editor,
+                        copyToInsert,
+                        currentOffset,
+                        CompletionUtil.calcIdEndOffset(
+                            completionInfo.getInitContext().getOffsetMap(),
+                            editor,
+                            currentOffset),
+                        completionInfo.getInitContext().getOffsetMap());
+
+                cachedLookupElement.handleInsert(context);
+
+              }));
     }
-    return !(mainRange.getEnd().getCharacter() <= editRange.getStart().getCharacter() ||
-        mainRange.getStart().getCharacter() >= editRange.getStart().getCharacter() + edit.getNewText().length());
+  }
+
+  private void deleteID(PsiFile copyToDeleteID, LookupElement cachedLookupElement) {
+    synchronized (cachedData) {
+      ApplicationManager.getApplication().runWriteAction(() -> WriteCommandAction.runWriteCommandAction(project,
+          () -> {
+            var tempDisp = Disposer.newDisposable();
+            try {
+              EditorUtil.withEditor(tempDisp, copyToDeleteID, cachedData.cachedPosition,
+                  (editor) -> {
+                    assert cachedData.cachedLookup != null;
+                    var prefix =
+                        cachedData.cachedLookup.itemPattern(cachedLookupElement);
+                    editor.getSelectionModel().setSelection(cachedData.cachedCaretOffset - prefix.length(),
+                        cachedData.cachedCaretOffset);
+                    EditorModificationUtilEx.deleteSelectedText(editor);
+                  });
+            } finally {
+              Disposer.dispose(tempDisp);
+            }
+          }));
+    }
   }
 
   @NotNull
@@ -595,7 +536,6 @@ final public class CompletionService implements Disposable {
     resItem.setLabel(presentation.getItemText());
     resItem.setLabelDetails(lDetails);
     resItem.setInsertTextMode(InsertTextMode.AsIs);
-//    resItem.setInsertText(resItem.getLabel());
     resItem.setTextEdit(
         Either.forLeft(new TextEdit(new Range(MiscUtil.with(new Position(),
             positionIDStarts -> {
@@ -609,154 +549,5 @@ final public class CompletionService implements Disposable {
     resItem.setTags(tagList);
 
     return resItem;
-  }
-
-  /* todo
-      Find an alternative way to find Indicator from project for completion
-      This process is needed for creation Completion Parameters and insertDummyIdentifier call.
-   */
-  static private class VoidCompletionProcess extends AbstractProgressIndicatorExBase implements Disposable, CompletionProcess {
-    @Override
-    public boolean isAutopopupCompletion() {
-      return false;
-    }
-
-    // todo check that we don't need this lock
-    @NotNull
-    private final Object myLock = ObjectUtils.sentinel("VoidCompletionProcess");
-
-    @Override
-    public void dispose() {
-    }
-
-    void registerChildDisposable(@NotNull Supplier<Disposable> child) {
-      synchronized (myLock) {
-        // Idea developer says: "avoid registering stuff on an indicator being disposed concurrently"
-        checkCanceled();
-        Disposer.register(this, child.get());
-      }
-    }
-  }
-
-  /*
-   This method is analogue for insertDummyIdentifier in CompletionInitializationUtil.java from idea 201.6668.113.
-   There is CompletionProcessEx in ideas source code, that can't be reached publicly,
-   but it uses only getHostOffsets and registerChildDisposable, that we can determine by ourselves.
-   So solution is to copy that code with our replacement for getHostOffsets and registerChildDisposable calls.
-   Other private methods from CompletionInitializationUtil are copied below too.
-  */
-  @NotNull
-  private OffsetsInFile insertDummyIdentifier(
-      @NotNull CompletionInitializationContext initContext,
-      @NotNull VoidCompletionProcess indicator,
-      @NotNull OffsetsInFile topLevelOffsets) {
-    var hostEditor = InjectedLanguageEditorUtil.getTopLevelEditor(initContext.getEditor());
-    var hostMap = topLevelOffsets.getOffsets();
-    boolean forbidCaching = false;
-
-    var hostCopy = obtainFileCopy(topLevelOffsets.getFile(), forbidCaching);
-    var copyDocument = hostCopy.getViewProvider().getDocument();
-    var dummyIdentifier = initContext.getDummyIdentifier();
-    var startOffset = hostMap.getOffset(CompletionInitializationContext.START_OFFSET);
-    var endOffset = hostMap.getOffset(CompletionInitializationContext.SELECTION_END_OFFSET);
-
-    indicator.registerChildDisposable(
-        () -> new OffsetTranslator(
-            hostEditor.getDocument(),
-            initContext.getFile(),
-            copyDocument,
-            startOffset,
-            endOffset,
-            dummyIdentifier)
-    );
-
-    var copyOffsets = topLevelOffsets.replaceInCopy(
-        hostCopy, startOffset, endOffset, dummyIdentifier).get();
-    if (!hostCopy.isValid()) {
-      throw new RuntimeException("PsiFile copy is not valid anymore");
-    }
-    return copyOffsets;
-  }
-
-  @NotNull
-  private static final Key<SoftReference<Pair<PsiFile, Document>>> FILE_COPY_KEY = Key.create("CompletionFileCopy");
-
-  @NotNull
-  private static PsiFile obtainFileCopy(@NotNull PsiFile file,
-                                        boolean forbidCaching) {
-    final VirtualFile virtualFile = file.getVirtualFile();
-    boolean mayCacheCopy = !forbidCaching && file.isPhysical() &&
-        // Idea developer: "we don't want to cache code fragment copies even if they appear to be physical"
-        virtualFile != null && virtualFile.isInLocalFileSystem();
-    if (mayCacheCopy) {
-      final Pair<PsiFile, Document> cached = SoftReference.dereference(file.getUserData(FILE_COPY_KEY));
-      if (cached != null && isCopyUpToDate(cached.second, cached.first, file)) {
-        PsiFile copy = cached.first;
-        assertCorrectOriginalFile("Cached", file, copy);
-        return copy;
-      }
-    }
-
-    final PsiFile copy = (PsiFile) file.copy();
-    if (copy.isPhysical() || copy.getViewProvider().isEventSystemEnabled()) {
-      LOG.error("File copy should be non-physical and non-event-system-enabled! Language=" +
-          file.getLanguage() +
-          "; file=" +
-          file +
-          " of " +
-          file.getClass());
-    }
-    assertCorrectOriginalFile("New", file, copy);
-
-    if (mayCacheCopy) {
-      final Document document = copy.getViewProvider().getDocument();
-      assert document != null;
-      syncAcceptSlashR(file.getViewProvider().getDocument(), document);
-      file.putUserData(FILE_COPY_KEY, new SoftReference<>(Pair.create(copy, document)));
-    }
-    return copy;
-  }
-
-  private static void syncAcceptSlashR(@Nullable Document originalDocument, @NotNull Document documentCopy) {
-    if (!(originalDocument instanceof DocumentImpl) || !(documentCopy instanceof DocumentImpl)) {
-      return;
-    }
-
-    ((DocumentImpl) documentCopy).setAcceptSlashR(((DocumentImpl) originalDocument).acceptsSlashR());
-  }
-
-  private static boolean isCopyUpToDate(Document document,
-                                        @NotNull PsiFile copyFile,
-                                        @NotNull PsiFile originalFile) {
-    if (!copyFile.getClass().equals(originalFile.getClass()) ||
-        !copyFile.isValid() ||
-        !copyFile.getName().equals(originalFile.getName())) {
-      return false;
-    }
-    /*
-     Idea developers:
-     the psi file cache might have been cleared by some external activity,
-     in which case PSI-document sync may stop working
-     */
-    PsiFile current = PsiDocumentManager.getInstance(copyFile.getProject()).getPsiFile(document);
-    return current != null && current.getViewProvider().getPsi(copyFile.getLanguage()) == copyFile;
-  }
-
-  @NotNull
-  private static @NonNls String fileInfo(@NotNull PsiFile file) {
-    return file + " of " + file.getClass() +
-        " in " + file.getViewProvider() + ", languages=" + file.getViewProvider().getLanguages() +
-        ", physical=" + file.isPhysical();
-  }
-
-  // this assertion method is copied from package-private method in CompletionAssertions class
-  private static void assertCorrectOriginalFile(@NonNls String prefix,
-                                                @NotNull PsiFile file,
-                                                @NotNull PsiFile copy) {
-    if (copy.getOriginalFile() != file) {
-      throw new AssertionError(prefix + " copied file doesn't have correct original: noOriginal=" + (copy.getOriginalFile() == copy) +
-          "\n file " + fileInfo(file) +
-          "\n copy " + fileInfo(copy));
-    }
   }
 }

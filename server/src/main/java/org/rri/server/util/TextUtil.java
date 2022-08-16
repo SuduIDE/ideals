@@ -78,4 +78,8 @@ public class TextUtil {
         true,
         psiFile.getVirtualFile());
   }
+
+  public static TextEdit createDeleteTextEdit(@NotNull Range range) {
+    return new TextEdit(range, "");
+  }
 }
