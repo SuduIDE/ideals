@@ -320,7 +320,7 @@ final public class CompletionService implements Disposable {
     textWithSnippetBuilder.insert(caretOffsetInMainTextEdit, "$0");
     unresolvedTextEdit.setNewText(textWithSnippetBuilder.toString());
   }
-
+  @NotNull
   private String mergeOffsets(
       @NotNull List<@NotNull TextEdit> editsToMerge,
       @NotNull List<@NotNull Pair<@NotNull Integer, @NotNull Integer>> editsToMergeOffsets,
@@ -407,9 +407,11 @@ final public class CompletionService implements Disposable {
     return intersectingEdits;
   }
 
-  private Pair<Integer, Integer> findIndexOfEditWithCaretAndCaretOffsetInsideEdit(int caretOffset,
-                                                                                  @NotNull List<@NotNull TextEdit> listOfEdits,
-                                                                                  @NotNull List<@NotNull Pair<@NotNull Integer, @NotNull Integer>> listOfOffsets) {
+  @NotNull
+  private Pair<@NotNull Integer, @NotNull Integer> findIndexOfEditWithCaretAndCaretOffsetInsideEdit(
+      int caretOffset,
+      @NotNull List<@NotNull TextEdit> listOfEdits,
+      @NotNull List<@NotNull Pair<@NotNull Integer, @NotNull Integer>> listOfOffsets) {
     synchronized (cachedData) {
       int foundIndexOfEditWithCaret = -1;
       var prev = listOfOffsets.get(0);
@@ -437,8 +439,10 @@ final public class CompletionService implements Disposable {
     }
   }
 
-  private List<Pair<Integer, Integer>> toListOfOffsets(List<TextEdit> list,
-                                                       Document document) {
+  @NotNull
+  private List<@NotNull Pair<@NotNull Integer, @NotNull Integer>> toListOfOffsets(
+      @NotNull List<@NotNull TextEdit> list,
+      @NotNull Document document) {
     return list.stream().map(textEdit -> {
       var range = textEdit.getRange();
       return new Pair<>(
@@ -448,17 +452,18 @@ final public class CompletionService implements Disposable {
     }).toList();
   }
 
-  private List<TextEdit> sortTextEdits(List<TextEdit> list, Document document) {
+  @NotNull
+  private List<TextEdit> sortTextEdits(@NotNull List<@NotNull TextEdit> list, @NotNull Document document) {
     return list.stream().sorted(
         Comparator.comparingInt(textEdit ->
             MiscUtil.positionToOffset(document, textEdit.getRange().getStart()))).toList();
   }
 
   @SuppressWarnings("UnstableApiUsage")
-  private void handleInsert(LookupElement cachedLookupElement,
-                            Editor editor,
-                            PsiFile copyToInsert,
-                            CompletionInfo completionInfo) {
+  private void handleInsert(@NotNull LookupElement cachedLookupElement,
+                            @NotNull Editor editor,
+                            @NotNull PsiFile copyToInsert,
+                            @NotNull CompletionInfo completionInfo) {
     synchronized (cachedData) {
       prepareCompletionInfoForInsert(completionInfo, cachedLookupElement);
 
@@ -489,7 +494,7 @@ final public class CompletionService implements Disposable {
     }
   }
 
-  private void deleteID(PsiFile copyToDeleteID, LookupElement cachedLookupElement) {
+  private void deleteID(@NotNull PsiFile copyToDeleteID, @NotNull LookupElement cachedLookupElement) {
     synchronized (cachedData) {
       ApplicationManager.getApplication().runWriteAction(() -> WriteCommandAction.runWriteCommandAction(project,
           () -> {
