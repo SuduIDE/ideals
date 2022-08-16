@@ -49,7 +49,6 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
   public CompletableFuture<InitializeResult> initialize(@NotNull InitializeParams params) {
     return CompletableFuture.supplyAsync(() -> {
       final var workspaceFolders = params.getWorkspaceFolders();
-      LOG.warn(params.getCapabilities().getTextDocument().getCompletion().getCompletionItem().getResolveSupport().getProperties().toString());
       var oldProject = project;
       if(oldProject != null) {
         if(oldProject.isOpen()) {
