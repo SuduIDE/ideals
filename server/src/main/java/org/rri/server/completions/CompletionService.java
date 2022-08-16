@@ -1,8 +1,6 @@
 package org.rri.server.completions;
 
-import com.google.common.collect.Streams;
 import com.google.gson.JsonObject;
-import com.intellij.codeInsight.completion.CompletionResult;
 import com.intellij.codeInsight.completion.CompletionUtil;
 import com.intellij.codeInsight.completion.impl.CamelHumpMatcher;
 import com.intellij.codeInsight.lookup.LookupElement;
@@ -87,7 +85,6 @@ final public class CompletionService implements Disposable {
   public void dispose() {
   }
 
-  @SuppressWarnings("UnstableApiUsage")
   public @NotNull Either<List<CompletionItem>, CompletionList> createCompletionResults(@NotNull PsiFile psiFile,
                                                                                        @NotNull Position position,
                                                                                        @NotNull CancelChecker cancelChecker) {
@@ -97,7 +94,6 @@ final public class CompletionService implements Disposable {
       EditorUtil.withEditor(process, psiFile,
           position,
           (editor) -> {
-            var ideaCompletionResults = new ArrayList<CompletionResult>();
             var compInfo = new CompletionInfo(editor, project);
             var ideaCompService = com.intellij.codeInsight.completion.CompletionService.getCompletionService();
             assert ideaCompService != null;
@@ -105,17 +101,8 @@ final public class CompletionService implements Disposable {
             ideaCompService.performCompletion(compInfo.getParameters(),
                 (result) -> {
                   compInfo.getLookup().addItem(result.getLookupElement(), result.getPrefixMatcher());
-                  ideaCompletionResults.add(result);
+                  compInfo.getArranger().addElement(result);
                 });
-
-            ideaCompletionResults.forEach((it) -> {
-              try {
-                compInfo.getArranger().addElement(it);
-              } catch (Exception ignored) {
-              } // we just skip this element
-            });
-            List<LookupElement> sortedLookupElements =
-                compInfo.getArranger().arrangeItems(compInfo.getLookup(), false).first;
 
             int currentResultIndex;
             synchronized (cachedData) {
@@ -126,22 +113,17 @@ final public class CompletionService implements Disposable {
               cachedData.cachedLanguage = psiFile.getLanguage();
               currentResultIndex = ++cachedData.cachedResultIndex;
               cachedData.cachedLookupElements.clear();
-              cachedData.cachedLookupElements.addAll(sortedLookupElements);
+              cachedData.cachedLookupElements.addAll(compInfo.getArranger().getLookupItems());
             }
-            var result = Streams.zip(sortedLookupElements.stream(), ideaCompletionResults.stream(),
-                ((lookupElement, completionResult) -> {
-                  var compPrefix = completionResult.getPrefixMatcher().getPrefix();
-                  var item =
-                      createLSPCompletionItem(lookupElement, position,
-                          compPrefix.length());
-                  item.setFilterText(
-                      lookupElement.getLookupString()
-                  );
-                  return item;
-                })).toList();
-            for (int i = 0; i < result.size(); i++) {
-              var completionItem = result.get(i);
-              completionItem.setData(new Pair<>(currentResultIndex, i));
+            var result = new ArrayList<CompletionItem>();
+            for (int i = 0; i < compInfo.getArranger().getLookupItems().size(); i++) {
+              var lookupElement = compInfo.getArranger().getLookupItems().get(i);
+              var prefix = compInfo.getArranger().getPrefixes().get(i);
+              var item =
+                  createLSPCompletionItem(lookupElement, position,
+                      prefix.length());
+              item.setData(new Pair<>(currentResultIndex, i));
+              result.add(item);
             }
             cancelChecker.checkCanceled();
             resultRef.set(result);
@@ -541,6 +523,7 @@ final public class CompletionService implements Disposable {
     resItem.setLabel(presentation.getItemText());
     resItem.setLabelDetails(lDetails);
     resItem.setInsertTextMode(InsertTextMode.AsIs);
+    resItem.setFilterText(lookupElement.getLookupString());
     resItem.setTextEdit(
         Either.forLeft(new TextEdit(new Range(MiscUtil.with(new Position(),
             positionIDStarts -> {
@@ -552,7 +535,6 @@ final public class CompletionService implements Disposable {
 
     resItem.setDetail(presentation.getTypeText());
     resItem.setTags(tagList);
-
     return resItem;
   }
 }
