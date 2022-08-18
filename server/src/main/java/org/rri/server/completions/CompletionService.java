@@ -121,7 +121,7 @@ final public class CompletionService implements Disposable {
               var prefix = compInfo.getArranger().getPrefixes().get(i);
               var item =
                   createLSPCompletionItem(lookupElement, position,
-                      prefix.length());
+                      prefix);
               item.setData(new Pair<>(currentResultIndex, i));
               result.add(item);
             }
@@ -203,32 +203,111 @@ final public class CompletionService implements Disposable {
                     unresolvedTextEdit.getRange().getStart());
                 var replaceElementEndOffset = MiscUtil.positionToOffset(copyThatCalledCompletionDoc,
                     unresolvedTextEdit.getRange().getEnd());
-                var x = findIndexOfEditWithCaretAndCaretOffsetInsideEdit(
-                    caretOffsetAfterInsert, diff, diffRangesAsOffsets);
-                int foundEditWithCaretIndex =
-                    x.first;
-                int snippetIndex = x.second;
-                if (foundEditWithCaretIndex == -1) {
-                  unresolved.getTextEdit().getLeft().setNewText("");
-                  unresolved.setAdditionalTextEdits(diff);
-                  return;
-                }
-                var rangeWithCaretStartOffset =
-                    diffRangesAsOffsets.get(foundEditWithCaretIndex).first;
-                var rangeWithCaretEndOffset =
-                    diffRangesAsOffsets.get(foundEditWithCaretIndex).second;
 
-                var mergeRangeStartOffset = Integer.min(replaceElementStartOffset, rangeWithCaretStartOffset);
-                var mergeRangeEndOffset = Integer.max(replaceElementEndOffset, rangeWithCaretEndOffset);
 
-//                var insertSnippetIndex = caretOffsetAfterInsert - mergeRangeStartOffset;
+//                if (foundEditWithCaretIndex == -1) {
+//                  unresolved.getTextEdit().getLeft().setNewText("");
+//                  unresolved.setAdditionalTextEdits(diff);
+//                  return;
+//                }
+//                int snippetIndex = caretOffsetAfterInsert;
+
+//                var rangeWithCaretStartOffset =
+//                    diffRangesAsOffsets.get(foundEditWithCaretIndex).first;
+//                var rangeWithCaretEndOffset =
+//                    diffRangesAsOffsets.get(foundEditWithCaretIndex).second;
 
                 var editsToMerge = new ArrayList<TextEdit>();
                 var editsToMergeRangesAsOffsets = new ArrayList<Pair<Integer, Integer>>();
 
-                findEditsToMerge(
-                    mergeRangeStartOffset, mergeRangeEndOffset, diff, diffRangesAsOffsets,
-                    editsToMerge, editsToMergeRangesAsOffsets);
+                var insertedOffsets = new ArrayList<Pair<Integer, Integer>>();
+                int prevInsertedEnd = 0;
+                int prevEnd = 0;
+                for (int i = 0; i < diffRangesAsOffsets.size(); i++) {
+                  var x = diffRangesAsOffsets.get(i);
+                  var currentStart = prevInsertedEnd + x.first - prevEnd;
+                  insertedOffsets.add(
+                      new Pair<>(
+                          currentStart,
+                          currentStart + diff.get(i).getNewText().length()));
+                }
+                int collisionStartIndex = -1;
+                int collisionEndIndex = -1;
+                int replaceNewStartOffset = replaceElementStartOffset;
+                for (int i = 0; i < insertedOffsets.size(); i++) {
+                  var x = diffRangesAsOffsets.get(i);
+                  if (diffRangesAsOffsets.get(i).second <= replaceElementStartOffset) {
+                    replaceNewStartOffset += (diff.get(i).getNewText().length() - (x.second - x.first));
+                  } else {
+                    collisionStartIndex = i;
+                    break;
+                  }
+                }
+                collisionEndIndex = collisionStartIndex;
+                for (int i = collisionStartIndex; i != -1 && i < insertedOffsets.size(); i++) {
+                  var x = diffRangesAsOffsets.get(i);
+                  if (x.first >= replaceElementEndOffset) {
+                    collisionEndIndex = i - 1;
+                  }
+                }
+
+                int replaceNewEndOffset =
+                    replaceNewStartOffset + (replaceElementEndOffset - replaceElementStartOffset);
+                if (collisionStartIndex != -1) {
+                  replaceNewStartOffset =
+                      insertedOffsets.get(collisionStartIndex).first;
+                }
+                if (collisionEndIndex != -1) {
+                  replaceNewEndOffset =
+                      insertedOffsets.get(collisionEndIndex).second;
+                }
+
+                int mergeRangeStartOffset = Integer.min(replaceNewStartOffset,
+                    caretOffsetAfterInsert);
+                int mergeRangeEndOffset = Integer.max(replaceNewEndOffset, caretOffsetAfterInsert);
+                String mergePrefix = null;
+                String mergeSuffix = null;
+                var insertedCaretPos = MiscUtil.offsetToPosition(
+                    copyToInsertDoc,
+                    caretOffsetAfterInsert);
+                for (int i = 0; i < insertedOffsets.size(); i++) {
+                  var x = insertedOffsets.get(i);
+                  if (x.second <= mergeRangeStartOffset) {
+                    continue;
+                  }
+                  if (x.first >= mergeRangeEndOffset) {
+                    break;
+                  }
+                  editsToMerge.add(diff.get(i));
+                  editsToMergeRangesAsOffsets.add(diffRangesAsOffsets.get(i));
+                  if (mergePrefix == null &&
+                      mergeRangeStartOffset == caretOffsetAfterInsert &&
+                      x.first > mergeRangeStartOffset) {
+                    mergePrefix = copyToInsertDoc.getText().substring(mergeRangeStartOffset, x.first);
+                    additionalEdits.add(TextUtil.createDeleteTextEdit(new Range(
+                        insertedCaretPos,
+                        diff.get(i).getRange().getStart()
+                    )));
+                  }
+                  if (mergeSuffix == null &&
+                      mergeRangeEndOffset == caretOffsetAfterInsert &&
+                      x.second < mergeRangeEndOffset) {
+                    mergeSuffix = copyToInsertDoc.getText().substring(x.second, mergeRangeEndOffset);
+                    additionalEdits.add(TextUtil.createDeleteTextEdit(new Range(
+                        diff.get(i).getRange().getEnd(),
+                        insertedCaretPos
+                    )));
+                  }
+                }
+                if (mergePrefix == null) {
+                  mergePrefix = "";
+                }
+                if (mergeSuffix == null) {
+                  mergeSuffix = "";
+                }
+//                findEditsToMerge(
+//                    mergeRangeStartOffset, mergeRangeEndOffset, diff, diffRangesAsOffsets,
+//                    editsToMerge, editsToMergeRangesAsOffsets);
 
 //                String newText = mergeOffsets(
 //                    unresolvedTextEdit.getRange(),
@@ -239,8 +318,8 @@ final public class CompletionService implements Disposable {
 //                    additionalEdits,
 //                    copyThatCalledCompletionDoc
 //                );
-
                 StringBuilder builder = new StringBuilder();
+                builder.append(mergePrefix);
                 if (editsToMergeRangesAsOffsets.get(0).first > replaceElementStartOffset) {
                   builder.append(
                       copyThatCalledCompletionDoc.getText(),
@@ -251,7 +330,6 @@ final public class CompletionService implements Disposable {
                       editsToMerge.get(0).getRange().getStart(),
                       unresolvedTextEdit.getRange().getStart()
                   )));
-//                  insertSnippetIndex -= (replaceElementStartOffset - editsToMergeRangesAsOffsets.get(0).first);
                 }
                 final int size = editsToMerge.size();
                 for (int i = 0; i < size; i++) {
@@ -261,14 +339,7 @@ final public class CompletionService implements Disposable {
                     var prevEditOffsets = editsToMergeRangesAsOffsets.get(i - 1);
                     builder.append(copyThatCalledCompletionDoc.getText(), prevEditOffsets.second, editOffsets.first);
                   }
-                  if (i == 0 && replaceElementStartOffset != mergeRangeStartOffset ||
-                      i == size - 1 && replaceElementEndOffset != mergeRangeEndOffset) {
-                    builder.append(edit.getNewText(), 0, snippetIndex);
-                    builder.append("$0");
-                    builder.append(edit.getNewText(), snippetIndex, edit.getNewText().length());
-                  } else {
-                    builder.append(edit.getNewText());
-                  }
+                  builder.append(edit.getNewText());
                 }
                 if (editsToMergeRangesAsOffsets.get(editsToMergeRangesAsOffsets.size() - 1).second < replaceElementEndOffset) {
                   builder.append(copyThatCalledCompletionDoc.getText(),
@@ -284,7 +355,12 @@ final public class CompletionService implements Disposable {
                 var setOfEditsToMerge = Set.of(editsToMerge.toArray());
                 additionalEdits.addAll(diff.stream().filter(
                     textEdit -> !setOfEditsToMerge.contains(textEdit)).toList());
-
+//                try {
+//                  builder.insert(snippetIndex, "$0");
+//                } catch (Exception ignored) {
+//                  snippetIndex = snippetIndex;
+//                }
+                builder.append(mergeSuffix);
                 unresolvedTextEdit.setNewText(builder.toString());
                 unresolved.setAdditionalTextEdits(additionalEdits);
 
@@ -404,7 +480,7 @@ final public class CompletionService implements Disposable {
         sub = (listOfOffsets.get(i).first - listOfOffsets.get(i - 1).second);
         caretOffset -= sub;
         if (caretOffset <= 0) {
-          foundIndexOfEditWithCaret = i - 1;
+          foundIndexOfEditWithCaret = i;
           break;
         }
         sub = listOfEdits.get(i).getNewText().length();
@@ -498,7 +574,7 @@ final public class CompletionService implements Disposable {
   @NotNull
   private static CompletionItem createLSPCompletionItem(@NotNull LookupElement lookupElement,
                                                         @NotNull Position position,
-                                                        int prefixLength) {
+                                                        @NotNull String prefix) {
     var resItem = new CompletionItem();
     var presentation = new LookupElementPresentation();
 
@@ -526,10 +602,10 @@ final public class CompletionService implements Disposable {
             MiscUtil.with(new Position(),
             positionIDStarts -> {
               positionIDStarts.setLine(position.getLine());
-              positionIDStarts.setCharacter(position.getCharacter() - prefixLength);
+              positionIDStarts.setCharacter(position.getCharacter() - prefix.length());
             }),
             position),
-            lookupElement.getLookupString()
+            prefix
         )));
 
     resItem.setDetail(presentation.getTypeText());
