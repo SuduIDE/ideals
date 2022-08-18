@@ -66,7 +66,7 @@ public class TextUtil {
   }
 
   @NotNull
-  private static List<@NotNull TextEdit> textEditFromDocs(@NotNull Document oldDoc, @NotNull Document newDoc) {
+  public static List<@NotNull TextEdit> textEditFromDocs(@NotNull Document oldDoc, @NotNull Document newDoc) {
     var changes = diff(oldDoc.getText(), newDoc.getText());
     return changes.stream().map(diffFragment -> {
       var start = MiscUtil.offsetToPosition(oldDoc, diffFragment.getStartOffset1());
