@@ -3,12 +3,10 @@ package org.rri.server.symbol;
 import com.intellij.codeInsight.daemon.impl.DaemonProgressIndicator;
 import com.intellij.ide.actions.searcheverywhere.SearchEverywhereToggleAction;
 import com.intellij.ide.actions.searcheverywhere.SymbolSearchEverywhereContributor;
-import com.intellij.openapi.Disposable;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.Pair;
 import com.intellij.openapi.util.Ref;
 import com.intellij.psi.PsiElement;
@@ -29,15 +27,11 @@ import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-public class WorkspaceSymbolService implements Disposable {
+public class WorkspaceSymbolService {
   @NotNull
   private final String pattern;
 
   private final int LIMIT = 100;
-
-  @Override
-  public void dispose() {
-  }
 
   public WorkspaceSymbolService(@NotNull String pattern) {
     this.pattern = pattern;
@@ -45,8 +39,6 @@ public class WorkspaceSymbolService implements Disposable {
 
   @SuppressWarnings("deprecation")
   public CompletableFuture<Either<List<? extends SymbolInformation>, List<? extends WorkspaceSymbol>>> execute(@NotNull Project project) {
-    final var me = this;
-
     return CompletableFuture.supplyAsync(() -> {
       Ref<SymbolSearchEverywhereContributor> contributorRef = new Ref<>();
       ApplicationManager.getApplication().invokeAndWait(
@@ -54,22 +46,17 @@ public class WorkspaceSymbolService implements Disposable {
             final var context = SimpleDataContext.getProjectContext(project);
             final var event = AnActionEvent.createFromDataContext("keyboard shortcut", null, context);
             final var contributor = new SymbolSearchEverywhereContributor(event);
-            final var actions = contributor.getActions(() -> {});
+            final var actions = contributor.getActions(() -> {
+            });
             final var everywhereAction = (SearchEverywhereToggleAction) ContainerUtil.find(actions, o -> o instanceof SearchEverywhereToggleAction);
             everywhereAction.setEverywhere(true);
             contributorRef.set(contributor);
           }
       );
-      final var progress = new DaemonProgressIndicator();
-      Disposer.register(me, progress);
-      try {
-        final var ref = new Ref<List<WorkspaceSymbol>>();
-        ApplicationManager.getApplication().runReadAction(
-            () -> ref.set(search(contributorRef.get(), LIMIT, pattern)));
-        return Either.forRight(ref.get());
-      } finally {
-        Disposer.dispose(me);
-      }
+      final var ref = new Ref<List<WorkspaceSymbol>>();
+      ApplicationManager.getApplication().runReadAction(
+          () -> ref.set(search(contributorRef.get(), LIMIT, pattern)));
+      return Either.forRight(ref.get());
     }, AppExecutorUtil.getAppExecutorService());
   }
 
