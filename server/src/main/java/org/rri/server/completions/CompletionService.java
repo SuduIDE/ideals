@@ -20,7 +20,6 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.Pair;
 import com.intellij.openapi.util.Ref;
-import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiFileFactory;
 import com.intellij.util.concurrency.AppExecutorUtil;
@@ -180,18 +179,21 @@ final public class CompletionService implements Disposable {
         try {
           EditorUtil.withEditor(tempDisp, copyToInsert, cachedData.cachedPosition,
               editor -> {
+
                 CompletionInfo completionInfo = new CompletionInfo(editor, project);
                 assert copyToInsertDoc != null;
                 assert copyThatCalledCompletionDoc != null;
 
                 handleInsert(cachedLookupElement, editor, copyToInsert, completionInfo);
-                PsiDocumentManager.getInstance(project).commitDocument(copyToInsertDoc);
 
                 var diff = TextUtil.textEditFromDocs(copyThatCalledCompletionDoc, copyToInsertDoc);
                 if (diff.isEmpty()) {
                   return;
                 }
                 diff = sortTextEdits(diff, copyThatCalledCompletionDoc);
+                if (unresolved.getLabel().equals("None")) {
+                  LOG.warn("here");
+                }
 
                 var caretOffsetAfterInsert = editor.getCaretModel().getOffset();
 
@@ -211,6 +213,7 @@ final public class CompletionService implements Disposable {
                 var prev = diffRangesAsOffsets.get(0);
                 caretOffset -= prev.first;
                 if (caretOffset < 0) {
+                  caretOffset += prev.first;
                   whereCaret = new Pair<>(caretOffset, caretOffset);
                 }
                 int sub = diff.get(0).getNewText().length();
@@ -265,21 +268,15 @@ final public class CompletionService implements Disposable {
                     mergeRangeStartOffset, mergeRangeEndOffset, diff, diffRangesAsOffsets,
                     editsToMerge, editsToMergeRangesAsOffsets, editWithCaretIndex);
 
-//                String newText = mergeOffsets(
-//                    unresolvedTextEdit.getRange(),
-//                    replaceElementStartOffset,
-//                    replaceElementEndOffset,
-//                    editsToMerge,
-//                    editsToMergeRangesAsOffsets,
-//                    additionalEdits,
-//                    copyThatCalledCompletionDoc
-//                );
-                mergeRangeStartOffset = Integer.min(editsToMergeRangesAsOffsets.get(0).first,
-                    selectedRangeStartOffset);
-                mergeRangeEndOffset = Integer.max(
-                    editsToMergeRangesAsOffsets.get(editsToMergeRangesAsOffsets.size() - 1).second,
-                    selectedRangeEndOffset
-                );
+                mergeRangeStartOffset =
+                    editsToMerge.isEmpty() ? selectedRangeStartOffset :
+                        Integer.min(editsToMergeRangesAsOffsets.get(0).first,
+                            selectedRangeStartOffset);
+                mergeRangeEndOffset =
+                    editsToMerge.isEmpty() ? selectedRangeEndOffset :
+                        Integer.max(editsToMergeRangesAsOffsets.get(editsToMergeRangesAsOffsets.size() - 1).second,
+                            selectedRangeEndOffset
+                        );
                 StringBuilder builder = new StringBuilder();
                 if (mergeRangeStartOffset > replaceElementStartOffset) {
                   builder.append(
@@ -343,14 +340,10 @@ final public class CompletionService implements Disposable {
                     textEdit -> !setOfEditsToMerge.contains(textEdit)).toList());
 
                 unresolvedTextEdit.setNewText(builder.toString());
-                unresolved.setAdditionalTextEdits(additionalEdits);
-
-//                var textWithSnippetBuilder = new StringBuilder();
-//                textWithSnippetBuilder.append(unresolvedTextEdit.getNewText());
-//                textWithSnippetBuilder.insert(insertSnippetIndex, "$0");
-//                unresolvedTextEdit.setNewText(textWithSnippetBuilder.toString());
-
-//                insertSnippet(unresolvedTextEdit, additionalEdits, copyThatCalledCompletionDoc, caretOffsetAfterInsert);
+                unresolved.setAdditionalTextEdits(
+//                    List.of()
+                    additionalEdits
+                );
               });
         } finally {
           ApplicationManager.getApplication().runWriteAction(
