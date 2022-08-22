@@ -39,7 +39,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.atomic.AtomicReference;
 
 @Service(Service.Level.PROJECT)
 final public class CompletionService implements Disposable {
@@ -105,18 +104,11 @@ final public class CompletionService implements Disposable {
 
             int currentResultIndex;
             synchronized (cachedData) {
-              var copyToInsert = PsiFileFactory.getInstance(project).createFileFromText(
-                  "copy",
-                  psiFile.getLanguage(),
-                  editor.getDocument().getText(),
-                  true,
-                  true,
-                  true);
-              cachedData.cachedFile = copyToInsert;
-              cachedData.cachedDoc = MiscUtil.getDocument(copyToInsert);
               cachedData.cachedCaretOffset = editor.getCaretModel().getOffset();
               cachedData.cachedPosition = position;
               cachedData.cachedLookup = compInfo.getLookup();
+              cachedData.cachedText = editor.getDocument().getText();
+              cachedData.cachedLanguage = psiFile.getLanguage();
               currentResultIndex = ++cachedData.cachedResultIndex;
               cachedData.cachedLookupElements.clear();
               cachedData.cachedLookupElements.addAll(compInfo.getArranger().getLookupItems());
@@ -188,75 +180,72 @@ final public class CompletionService implements Disposable {
   }
 
   private void doResolve(int resultIndex, int lookupElementIndex, @NotNull CompletionItem unresolved) {
-    final Position position;
-    AtomicReference<Document> copyThatCalledCompletionDoc = new AtomicReference<>();
-    final Document copyToInsertDoc;
-    final PsiFile copyToInsert;
-    AtomicReference<LookupElement> cachedLookupElement = new AtomicReference<>();
     synchronized (cachedData) {
-      position = cachedData.cachedPosition;
-      cachedLookupElement.set(cachedData.cachedLookupElements.get(lookupElementIndex));
-      assert cachedData.cachedFile != null;
+      var cachedLookupElement = cachedData.cachedLookupElements.get(lookupElementIndex);
 
-      copyThatCalledCompletionDoc.set(cachedData.cachedDoc);
+      assert cachedData.cachedLanguage != null;
+      var copyToInsert = PsiFileFactory.getInstance(project).createFileFromText(
+          "copy",
+          cachedData.cachedLanguage,
+          cachedData.cachedText,
+          true,
+          true,
+          true);
+      var copyThatCalledCompletion = (PsiFile) copyToInsert.copy();
 
-      copyToInsert = (PsiFile) cachedData.cachedFile.copy();
-      copyToInsertDoc = MiscUtil.getDocument(copyToInsert);
+      var copyThatCalledCompletionDoc = MiscUtil.getDocument(copyThatCalledCompletion);
+      var copyToInsertDoc = MiscUtil.getDocument(copyToInsert);
 
       if (resultIndex != cachedData.cachedResultIndex) {
         return;
       }
-    }
 
-    ApplicationManager.getApplication().runReadAction(() -> {
-      var tempDisp = Disposer.newDisposable();
-      int caretOffsetAfterInsert;
-      try {
-        var editor =
-            EditorUtil.createEditor(tempDisp, copyToInsert, position);
+      ApplicationManager.getApplication().runReadAction(() -> {
+        var tempDisp = Disposer.newDisposable();
+        int caretOffsetAfterInsert = 0;
+        try {
+          var editor =
+              EditorUtil.createEditor(tempDisp, copyToInsert, cachedData.cachedPosition);
 
 
-        CompletionInfo completionInfo = new CompletionInfo(editor, project);
-        assert copyToInsertDoc != null;
-        synchronized (cachedLookupElement) {
-          handleInsert(cachedLookupElement.get(), editor, copyToInsert, completionInfo);
-        }
-        caretOffsetAfterInsert = editor.getCaretModel().getOffset();
+          CompletionInfo completionInfo = new CompletionInfo(editor, project);
+          assert copyToInsertDoc != null;
+          assert copyThatCalledCompletionDoc != null;
 
-        var diff = new ArrayList<>(TextUtil.textEditFromDocs(copyThatCalledCompletionDoc.get(),
-            copyToInsertDoc));
-        if (diff.isEmpty()) {
-          return;
-        }
+          handleInsert(cachedLookupElement, editor, copyToInsert, completionInfo);
+          caretOffsetAfterInsert = editor.getCaretModel().getOffset();
 
-        var unresolvedTextEdit = unresolved.getTextEdit().getLeft();
+          var diff = new ArrayList<>(TextUtil.textEditFromDocs(copyThatCalledCompletionDoc,
+              copyToInsertDoc));
+          if (diff.isEmpty()) {
+            return;
+          }
 
-        var replaceElementStartOffset = MiscUtil.positionToOffset(copyThatCalledCompletionDoc.get(),
-            unresolvedTextEdit.getRange().getStart());
-        var replaceElementEndOffset = MiscUtil.positionToOffset(copyThatCalledCompletionDoc.get(),
-            unresolvedTextEdit.getRange().getEnd());
+          var unresolvedTextEdit = unresolved.getTextEdit().getLeft();
+
+          var replaceElementStartOffset = MiscUtil.positionToOffset(copyThatCalledCompletionDoc,
+              unresolvedTextEdit.getRange().getStart());
+          var replaceElementEndOffset = MiscUtil.positionToOffset(copyThatCalledCompletionDoc,
+              unresolvedTextEdit.getRange().getEnd());
 
         Pair<String, List<TextEditWithOffsets>> newTextAndAdditionalEdits =
             mergeTextEditsFromMainRangeToCaret(
-                toTreeSetOfEditsWithOffsets(diff, copyThatCalledCompletionDoc.get()),
+                toTreeSetOfEditsWithOffsets(diff, copyThatCalledCompletionDoc),
                 replaceElementStartOffset, replaceElementEndOffset,
-                copyThatCalledCompletionDoc.get().getText(), caretOffsetAfterInsert
+                copyThatCalledCompletionDoc.getText(), caretOffsetAfterInsert
             );
 
-        unresolvedTextEdit.setNewText(newTextAndAdditionalEdits.first);
-        unresolved.setAdditionalTextEdits(
-            toListOfTextEdits(newTextAndAdditionalEdits.second, copyThatCalledCompletionDoc.get())
-        );
-
-      } finally {
-        ApplicationManager.getApplication().runWriteAction(
-            () -> WriteCommandAction.runWriteCommandAction(project, () -> Disposer.dispose(tempDisp))
-        );
-      }
-
-    });
-
-
+          unresolvedTextEdit.setNewText(newTextAndAdditionalEdits.first);
+          unresolved.setAdditionalTextEdits(
+              toListOfTextEdits(newTextAndAdditionalEdits.second, copyThatCalledCompletionDoc)
+          );
+        } finally {
+          ApplicationManager.getApplication().runWriteAction(
+              () -> WriteCommandAction.runWriteCommandAction(project, () -> Disposer.dispose(tempDisp))
+          );
+        }
+      });
+    }
   }
 
   static private Pair<String, List<TextEditWithOffsets>> mergeTextEditsFromMainRangeToCaret(
