@@ -1,5 +1,6 @@
 package org.rri.server.lsp;
 
+import com.intellij.openapi.project.DumbService;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
@@ -12,7 +13,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.stream.Collectors;
 
-public class DocumentSymbolTest extends LspServerTestBase {
+public class SymbolTest extends LspServerTestBase {
   @Override
   protected String getProjectRelativePath() {
     return "symbol/java/project1";
@@ -34,6 +35,20 @@ public class DocumentSymbolTest extends LspServerTestBase {
     final var answer = List.of(testClass);
 
     assertEquals(answer, result);
+  }
+
+  @Test
+  public void workspaceSymbol() {
+    TestUtil.waitInEdtFor(() -> !DumbService.getInstance(server().getProject()).isDumb(), 30000);
+    final var params = new WorkspaceSymbolParams("WorkspaceSymbolIntegratingTest");
+    final var future = server().getWorkspaceService().symbol(params);
+    final var result = TestUtil.getNonBlockingEdt(future, 30000).getRight();
+
+    final var filePath = LspPath.fromLocalPath(getProjectPath().resolve("src/WorkspaceSymbolIntegratingTest.java"));
+    final var workspaceSymbolIntegratingTest = new WorkspaceSymbol("WorkspaceSymbolIntegratingTest", SymbolKind.Class,
+        Either.forLeft(new Location(filePath.toLspUri(), range(0, 13, 0, 43))));
+
+    assertEquals(List.of(workspaceSymbolIntegratingTest), result);
   }
 
   @NotNull

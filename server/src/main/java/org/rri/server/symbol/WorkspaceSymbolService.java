@@ -38,7 +38,7 @@ public class WorkspaceSymbolService {
   }
 
   @SuppressWarnings("deprecation")
-  public CompletableFuture<Either<List<? extends SymbolInformation>, List<? extends WorkspaceSymbol>>> execute(@NotNull Project project) {
+  public @NotNull CompletableFuture<@NotNull Either<@NotNull List<? extends SymbolInformation>, @NotNull List<? extends WorkspaceSymbol>>> execute(@NotNull Project project) {
     return CompletableFuture.supplyAsync(() -> {
       Ref<SymbolSearchEverywhereContributor> contributorRef = new Ref<>();
       ApplicationManager.getApplication().invokeAndWait(
@@ -60,11 +60,11 @@ public class WorkspaceSymbolService {
     }, AppExecutorUtil.getAppExecutorService());
   }
 
-  public List<WorkspaceSymbol> search(@NotNull SymbolSearchEverywhereContributor contributor,
+  public @NotNull List<@NotNull WorkspaceSymbol> search(@NotNull SymbolSearchEverywhereContributor contributor,
                                       int limit,
                                       @NotNull String pattern) {
     if (pattern.isEmpty()) {
-      return null;
+      return List.of();
     }
 
     final var res = new ArrayList<Pair<Object, Integer>>();
@@ -100,7 +100,7 @@ public class WorkspaceSymbolService {
       return null;
     }
     final var containerName = elem.getParent() instanceof PsiNameIdentifierOwner
-        ? ((PsiNameIdentifierOwner) elem).getName()
+        ? ((PsiNameIdentifierOwner) elem.getParent()).getName()
         : null;
     return new WorkspaceSymbol(info.getName(), info.getKind(), Either.forLeft(MiscUtil.psiElementToLocation(elem)), containerName);
   }
