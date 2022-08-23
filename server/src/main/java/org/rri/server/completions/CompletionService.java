@@ -6,21 +6,23 @@ import com.intellij.codeInsight.completion.impl.CamelHumpMatcher;
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementPresentation;
 import com.intellij.codeInsight.lookup.impl.LookupImpl;
+import com.intellij.icons.AllIcons;
 import com.intellij.lang.Language;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
-import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Editor;
-import com.intellij.openapi.editor.EditorModificationUtilEx;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.Pair;
 import com.intellij.openapi.util.Ref;
+import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiFileFactory;
+import com.intellij.ui.CoreIconManager;
+import com.intellij.ui.IconManager;
 import com.intellij.util.concurrency.AppExecutorUtil;
 import jnr.ffi.annotations.Synchronized;
 import org.eclipse.lsp4j.*;
@@ -38,6 +40,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
+import static org.rri.server.util.IconUtil.compareIcons;
 import static org.rri.server.util.TextUtil.*;
 
 @Service(Service.Level.PROJECT)
@@ -104,7 +107,6 @@ final public class CompletionService implements Disposable {
 
             int currentResultIndex;
             synchronized (cachedData) {
-              cachedData.cachedCaretOffset = editor.getCaretModel().getOffset();
               cachedData.cachedPosition = position;
               cachedData.cachedLookup = compInfo.getLookup();
               cachedData.cachedText = editor.getDocument().getText();
@@ -175,7 +177,7 @@ final public class CompletionService implements Disposable {
 
       ApplicationManager.getApplication().runReadAction(() -> {
         var tempDisp = Disposer.newDisposable();
-        int caretOffsetAfterInsert = 0;
+        int caretOffsetAfterInsert;
         try {
           var editor =
               EditorUtil.createEditor(tempDisp, copyToInsert, cachedData.cachedPosition);
@@ -188,8 +190,7 @@ final public class CompletionService implements Disposable {
           handleInsert(cachedLookupElement, editor, copyToInsert, completionInfo);
           caretOffsetAfterInsert = editor.getCaretModel().getOffset();
 
-          var diff = new ArrayList<>(TextUtil.textEditFromDocs(copyThatCalledCompletionDoc,
-              copyToInsertDoc));
+          var diff = new ArrayList<>(TextUtil.textEditFromDocs(copyThatCalledCompletionDoc, copyToInsertDoc));
           if (diff.isEmpty()) {
             return;
           }
@@ -201,17 +202,16 @@ final public class CompletionService implements Disposable {
           var replaceElementEndOffset = MiscUtil.positionToOffset(copyThatCalledCompletionDoc,
               unresolvedTextEdit.getRange().getEnd());
 
-        Pair<String, List<TextUtil.TextEditWithOffsets>> newTextAndAdditionalEdits =
-            mergeTextEditsFromMainRangeToCaret(
-                toTreeSetOfEditsWithOffsets(diff, copyThatCalledCompletionDoc),
-                replaceElementStartOffset, replaceElementEndOffset,
-                copyThatCalledCompletionDoc.getText(), caretOffsetAfterInsert
-            );
-
-          unresolvedTextEdit.setNewText(newTextAndAdditionalEdits.first);
+          Pair<String, List<TextUtil.TextEditWithOffsets>> newTextAndAdditionalEdits =
+              mergeTextEditsFromMainRangeToCaret(
+                  toTreeSetOfEditsWithOffsets(diff, copyThatCalledCompletionDoc),
+                  replaceElementStartOffset, replaceElementEndOffset,
+                  copyThatCalledCompletionDoc.getText(), caretOffsetAfterInsert
+              );
           unresolved.setAdditionalTextEdits(
               toListOfTextEdits(newTextAndAdditionalEdits.second, copyThatCalledCompletionDoc)
           );
+          unresolvedTextEdit.setNewText(newTextAndAdditionalEdits.first);
         } finally {
           ApplicationManager.getApplication().runWriteAction(
               () -> WriteCommandAction.runWriteCommandAction(project, () -> Disposer.dispose(tempDisp))
@@ -225,7 +225,6 @@ final public class CompletionService implements Disposable {
   private static class CachedCompletionResolveData {
     @NotNull
     private final List<@NotNull LookupElement> cachedLookupElements = new ArrayList<>();
-    private int cachedCaretOffset = 0;
     @Nullable
     private LookupImpl cachedLookup = null;
     private int cachedResultIndex = 0;
@@ -288,67 +287,110 @@ final public class CompletionService implements Disposable {
     }
   }
 
-  private void deleteID(@NotNull PsiFile copyToDeleteID, @NotNull LookupElement cachedLookupElement) {
-    synchronized (cachedData) {
-      ApplicationManager.getApplication().runWriteAction(() -> WriteCommandAction.runWriteCommandAction(project,
-          () -> {
-            var tempDisp = Disposer.newDisposable();
-            try {
-              EditorUtil.withEditor(tempDisp, copyToDeleteID, cachedData.cachedPosition,
-                  (editor) -> {
-                    assert cachedData.cachedLookup != null;
-                    var prefix =
-                        cachedData.cachedLookup.itemPattern(cachedLookupElement);
-                    editor.getSelectionModel().setSelection(cachedData.cachedCaretOffset - prefix.length(),
-                        cachedData.cachedCaretOffset);
-                    EditorModificationUtilEx.deleteSelectedText(editor);
-                  });
-            } finally {
-              Disposer.dispose(tempDisp);
-            }
-          }));
-    }
-  }
-
+  @SuppressWarnings("UnstableApiUsage")
   @NotNull
   private static CompletionItem createLSPCompletionItem(@NotNull LookupElement lookupElement,
                                                         @NotNull Position position,
                                                         @NotNull String prefix) {
     var resItem = new CompletionItem();
-    var presentation = new LookupElementPresentation();
 
-    ReadAction.run(() -> lookupElement.renderElement(presentation));
+    var d = Disposer.newDisposable();
+    try {
 
-    StringBuilder contextInfo = new StringBuilder();
-    for (var textFragment : presentation.getTailFragments()) {
-      contextInfo.append(textFragment.text);
+        IconManager.activate(new CoreIconManager());
+
+      var presentation = LookupElementPresentation.renderElement(lookupElement);
+
+
+      StringBuilder contextInfo = new StringBuilder();
+      for (var textFragment : presentation.getTailFragments()) {
+        contextInfo.append(textFragment.text);
+      }
+
+      var lDetails = new CompletionItemLabelDetails();
+      lDetails.setDetail(contextInfo.toString());
+
+      var tagList = new ArrayList<CompletionItemTag>();
+      if (presentation.isStrikeout()) {
+        tagList.add(CompletionItemTag.Deprecated);
+      }
+      resItem.setInsertTextFormat(InsertTextFormat.Snippet);
+      resItem.setLabel(presentation.getItemText());
+      resItem.setLabelDetails(lDetails);
+      resItem.setInsertTextMode(InsertTextMode.AsIs);
+      resItem.setFilterText(lookupElement.getLookupString());
+      resItem.setTextEdit(
+          Either.forLeft(new TextEdit(new Range(
+              MiscUtil.with(new Position(),
+                  positionIDStarts -> {
+                    positionIDStarts.setLine(position.getLine());
+                    positionIDStarts.setCharacter(position.getCharacter() - prefix.length());
+                  }),
+              position),
+              lookupElement.getLookupString()
+          )));
+
+      resItem.setDetail(presentation.getTypeText());
+      resItem.setTags(tagList);
+
+      var icon = presentation.getIcon();
+
+      if (icon == null) {
+        resItem.setKind(CompletionItemKind.Keyword);
+        return resItem;
+      }
+      CompletionItemKind kind = null;
+
+      if (compareIcons(icon, AllIcons.Nodes.Method) ||
+          compareIcons(icon, AllIcons.Nodes.AbstractMethod)) {
+        kind = CompletionItemKind.Method;
+      } else if (compareIcons(icon, AllIcons.Nodes.Module)
+                 || compareIcons(icon, AllIcons.Nodes.IdeaModule)
+                 || compareIcons(icon, AllIcons.Nodes.JavaModule)
+                 || compareIcons(icon, AllIcons.Nodes.ModuleGroup)) {
+        kind = CompletionItemKind.Module;
+      } else if (compareIcons(icon, AllIcons.Nodes.Function)) {
+        kind = CompletionItemKind.Function;
+      } else if (compareIcons(icon, AllIcons.Nodes.Interface)) {
+        kind = CompletionItemKind.Interface;
+      } else if (compareIcons(icon, AllIcons.Nodes.Folder)) {
+        kind = CompletionItemKind.Folder;
+      } else if (compareIcons(icon, AllIcons.Nodes.MethodReference)) {
+        kind = CompletionItemKind.Reference;
+      } else if (compareIcons(icon, AllIcons.Nodes.TextArea)) {
+        kind = CompletionItemKind.Text;
+      } else if (compareIcons(icon, AllIcons.Nodes.Type)) { // todo what is type parameter
+        kind = CompletionItemKind.TypeParameter;
+      } else if (compareIcons(icon, AllIcons.Nodes.Property)) {
+        kind = CompletionItemKind.Property;
+      } else if (compareIcons(icon, AllIcons.FileTypes.Any_type) /* todo can we find that?*/) {
+        kind = CompletionItemKind.File;
+      } else if (compareIcons(icon, AllIcons.Nodes.Enum)) {
+        kind = CompletionItemKind.Enum;
+      } else if (compareIcons(icon, AllIcons.Nodes.Variable) ||
+                 compareIcons(icon, AllIcons.Nodes.Parameter) ||
+                 compareIcons(icon, AllIcons.Nodes.NewParameter)) {
+        kind = CompletionItemKind.Variable;
+      } else if (compareIcons(icon, AllIcons.Nodes.Constant)) {
+        kind = CompletionItemKind.Constant;
+      } else if (
+          lookupElement.getPsiElement() instanceof PsiClass || // todo find another way for classes in java
+                 compareIcons(icon, AllIcons.Nodes.Class) ||
+                 compareIcons(icon, AllIcons.Nodes.AbstractClass)) {
+        kind = CompletionItemKind.Class;
+      } else if (compareIcons(icon, AllIcons.Nodes.Field)) {
+        kind = CompletionItemKind.Field;
+      } else if (compareIcons(icon, AllIcons.Nodes.Template)) {
+        kind = CompletionItemKind.Snippet;
+      }
+      resItem.setKind(kind);
+
+      return resItem;
+    } catch (Throwable e) {
+      throw new RuntimeException(e);
+    } finally {
+      IconManager.deactivate();
+      Disposer.dispose(d);
     }
-
-    var lDetails = new CompletionItemLabelDetails();
-    lDetails.setDetail(contextInfo.toString());
-
-    var tagList = new ArrayList<CompletionItemTag>();
-    if (presentation.isStrikeout()) {
-      tagList.add(CompletionItemTag.Deprecated);
-    }
-    resItem.setInsertTextFormat(InsertTextFormat.Snippet);
-    resItem.setLabel(presentation.getItemText());
-    resItem.setLabelDetails(lDetails);
-    resItem.setInsertTextMode(InsertTextMode.AsIs);
-    resItem.setFilterText(lookupElement.getLookupString());
-    resItem.setTextEdit(
-        Either.forLeft(new TextEdit(new Range(
-            MiscUtil.with(new Position(),
-            positionIDStarts -> {
-              positionIDStarts.setLine(position.getLine());
-              positionIDStarts.setCharacter(position.getCharacter() - prefix.length());
-            }),
-            position),
-            lookupElement.getLookupString()
-        )));
-
-    resItem.setDetail(presentation.getTypeText());
-    resItem.setTags(tagList);
-    return resItem;
   }
 }
