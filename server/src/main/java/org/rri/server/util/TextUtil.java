@@ -82,10 +82,6 @@ public class TextUtil {
         psiFile.getVirtualFile());
   }
 
-  public static TextEdit createDeleteTextEdit(@NotNull Range range) {
-    return new TextEdit(range, "");
-  }
-
   public static class TextEditWithOffsets implements Comparable<TextEditWithOffsets> {
     private final Pair<Integer, Integer> range;
     private String newText;
@@ -110,6 +106,11 @@ public class TextUtil {
         return false;
       }
       return range.equals(otherEdit.range);
+    }
+
+    @Override
+    public String toString() {
+      return "range: " + range + ", newText: " + newText;
     }
   }
 
@@ -228,13 +229,21 @@ public class TextUtil {
     var editsToMergeRangesAsOffsets = new TreeSet<>(diffRangesAsOffsetsTreeSet.subSet(first, true, last, true));
 
     if (floor != null) {
-      editsToMergeRangesAsOffsets.add(floor);
-      uselessEdits.addAll(diffRangesAsOffsetsTreeSet.headSet(floor, false));
+      if (floor.range.second >= collisionRangeStartOffset) {
+        editsToMergeRangesAsOffsets.add(floor);
+        uselessEdits.addAll(diffRangesAsOffsetsTreeSet.headSet(floor, false));
+      } else {
+        uselessEdits.addAll(diffRangesAsOffsetsTreeSet.headSet(floor, true));
+      }
     }
 
     if (ceil != null) {
-      editsToMergeRangesAsOffsets.add(ceil);
-      uselessEdits.addAll(diffRangesAsOffsetsTreeSet.tailSet(ceil, false));
+      if (ceil.range.first <= collisionRangeEndOffset) {
+        editsToMergeRangesAsOffsets.add(ceil);
+        uselessEdits.addAll(diffRangesAsOffsetsTreeSet.tailSet(ceil, false));
+      } else {
+        uselessEdits.addAll(diffRangesAsOffsetsTreeSet.tailSet(ceil, true));
+      }
     }
     return editsToMergeRangesAsOffsets;
   }
