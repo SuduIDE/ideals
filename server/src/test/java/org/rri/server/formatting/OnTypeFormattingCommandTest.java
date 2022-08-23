@@ -25,10 +25,10 @@ public class OnTypeFormattingCommandTest extends BasePlatformTestCase {
   @Test
   public void testFormatAfterClosedBlockJava() {
     Assertions.assertEquals(List.of(
-            TestUtil.createTextEdit(1, 0, 1, 0, "    "),
-            TestUtil.createTextEdit(1, 5, 1, 5, " "),
-            TestUtil.createTextEdit(1, 7, 1, 9, ""),
-            TestUtil.createTextEdit(1, 11, 1, 22, "")
+            TestUtil.newTextEdit(1, 0, 1, 0, "    "),
+            TestUtil.newTextEdit(1, 5, 1, 5, " "),
+            TestUtil.newTextEdit(1, 7, 1, 9, ""),
+            TestUtil.newTextEdit(1, 11, 1, 22, "")
         ),
         getEditsByTextAndInsertedCharAtPosition(
             """
@@ -48,8 +48,8 @@ public class OnTypeFormattingCommandTest extends BasePlatformTestCase {
   @Test
   public void testWrapBinaryExprJava() {
     Assertions.assertEquals(List.of(
-            TestUtil.createTextEdit(1, 12, 1, 12, "("),
-            TestUtil.createTextEdit(1, 18, 1, 18, ")")
+            TestUtil.newTextEdit(1, 12, 1, 12, "("),
+            TestUtil.newTextEdit(1, 18, 1, 18, ")")
         ),
         getEditsByTextAndInsertedCharAtPosition(
             """
@@ -69,8 +69,8 @@ public class OnTypeFormattingCommandTest extends BasePlatformTestCase {
   @Test
   public void testSemiColonInsideFuncJava() {
     Assertions.assertEquals(List.of(
-            TestUtil.createTextEdit(2, 12, 2, 13, ""),
-            TestUtil.createTextEdit(2, 14, 2, 14, ";")
+            TestUtil.newTextEdit(2, 12, 2, 13, ""),
+            TestUtil.newTextEdit(2, 14, 2, 14, ";")
         ),
         getEditsByTextAndInsertedCharAtPosition(
             """
@@ -94,8 +94,8 @@ public class OnTypeFormattingCommandTest extends BasePlatformTestCase {
   @Test
   public void testWrapBooleanExprInsideOtherJava() {
     Assertions.assertEquals(List.of(
-            TestUtil.createTextEdit(1, 16, 1, 16, "("),
-            TestUtil.createTextEdit(1, 22, 1, 22, ")")
+            TestUtil.newTextEdit(1, 16, 1, 16, "("),
+            TestUtil.newTextEdit(1, 22, 1, 22, ")")
         ),
         getEditsByTextAndInsertedCharAtPosition(
             """
@@ -115,7 +115,7 @@ public class OnTypeFormattingCommandTest extends BasePlatformTestCase {
   @Test
   public void testSwitchIndentFormatAfterColonJava() {
     Assertions.assertEquals(List.of(
-            TestUtil.createTextEdit(4, 12, 4, 16, "")
+            TestUtil.newTextEdit(4, 12, 4, 16, "")
         ),
         getEditsByTextAndInsertedCharAtPosition(
             """
@@ -145,7 +145,7 @@ public class OnTypeFormattingCommandTest extends BasePlatformTestCase {
   @Test
   public void testNotInsertSecondColon() {
     Assertions.assertEquals(List.of(
-            TestUtil.createTextEdit(0, 3, 0, 4, "")
+            TestUtil.newTextEdit(0, 3, 0, 4, "")
         ),
         getEditsByTextAndInsertedCharAtPosition(
             """
@@ -161,7 +161,7 @@ public class OnTypeFormattingCommandTest extends BasePlatformTestCase {
   @Test
   public void testInsertDocstringOnSpace() {
     Assertions.assertEquals(List.of(
-            TestUtil.createTextEdit(2, 0, 2, 0,
+            TestUtil.newTextEdit(2, 0, 2, 0,
                 """
                         :param first:\s
                         :return:\s

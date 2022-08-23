@@ -60,6 +60,7 @@ tasks {
       "--add-exports=java.desktop/sun.awt=ALL-UNNAMED",
       "--add-exports=java.desktop/sun.awt.X11=ALL-UNNAMED",
       "--add-exports=java.desktop/sun.awt.windows=ALL-UNNAMED",
+      "--add-exports=java.desktop/sun.java2d=ALL-UNNAMED",
       "--add-exports=java.desktop/sun.font=ALL-UNNAMED",
       "--add-exports=jdk.unsupported/sun.misc=ALL-UNNAMED",
       "--add-exports=java.base/jdk.internal.vm=ALL-UNNAMED",

@@ -1,9 +1,17 @@
 package org.rri.server.diagnostics;
 
+import com.google.gson.Gson;
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
+import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiManager;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import com.jetbrains.python.PythonFileType;
-import org.eclipse.lsp4j.*;
+import org.eclipse.lsp4j.ClientCapabilities;
+import org.eclipse.lsp4j.Diagnostic;
+import org.eclipse.lsp4j.DiagnosticSeverity;
+import org.eclipse.lsp4j.PublishDiagnosticsParams;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Before;
@@ -12,6 +20,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.rri.server.LspContext;
 import org.rri.server.LspPath;
+import org.rri.server.TestUtil;
 import org.rri.server.mocks.MockLanguageClient;
 import org.rri.server.util.MiscUtil;
 
@@ -23,8 +32,8 @@ public class DiagnosticsServiceTest extends BasePlatformTestCase {
   @Before
   public void setupContext() {
     LspContext.createContext(getProject(),
-            new MockLanguageClient(),
-            new ClientCapabilities()
+        new MockLanguageClient(),
+        new ClientCapabilities()
     );
   }
 
@@ -44,25 +53,97 @@ public class DiagnosticsServiceTest extends BasePlatformTestCase {
     MiscUtil.with(diagnostics.get(0), it -> {
       Assert.assertEquals("End of statement expected", it.getMessage());
       Assert.assertEquals(DiagnosticSeverity.Error, it.getSeverity());
-      Assert.assertEquals(range(0, 1, 0, 2), it.getRange());
+      Assert.assertEquals(TestUtil.newRange(0, 1, 0, 2), it.getRange());
     });
 
     MiscUtil.with(diagnostics.get(1), it -> {
       Assert.assertEquals("Statement expected, found BAD_CHARACTER", it.getMessage());
       Assert.assertEquals(DiagnosticSeverity.Error, it.getSeverity());
-      Assert.assertEquals(range(0, 3, 0, 4), it.getRange());
+      Assert.assertEquals(TestUtil.newRange(0, 3, 0, 4), it.getRange());
     });
+  }
+
+  @Test
+  public void testKotlinErrors() {
+    final var text = """
+    fun main(): Unit {
+      Test.main(args)
+    }
+    """;
+
+    final var file = myFixture.configureByText("test.kt", text);
+
+    final List<Diagnostic> diagnostics = runAndGetDiagnostics(file).getDiagnostics();
+
+    Assert.assertEquals(2, diagnostics.size());
+
+    MiscUtil.with(diagnostics.get(0), it -> {
+      Assert.assertEquals("[UNRESOLVED_REFERENCE] Unresolved reference: Test", it.getMessage());
+      Assert.assertEquals(DiagnosticSeverity.Error, it.getSeverity());
+      Assert.assertEquals(TestUtil.newRange(1, 2, 1, 6), it.getRange());
+    });
+
+    MiscUtil.with(diagnostics.get(1), it -> {
+      Assert.assertEquals("[UNRESOLVED_REFERENCE] Unresolved reference: args", it.getMessage());
+      Assert.assertEquals(DiagnosticSeverity.Error, it.getSeverity());
+      Assert.assertEquals(TestUtil.newRange(1, 12, 1, 16), it.getRange());
+    });
+  }
+
+  @Test
+  public void testQuickFixFoundAndApplied() {
+    final var before = """
+        class A {
+           final int x = "a";
+        }
+        """;
+
+    final var after = """
+        class A {
+           final java.lang.String x = "a";
+        }
+        """;
+
+    final var actionTitle = "Change field 'x' type to 'String'";
+
+
+    final var file = myFixture.configureByText("test.java", before);
+
+    final var xVariableRange = TestUtil.newRange(1, 13, 1, 13);
+
+    var path = LspPath.fromVirtualFile(file.getVirtualFile());
+
+    final var diagnosticsService = getProject().getService(DiagnosticsService.class);
+
+    runAndGetDiagnostics(file);
+
+    final var codeActions = diagnosticsService.getCodeActions(path, xVariableRange);
+
+    var action = codeActions.stream()
+        .filter(it -> it.getTitle().equals(actionTitle))
+        .findFirst()
+        .orElseThrow(() -> new AssertionError("action not found"));
+
+    Gson gson = new GsonBuilder().create();
+    action.setData(gson.fromJson(gson.toJson(action.getData()), JsonObject.class));
+
+    final var edit = diagnosticsService.applyCodeAction(action);
+
+    Assert.assertEquals(after, TestUtil.applyEdits(file.getText(), edit.getChanges().get(path.toLspUri())));
+
+    // checking the quick fix doesn't actually change the file
+    final var reloaded = PsiManager.getInstance(getProject()).findFile(file.getVirtualFile());
+    Assert.assertNotNull(reloaded);
+    Assert.assertEquals(before, reloaded.getText());
+    final var reloadedDoc = PsiDocumentManager.getInstance(getProject()).getDocument(reloaded);
+    Assert.assertNotNull(reloadedDoc);
+    Assert.assertEquals(before, reloadedDoc.getText());
+
   }
 
   private PublishDiagnosticsParams runAndGetDiagnostics(@NotNull PsiFile file) {
     getClient().resetDiagnosticsResult();
     getProject().getService(DiagnosticsService.class).launchDiagnostics(LspPath.fromVirtualFile(file.getVirtualFile()));
     return getClient().waitAndGetDiagnosticsPublished();
-  }
-
-  @SuppressWarnings("SameParameterValue")
-  @NotNull
-  private static Range range(int line1, int char1, int line2, int char2) {
-    return new Range(new Position(line1, char1), new Position(line2, char2));
   }
 }
