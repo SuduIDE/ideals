@@ -30,7 +30,7 @@ public class TextUtilTest extends BasePlatformTestCase {
             4, // caret
             List.of(new TextEditWithOffsets(2, 3, "_")), // textEdits
             "01_3$0", // merged string
-            Set.of(new TextEditWithOffsets(1, 4, "")) // additional edits
+            Set.of(new TextEditWithOffsets(1, 4, "")) // expected additional edits
         ),
         // |__| [_!]
         Arguments.of(
@@ -38,7 +38,7 @@ public class TextUtilTest extends BasePlatformTestCase {
             3, // caret
             List.of(new TextEditWithOffsets(2, 4, "___")), // textEdits
             "01_$0__", // merged string
-            Set.of(new TextEditWithOffsets(1, 4, "")) // additional edits
+            Set.of(new TextEditWithOffsets(1, 4, "")) // expected additional edits
         ),
         // |__| ! [__]
         Arguments.of(
@@ -48,7 +48,7 @@ public class TextUtilTest extends BasePlatformTestCase {
             "01$0", // merged string
             Set.of(
                 new TextEditWithOffsets(1, 2, ""),
-                new TextEditWithOffsets(3, 4, "_")) // additional edits
+                new TextEditWithOffsets(3, 4, "_")) // expected additional edits
         ),
         // |__| ! [__]
         Arguments.of(
@@ -58,7 +58,7 @@ public class TextUtilTest extends BasePlatformTestCase {
             "01$0", // merged string
             Set.of(
                 new TextEditWithOffsets(1, 2, ""),
-                new TextEditWithOffsets(3, 4, "_")) // additional edits
+                new TextEditWithOffsets(3, 4, "_")) // expected additional edits
         ),
         // [__] |__| !
         Arguments.of(
@@ -68,7 +68,7 @@ public class TextUtilTest extends BasePlatformTestCase {
             "23$0", // merged string
             Set.of(
                 new TextEditWithOffsets(0, 1, "_"),
-                new TextEditWithOffsets(3, 4, "")) // additional edits
+                new TextEditWithOffsets(3, 4, "")) // expected additional edits
         ),
         // [__] ! |__|
         Arguments.of(
@@ -78,7 +78,7 @@ public class TextUtilTest extends BasePlatformTestCase {
             "$023", // merged string
             Set.of(
                 new TextEditWithOffsets(0, 1, "___"),
-                new TextEditWithOffsets(2, 3, "")) // additional edits
+                new TextEditWithOffsets(2, 3, "")) // expected additional edits
         ),
         // ! [__] |__|
         Arguments.of(
@@ -87,7 +87,7 @@ public class TextUtilTest extends BasePlatformTestCase {
             List.of(new TextEditWithOffsets(1, 2, "")), // textEdits
             "$0023", // merged string
             Set.of(
-                new TextEditWithOffsets(0, 3, "")) // additional edits
+                new TextEditWithOffsets(0, 3, "")) // expected additional edits
         ),
         // [!_] |__|
         Arguments.of(
@@ -96,7 +96,7 @@ public class TextUtilTest extends BasePlatformTestCase {
             List.of(new TextEditWithOffsets(1, 2, "___")), // textEdits
             "_$0__23", // merged string
             Set.of(
-                new TextEditWithOffsets(1, 3, "")) // additional edits
+                new TextEditWithOffsets(1, 3, "")) // expected additional edits
         ),
         // [__|]__[|__] !
         Arguments.of(
@@ -109,7 +109,7 @@ public class TextUtilTest extends BasePlatformTestCase {
             "___67$0", // merged string
             Set.of(
                 new TextEditWithOffsets(2, 3, ""),
-                new TextEditWithOffsets(5, 8, "")) // additional edits
+                new TextEditWithOffsets(5, 8, "")) // expected additional edits
         ),
         // ! [__|]__[|__]
         Arguments.of(
@@ -122,7 +122,7 @@ public class TextUtilTest extends BasePlatformTestCase {
             "$001___", // merged string
             Set.of(
                 new TextEditWithOffsets(0, 3, ""),
-                new TextEditWithOffsets(5, 6, "")) // additional edits
+                new TextEditWithOffsets(5, 6, "")) // expected additional edits
         )
     );
   }
