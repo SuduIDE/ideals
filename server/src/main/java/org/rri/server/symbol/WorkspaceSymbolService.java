@@ -30,6 +30,7 @@ import org.rri.server.util.MiscUtil;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
 
@@ -38,7 +39,7 @@ final public class WorkspaceSymbolService {
   @NotNull
   private final Project project;
   @NotNull
-  private final Map<@NotNull WorkspaceSymbol, @NotNull PsiElement> elements = new LinkedHashMap<>();
+  private final Map<@NotNull WorkspaceSymbol, @NotNull PsiElement> elements = new ConcurrentHashMap<>();
 
   private final int LIMIT = 100;
 
