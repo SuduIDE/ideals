@@ -6,6 +6,7 @@ import com.intellij.ide.actions.searcheverywhere.SymbolSearchEverywhereContribut
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Pair;
@@ -22,29 +23,32 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.server.LspPath;
 import org.rri.server.symbol.provider.DocumentSymbolInfoUtil;
+import org.rri.server.util.MiscUtil;
 
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
 
-public class WorkspaceSymbolService {
+@Service(Service.Level.PROJECT)
+final public class WorkspaceSymbolService {
   @NotNull
-  private final String pattern;
+  private final Project project;
+  @NotNull
+  private final Map<@NotNull WorkspaceSymbol, @NotNull PsiElement> elements = new LinkedHashMap<>();
 
   private final int LIMIT = 100;
 
-  public WorkspaceSymbolService(@NotNull String pattern) {
-    this.pattern = pattern;
+  public WorkspaceSymbolService(@NotNull Project project) {
+    this.project = project;
   }
 
   @SuppressWarnings("deprecation")
-  public @NotNull CompletableFuture<@NotNull Either<List<? extends SymbolInformation>, @Nullable List<? extends WorkspaceSymbol>>>
-                  runAsync(Project project, Map<WorkspaceSymbol, PsiElement> elements) {
+  public @NotNull CompletableFuture<@NotNull Either<List<? extends SymbolInformation>, @Nullable List<? extends WorkspaceSymbol>>> runSearch(String pattern) {
     return CompletableFuture.supplyAsync(() -> {
       if (DumbService.isDumb(project)) {
         return Either.forRight(null);
       }
-      final var result = new WorkspaceSymbolService(pattern).execute(project);
+      final var result = execute(pattern);
       result.forEach(searchResult -> elements.put(searchResult.symbol(), searchResult.element()));
       final var lst = result.stream()
           .map(WorkspaceSearchResult::symbol)
@@ -53,7 +57,15 @@ public class WorkspaceSymbolService {
     }, AppExecutorUtil.getAppExecutorService());
   }
 
-  private @NotNull List<@NotNull WorkspaceSearchResult> execute(@NotNull Project project) {
+  public @NotNull CompletableFuture<@NotNull WorkspaceSymbol> resolveWorkspaceSymbol(@NotNull WorkspaceSymbol workspaceSymbol) {
+    return CompletableFuture.supplyAsync(() -> {
+      workspaceSymbol.setLocation(Either.forLeft(MiscUtil.psiElementToLocation(elements.get(workspaceSymbol))));
+      elements.clear();
+      return workspaceSymbol;
+    });
+  }
+
+  private @NotNull List<@NotNull WorkspaceSearchResult> execute(@NotNull String pattern) {
     Ref<SymbolSearchEverywhereContributor> contributorRef = new Ref<>();
     ApplicationManager.getApplication().invokeAndWait(
         () -> {
