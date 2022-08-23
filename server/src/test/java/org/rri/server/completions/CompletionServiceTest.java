@@ -1,12 +1,10 @@
 package org.rri.server.completions;
 
+import com.google.common.collect.Streams;
 import com.intellij.openapi.project.Project;
 import com.intellij.psi.PsiFile;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
-import org.eclipse.lsp4j.CompletionItem;
-import org.eclipse.lsp4j.CompletionItemLabelDetails;
-import org.eclipse.lsp4j.CompletionItemTag;
-import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
@@ -32,19 +30,39 @@ public class CompletionServiceTest extends BasePlatformTestCase {
         getProject(), file, new Position(0, 1));
 
     var expected = new HashSet<CompletionItem>();
-    expected.add(createCompletionItem("del", "", null, new ArrayList<>(), "del"));
-    expected.add(createCompletionItem("def", "", null, new ArrayList<>(), "def"));
-    expected.add(createCompletionItem("and", "", null, new ArrayList<>(), "and"));
-    expected.add(createCompletionItem("lambda", "", null, new ArrayList<>(), "lambda"));
-
+    expected.add(
+        createCompletionItem("del", "", null, new ArrayList<>(), CompletionItemKind.Keyword));
+    expected.add(
+        createCompletionItem("def", "", null, new ArrayList<>(), CompletionItemKind.Keyword));
+    expected.add(
+        createCompletionItem("and", "", null, new ArrayList<>(), CompletionItemKind.Keyword));
+    expected.add(
+        createCompletionItem("lambda", "", null, new ArrayList<>(), CompletionItemKind.Keyword));
+    Streams.zip(completionItemList.stream(), expected.stream(),
+        (completionItem, completionItem2) -> {
+          completionItem2.setTextEdit(completionItem.getTextEdit());
+          completionItem2.setAdditionalTextEdits(completionItem.getAdditionalTextEdits());
+          return null;
+        }
+    );
     Assertions.assertEquals(expected, new HashSet<>(completionItemList));
   }
 
   @Test
   public void testCompletionForKeywordAndFunctionPython() {
     var expected = Set.of(
-        createCompletionItem("for", "", null, new ArrayList<>(), "for"),
-        createCompletionItem("formula", "(x)", null, new ArrayList<>(), "formula"));
+        createCompletionItem(
+            "for",
+            "",
+            null,
+            new ArrayList<>(),
+            CompletionItemKind.Keyword),
+        createCompletionItem(
+            "formula",
+            "(x)",
+            null,
+            new ArrayList<>(),
+            CompletionItemKind.Function));
 
     final var file = myFixture.configureByFile("function_and_keyword.py");
 
@@ -52,14 +70,32 @@ public class CompletionServiceTest extends BasePlatformTestCase {
         getProject(), file, new Position(3, 3)
     );
     Assert.assertNotNull(completionItemList);
+    Streams.zip(completionItemList.stream(), expected.stream(),
+        (completionItem, completionItem2) -> {
+          completionItem2.setTextEdit(completionItem.getTextEdit());
+          return null;
+        }
+    );
     Assert.assertEquals(expected, new HashSet<>(completionItemList));
   }
 
   @Test
   public void testCompletionForKeywordAndFunctionJava() {
     var expected = new HashSet<CompletionItem>();
-    expected.add(createCompletionItem("formula", "()", "void", new ArrayList<>(), "formula"));
-    expected.add(createCompletionItem("for", "", null, new ArrayList<>(), "for"));
+    expected.add(createCompletionItem(
+        "formula",
+        "()",
+        "void",
+        new ArrayList<>(),
+        CompletionItemKind.Method
+    ));
+    expected.add(createCompletionItem(
+        "for",
+        "",
+        null,
+        new ArrayList<>(),
+        CompletionItemKind.Keyword
+    ));
 
     final var file = myFixture.configureByFile("function_and_keyword.java");
 
@@ -67,6 +103,12 @@ public class CompletionServiceTest extends BasePlatformTestCase {
         getProject(), file, new Position(2, 7)
     );
     Assert.assertNotNull(completionItemList);
+    Streams.zip(completionItemList.stream(), expected.stream(),
+        (completionItem, completionItem2) -> {
+          completionItem2.setTextEdit(completionItem.getTextEdit());
+          return null;
+        }
+    );
     Assert.assertEquals(expected, new HashSet<>(completionItemList));
   }
 
@@ -81,15 +123,16 @@ public class CompletionServiceTest extends BasePlatformTestCase {
                                               @NotNull String labelDetail,
                                               @Nullable String detail,
                                               @NotNull ArrayList<@NotNull CompletionItemTag> completionItemTags,
-                                              @NotNull String insertText) {
+                                              @NotNull CompletionItemKind kind) {
     return MiscUtil.with(new CompletionItem(), item -> {
       item.setLabel(label);
       item.setLabelDetails(MiscUtil.with(new CompletionItemLabelDetails(), completionItemLabelDetails -> completionItemLabelDetails.setDetail(labelDetail)));
       item.setDetail(detail);
       item.setTags(completionItemTags);
-      item.setInsertText(insertText);
+      item.setKind(kind);
     });
   }
+
   @NotNull
   private static List<@NotNull CompletionItem> getCompletionListAtPosition(
       @NotNull Project project, @NotNull PsiFile file, @NotNull Position position) {

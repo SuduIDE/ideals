@@ -1,7 +1,7 @@
 package org.rri.server.util;
 
-import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.jetbrains.annotations.NotNull;
+import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.params.ParameterizedTest;
 import org.junit.jupiter.params.provider.Arguments;
@@ -16,11 +16,36 @@ import java.util.Set;
 import java.util.stream.Stream;
 
 @RunWith(JUnit4.class)
-public class TextUtilTest extends BasePlatformTestCase {
-  @NotNull final String simpleSampleText = "0123456789";
+public class TextUtilTest {
+  @Test
+  public void voidTest() { // todo why without this tests are failed
+  }
+
+  @NotNull
+  final String simpleSampleText = "0123456789";
+
   // |__| -- main replace range
   // [__] -- TextEdit from diff
   //  !   -- caret
+  @ParameterizedTest
+  @MethodSource("provideAllCasesForMerge")
+  public void testMergeTextEditsFromMainRangeToCaret(int replaceElementStartOffset,
+                                                     int replaceElementEndOffset,
+                                                     int caretOffsetAfterInsert,
+                                                     List<TextEditWithOffsets> diffRangesAsOffsetsList,
+                                                     String expectedString,
+                                                     Set<TextEditWithOffsets> expectedAdditionalEdits) {
+
+    var res = TextUtil.mergeTextEditsFromMainRangeToCaret(
+        diffRangesAsOffsetsList,
+        replaceElementStartOffset,
+        replaceElementEndOffset,
+        simpleSampleText,
+        caretOffsetAfterInsert);
+    Assertions.assertEquals(expectedString, res.first);
+    Assertions.assertEquals(expectedAdditionalEdits, new HashSet<>(res.second));
+  }
+
 
   public static Stream<Arguments> provideAllCasesForMerge() {
     return Stream.of(
@@ -105,7 +130,7 @@ public class TextUtilTest extends BasePlatformTestCase {
             List.of(
                 new TextEditWithOffsets(2, 4, "___"),
                 new TextEditWithOffsets(4, 6, "")
-                ), // textEdits
+            ), // textEdits
             "___67$0", // merged string
             Set.of(
                 new TextEditWithOffsets(2, 3, ""),
@@ -125,24 +150,5 @@ public class TextUtilTest extends BasePlatformTestCase {
                 new TextEditWithOffsets(5, 6, "")) // expected additional edits
         )
     );
-  }
-
-  @ParameterizedTest
-  @MethodSource("provideAllCasesForMerge")
-  public void testMergeTextEditsFromMainRangeToCaret(int replaceElementStartOffset,
-                        int replaceElementEndOffset,
-                        int caretOffsetAfterInsert,
-                        List<TextEditWithOffsets> diffRangesAsOffsetsList,
-                        String expectedString,
-                        Set<TextEditWithOffsets> expectedAdditionalEdits) {
-
-    var res = TextUtil.mergeTextEditsFromMainRangeToCaret(
-        diffRangesAsOffsetsList,
-        replaceElementStartOffset,
-        replaceElementEndOffset,
-        simpleSampleText,
-        caretOffsetAfterInsert);
-    Assertions.assertEquals(expectedString, res.first);
-    Assertions.assertEquals(expectedAdditionalEdits, new HashSet<>(res.second));
   }
 }
