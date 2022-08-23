@@ -23,9 +23,9 @@ public class FormattingTest extends LspServerTestBase {
   @Test
   public void wholeFileFormatting() {
     final var expected = Set.of(
-        TestUtil.createTextEdit(1, 2, 1, 2, "  "),
-        TestUtil.createTextEdit(2, 0, 2, 0, "\n\n"),
-        TestUtil.createTextEdit(3, 2, 3, 2, "  ")
+        TestUtil.newTextEdit(1, 2, 1, 2, "  "),
+        TestUtil.newTextEdit(2, 0, 2, 0, "\n\n"),
+        TestUtil.newTextEdit(3, 2, 3, 2, "  ")
     );
     final var filePath = LspPath.fromLocalPath(getProjectPath().resolve("main.py"));
 
@@ -39,8 +39,8 @@ public class FormattingTest extends LspServerTestBase {
   @Test
   public void rangeFormatting() {
     final var expected = Set.of(
-        TestUtil.createTextEdit(1, 2, 1, 2, "  "),
-        TestUtil.createTextEdit(2, 0, 2, 0, "\n\n")
+        TestUtil.newTextEdit(1, 2, 1, 2, "  "),
+        TestUtil.newTextEdit(2, 0, 2, 0, "\n\n")
     );
     final var filePath = LspPath.fromLocalPath(getProjectPath().resolve("main.py"));
 
@@ -55,7 +55,7 @@ public class FormattingTest extends LspServerTestBase {
   @Test
   public void onTypeFormatting() {
     final var expected = Set.of(
-        TestUtil.createTextEdit(0, 10, 0, 11, "")
+        TestUtil.newTextEdit(0, 10, 0, 11, "")
     );
     final var filePath = LspPath.fromLocalPath(getProjectPath().resolve("util.py"));
 

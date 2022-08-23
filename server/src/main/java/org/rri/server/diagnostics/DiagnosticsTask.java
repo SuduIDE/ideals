@@ -62,16 +62,12 @@ class DiagnosticsTask implements Runnable {
       return null;
 
     final var range = MiscUtil.getRange(doc, info);
-    //final var toolId = info.getInspectionToolId();
 
-    //if(toolId != null) {
     if(info.quickFixActionRanges != null) {
       registry.registerQuickFixes(
           range,
-          null,
           info.quickFixActionRanges.stream().map(it -> it.first).collect(Collectors.toList()));
     }
-    //}
 
     return new Diagnostic(range, info.getDescription(), diagnosticSeverity(info.getSeverity()), "rriij");
   }

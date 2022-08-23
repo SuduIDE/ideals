@@ -3,7 +3,9 @@ package org.rri.server.diagnostics;
 import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
+import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiFile;
+import com.intellij.psi.PsiManager;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import com.jetbrains.python.PythonFileType;
 import org.eclipse.lsp4j.ClientCapabilities;
@@ -62,7 +64,34 @@ public class DiagnosticsServiceTest extends BasePlatformTestCase {
   }
 
   @Test
-  public void testQuickFix() {
+  public void testKotlinErrors() {
+    final var text = """
+    fun main(): Unit {
+      Test.main(args)
+    }
+    """;
+
+    final var file = myFixture.configureByText("test.kt", text);
+
+    final List<Diagnostic> diagnostics = runAndGetDiagnostics(file).getDiagnostics();
+
+    Assert.assertEquals(2, diagnostics.size());
+
+    MiscUtil.with(diagnostics.get(0), it -> {
+      Assert.assertEquals("[UNRESOLVED_REFERENCE] Unresolved reference: Test", it.getMessage());
+      Assert.assertEquals(DiagnosticSeverity.Error, it.getSeverity());
+      Assert.assertEquals(TestUtil.newRange(1, 2, 1, 6), it.getRange());
+    });
+
+    MiscUtil.with(diagnostics.get(1), it -> {
+      Assert.assertEquals("[UNRESOLVED_REFERENCE] Unresolved reference: args", it.getMessage());
+      Assert.assertEquals(DiagnosticSeverity.Error, it.getSeverity());
+      Assert.assertEquals(TestUtil.newRange(1, 12, 1, 16), it.getRange());
+    });
+  }
+
+  @Test
+  public void testQuickFixFoundAndApplied() {
     final var before = """
         class A {
            final int x = "a";
@@ -101,6 +130,15 @@ public class DiagnosticsServiceTest extends BasePlatformTestCase {
     final var edit = diagnosticsService.applyCodeAction(action);
 
     Assert.assertEquals(after, TestUtil.applyEdits(file.getText(), edit.getChanges().get(path.toLspUri())));
+
+    // checking the quick fix doesn't actually change the file
+    final var reloaded = PsiManager.getInstance(getProject()).findFile(file.getVirtualFile());
+    Assert.assertNotNull(reloaded);
+    Assert.assertEquals(before, reloaded.getText());
+    final var reloadedDoc = PsiDocumentManager.getInstance(getProject()).getDocument(reloaded);
+    Assert.assertNotNull(reloadedDoc);
+    Assert.assertEquals(before, reloadedDoc.getText());
+
   }
 
   private PublishDiagnosticsParams runAndGetDiagnostics(@NotNull PsiFile file) {

@@ -43,9 +43,9 @@ public class FormattingCommandTest extends BasePlatformTestCase {
   public void testExtraSpacesAndNewlinesVarDec() {
     Assertions.assertEquals(
         List.of(
-            TestUtil.createTextEdit(0, 0, 1, 5, ""),
-            TestUtil.createTextEdit(1, 6, 1, 6, " "),
-            TestUtil.createTextEdit(1, 7, 1, 7, " ")),
+            TestUtil.newTextEdit(0, 0, 1, 5, ""),
+            TestUtil.newTextEdit(1, 6, 1, 6, " "),
+            TestUtil.newTextEdit(1, 7, 1, 7, " ")),
         getEditsByText(
             """
                                 
@@ -62,10 +62,10 @@ public class FormattingCommandTest extends BasePlatformTestCase {
   public void testExtraSpaceBetweenFuncDecAndOtherStatements() {
     Assertions.assertEquals(
         List.of(
-            TestUtil.createTextEdit(0, 4, 0, 5, ""),
-            TestUtil.createTextEdit(0, 8, 0, 10, ""),
-            TestUtil.createTextEdit(0, 13, 0, 16, ""),
-            TestUtil.createTextEdit(1, 0, 1, 0, "\n\n")
+            TestUtil.newTextEdit(0, 4, 0, 5, ""),
+            TestUtil.newTextEdit(0, 8, 0, 10, ""),
+            TestUtil.newTextEdit(0, 13, 0, 16, ""),
+            TestUtil.newTextEdit(1, 0, 1, 0, "\n\n")
         ),
         getEditsByText(
             """
@@ -86,7 +86,7 @@ public class FormattingCommandTest extends BasePlatformTestCase {
   public void testEmptyForStatement() {
     Assertions.assertEquals(
         List.of(
-            TestUtil.createTextEdit(1, 0, 1, 0, "    ")
+            TestUtil.newTextEdit(1, 0, 1, 0, "    ")
         ),
         getEditsByText(
             """
@@ -104,7 +104,7 @@ public class FormattingCommandTest extends BasePlatformTestCase {
   public void testExtraSpaceBetweenImportListAndOtherStatements() {
     Assertions.assertEquals(
         List.of(
-            TestUtil.createTextEdit(0, 10, 0, 11, "\n\n")
+            TestUtil.newTextEdit(0, 10, 0, 11, "\n\n")
         ),
         getEditsByText(
             """
@@ -125,7 +125,7 @@ public class FormattingCommandTest extends BasePlatformTestCase {
   public void testTextRangeFormatInSelectFormatting() {
     Assertions.assertEquals(
         List.of(
-            TestUtil.createTextEdit(0, 0, 0, 4, "")
+            TestUtil.newTextEdit(0, 0, 0, 4, "")
         ),
         getEditsByTextAndSelectRange(
             """
@@ -142,8 +142,8 @@ public class FormattingCommandTest extends BasePlatformTestCase {
 
     Assertions.assertEquals(
         List.of(
-            TestUtil.createTextEdit(0, 0, 0, 4, ""),
-            TestUtil.createTextEdit(1, 0, 1, 4, "")
+            TestUtil.newTextEdit(0, 0, 0, 4, ""),
+            TestUtil.newTextEdit(1, 0, 1, 4, "")
         ),
         getEditsByTextAndSelectRange(
             """
