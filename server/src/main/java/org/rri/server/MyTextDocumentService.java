@@ -109,7 +109,6 @@ public class MyTextDocumentService implements TextDocumentService {
 
   @Override
   public CompletableFuture<List<Either<Command, CodeAction>>> codeAction(CodeActionParams params) {
-//    LOG.warn("codeAction invoked: " + params);
     return CompletableFuture.completedFuture(
         diagnostics().getCodeActions(
             LspPath.fromLspUri(params.getTextDocument().getUri()),
