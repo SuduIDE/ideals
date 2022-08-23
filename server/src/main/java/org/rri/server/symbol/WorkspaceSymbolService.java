@@ -1,6 +1,5 @@
 package org.rri.server.symbol;
 
-import com.intellij.codeInsight.daemon.impl.DaemonProgressIndicator;
 import com.intellij.ide.actions.searcheverywhere.FoundItemDescriptor;
 import com.intellij.ide.actions.searcheverywhere.SearchEverywhereToggleAction;
 import com.intellij.ide.actions.searcheverywhere.SymbolSearchEverywhereContributor;
@@ -8,6 +7,9 @@ import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.Service;
+import com.intellij.openapi.progress.ProcessCanceledException;
+import com.intellij.openapi.progress.StandardProgressIndicator;
+import com.intellij.openapi.progress.util.AbstractProgressIndicatorBase;
 import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Ref;
@@ -21,6 +23,8 @@ import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.SymbolInformation;
 import org.eclipse.lsp4j.WorkspaceSymbol;
 import org.eclipse.lsp4j.WorkspaceSymbolLocation;
+import org.eclipse.lsp4j.jsonrpc.CancelChecker;
+import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -29,6 +33,7 @@ import org.rri.server.symbol.provider.DocumentSymbolInfoUtil;
 import org.rri.server.util.MiscUtil;
 
 import java.util.*;
+import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
@@ -49,17 +54,18 @@ final public class WorkspaceSymbolService {
 
   @SuppressWarnings("deprecation")
   public @NotNull CompletableFuture<@NotNull Either<List<? extends SymbolInformation>, @Nullable List<? extends WorkspaceSymbol>>> runSearch(String pattern) {
-    return CompletableFuture.supplyAsync(() -> {
-      if (DumbService.isDumb(project)) {
-        return Either.forRight(null);
-      }
-      final var result = execute(pattern);
-      result.forEach(searchResult -> elements.put(searchResult.symbol(), searchResult.element()));
-      final var lst = result.stream()
-          .map(WorkspaceSearchResult::symbol)
-          .toList();
-      return Either.forRight(lst);
-    }, AppExecutorUtil.getAppExecutorService());
+    return CompletableFutures.computeAsync(AppExecutorUtil.getAppExecutorService(),
+        cancelToken -> {
+          if (DumbService.isDumb(project)) {
+            return Either.forRight(null);
+          }
+          final var result = execute(pattern, cancelToken);
+          result.forEach(searchResult -> elements.put(searchResult.symbol(), searchResult.element()));
+          final var lst = result.stream()
+              .map(WorkspaceSearchResult::symbol)
+              .toList();
+          return Either.forRight(lst);
+        });
   }
 
   public @NotNull CompletableFuture<@NotNull WorkspaceSymbol> resolveWorkspaceSymbol(@NotNull WorkspaceSymbol workspaceSymbol) {
@@ -75,7 +81,7 @@ final public class WorkspaceSymbolService {
     }, AppExecutorUtil.getAppExecutorService());
   }
 
-  private @NotNull List<@NotNull WorkspaceSearchResult> execute(@NotNull String pattern) {
+  private @NotNull List<@NotNull WorkspaceSearchResult> execute(@NotNull String pattern, @Nullable CancelChecker cancelToken) {
     Ref<SymbolSearchEverywhereContributor> contributorRef = new Ref<>();
     ApplicationManager.getApplication().invokeAndWait(
         () -> {
@@ -93,7 +99,7 @@ final public class WorkspaceSymbolService {
     );
     final var ref = new Ref<List<WorkspaceSearchResult>>();
     ApplicationManager.getApplication().runReadAction(
-        () -> ref.set(search(contributorRef.get(), pattern.isEmpty() ? "*" : pattern)));
+        () -> ref.set(search(contributorRef.get(), pattern.isEmpty() ? "*" : pattern, cancelToken)));
     return ref.get();
   }
 
@@ -105,12 +111,14 @@ final public class WorkspaceSymbolService {
 
   public @NotNull List<@NotNull WorkspaceSearchResult> search(
       @NotNull SymbolSearchEverywhereContributor contributor,
-      @NotNull String pattern) {
+      @NotNull String pattern,
+      @Nullable CancelChecker cancelToken) {
     final var projectSymbols = new ArrayList<WorkspaceSearchResult>(LIMIT);
     final var otherSymbols = new ArrayList<WorkspaceSearchResult>(LIMIT);
     final var scope = ProjectScope.getProjectScope(project);
     try {
-      final var indicator = new DaemonProgressIndicator();
+//      final var indicator = new DaemonProgressIndicator();
+      final var indicator = new WorkspaceSymbolIndicator(cancelToken);
       final var elements = new HashSet<PsiElement>();
       ApplicationManager.getApplication().executeOnPooledThread(() ->
           contributor.fetchWeightedElements(pattern, indicator,
@@ -168,5 +176,26 @@ final public class WorkspaceSymbolService {
   @NotNull
   private static String normalizeUri(@NotNull String uri) {
     return uri.replaceAll("/+", "/");
+  }
+
+  private static class WorkspaceSymbolIndicator extends AbstractProgressIndicatorBase implements StandardProgressIndicator {
+    @Nullable
+    private final CancelChecker cancelToken;
+
+    public WorkspaceSymbolIndicator(@Nullable CancelChecker cancelToken) {
+      this.cancelToken = cancelToken;
+    }
+
+    @Override
+    public void checkCanceled() {
+      if (cancelToken != null) {
+        try {
+          cancelToken.checkCanceled();
+        } catch (CancellationException e) {
+          throw new ProcessCanceledException(e);
+        }
+      }
+      super.checkCanceled();
+    }
   }
 }
