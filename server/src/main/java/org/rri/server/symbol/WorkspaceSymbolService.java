@@ -117,7 +117,6 @@ final public class WorkspaceSymbolService {
     final var otherSymbols = new ArrayList<WorkspaceSearchResult>(LIMIT);
     final var scope = ProjectScope.getProjectScope(project);
     try {
-//      final var indicator = new DaemonProgressIndicator();
       final var indicator = new WorkspaceSymbolIndicator(cancelToken);
       final var elements = new HashSet<PsiElement>();
       ApplicationManager.getApplication().executeOnPooledThread(() ->
