@@ -296,11 +296,8 @@ final public class CompletionService implements Disposable {
 
     var d = Disposer.newDisposable();
     try {
-
-        IconManager.activate(new CoreIconManager());
-
+      IconManager.activate(new CoreIconManager());
       var presentation = LookupElementPresentation.renderElement(lookupElement);
-
 
       StringBuilder contextInfo = new StringBuilder();
       for (var textFragment : presentation.getTailFragments()) {
