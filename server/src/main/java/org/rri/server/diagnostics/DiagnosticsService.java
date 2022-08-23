@@ -120,12 +120,6 @@ final public class DiagnosticsService {
 
       final var oldCopy = ((PsiFile) psiFile.copy());
 
-      var manager = PsiDocumentManager.getInstance(project);
-
-      var doc = MiscUtil.getDocument(psiFile);
-      assert doc != null;
-      assert manager.isCommitted(doc);
-
       ApplicationManager.getApplication().invokeAndWait(() -> {
         final var editor = EditorUtil.createEditor(disposable, psiFile, actionData.getRange().getStart());
 
@@ -151,7 +145,7 @@ final public class DiagnosticsService {
 
       WriteCommandAction.runWriteCommandAction(project, () -> {
         newDoc.get().setText(oldDoc.get().getText());
-        manager.commitDocument(newDoc.get());
+        PsiDocumentManager.getInstance(project).commitDocument(newDoc.get());
       });
 
       if (!edits.isEmpty()) {
