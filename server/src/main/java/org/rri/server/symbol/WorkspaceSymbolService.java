@@ -1,6 +1,7 @@
 package org.rri.server.symbol;
 
 import com.intellij.codeInsight.daemon.impl.DaemonProgressIndicator;
+import com.intellij.ide.actions.searcheverywhere.FoundItemDescriptor;
 import com.intellij.ide.actions.searcheverywhere.SearchEverywhereToggleAction;
 import com.intellij.ide.actions.searcheverywhere.SymbolSearchEverywhereContributor;
 import com.intellij.openapi.actionSystem.AnActionEvent;
@@ -9,12 +10,14 @@ import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
-import com.intellij.openapi.util.Pair;
 import com.intellij.openapi.util.Ref;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiNameIdentifierOwner;
+import com.intellij.psi.search.ProjectScope;
+import com.intellij.psi.search.SearchScope;
 import com.intellij.util.concurrency.AppExecutorUtil;
 import com.intellij.util.containers.ContainerUtil;
+import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.SymbolInformation;
 import org.eclipse.lsp4j.WorkspaceSymbol;
 import org.eclipse.lsp4j.WorkspaceSymbolLocation;
@@ -28,6 +31,7 @@ import org.rri.server.util.MiscUtil;
 import java.util.*;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutionException;
+import java.util.stream.Stream;
 
 @Service(Service.Level.PROJECT)
 final public class WorkspaceSymbolService {
@@ -59,10 +63,15 @@ final public class WorkspaceSymbolService {
 
   public @NotNull CompletableFuture<@NotNull WorkspaceSymbol> resolveWorkspaceSymbol(@NotNull WorkspaceSymbol workspaceSymbol) {
     return CompletableFuture.supplyAsync(() -> {
-      workspaceSymbol.setLocation(Either.forLeft(MiscUtil.psiElementToLocation(elements.get(workspaceSymbol))));
+      final var uri = workspaceSymbol.getLocation().getRight().getUri();
+      final var normalizedLocation = new WorkspaceSymbolLocation(normalizeUri(LspPath.fromLspUri(uri).toLspUri()));
+      workspaceSymbol.setLocation(Either.forRight(normalizedLocation));
+      ApplicationManager.getApplication().runReadAction(() ->
+          workspaceSymbol.setLocation(Either.forLeft(MiscUtil.psiElementToLocation(elements.get(workspaceSymbol))))
+      );
       elements.clear();
       return workspaceSymbol;
-    });
+    }, AppExecutorUtil.getAppExecutorService());
   }
 
   private @NotNull List<@NotNull WorkspaceSearchResult> execute(@NotNull String pattern) {
@@ -72,62 +81,62 @@ final public class WorkspaceSymbolService {
           final var context = SimpleDataContext.getProjectContext(project);
           final var event = AnActionEvent.createFromDataContext("keyboard shortcut", null, context);
           final var contributor = new SymbolSearchEverywhereContributor(event);
-          final var actions = contributor.getActions(() -> {
-          });
-          final var everywhereAction = (SearchEverywhereToggleAction) ContainerUtil.find(actions, o -> o instanceof SearchEverywhereToggleAction);
-          everywhereAction.setEverywhere(true);
+          if (!pattern.isEmpty()) {
+            final var actions = contributor.getActions(() -> {
+            });
+            final var everywhereAction = (SearchEverywhereToggleAction) ContainerUtil.find(actions, o -> o instanceof SearchEverywhereToggleAction);
+            everywhereAction.setEverywhere(true);
+          }
           contributorRef.set(contributor);
         }
     );
     final var ref = new Ref<List<WorkspaceSearchResult>>();
     ApplicationManager.getApplication().runReadAction(
-        () -> ref.set(search(contributorRef.get(), pattern)));
+        () -> ref.set(search(contributorRef.get(), pattern.isEmpty() ? "*" : pattern)));
     return ref.get();
   }
 
-  private record WorkspaceSearchResult(WorkspaceSymbol symbol, PsiElement element) {
+  private record WorkspaceSearchResult(@NotNull WorkspaceSymbol symbol,
+                                       @NotNull PsiElement element,
+                                       int weight,
+                                       boolean isProjectFile) {
   }
 
   public @NotNull List<@NotNull WorkspaceSearchResult> search(
       @NotNull SymbolSearchEverywhereContributor contributor,
       @NotNull String pattern) {
-    if (pattern.isEmpty()) {
-      return List.of();
-    }
-
-    final var res = new ArrayList<Pair<WorkspaceSearchResult, Integer>>(LIMIT);
+    final var projectSymbols = new ArrayList<WorkspaceSearchResult>(LIMIT);
+    final var otherSymbols = new ArrayList<WorkspaceSearchResult>(LIMIT);
+    final var scope = ProjectScope.getProjectScope(project);
     try {
       final var indicator = new DaemonProgressIndicator();
       final var elements = new HashSet<PsiElement>();
       ApplicationManager.getApplication().executeOnPooledThread(() ->
           contributor.fetchWeightedElements(pattern, indicator,
               descriptor -> {
-                assert descriptor.getItem() instanceof PsiElement;
-                final var elem = (PsiElement) descriptor.getItem();
-                if (elements.contains(elem)) {
+                if (!(descriptor.getItem() instanceof final PsiElement elem)
+                    || elements.contains(elem)) {
                   return true;
                 }
-                final var workspaceSym = toWorkspaceSymbol(descriptor.getItem());
-                if (workspaceSym == null) {
+                final var searchResult = toSearchResult(descriptor, scope);
+                if (searchResult == null) {
                   return true;
                 }
                 elements.add(elem);
-                res.add(new Pair<>(new WorkspaceSearchResult(workspaceSym, (PsiElement) descriptor.getItem()),
-                    descriptor.getWeight()));
-                return res.size() < LIMIT;
+                (searchResult.isProjectFile() ? projectSymbols : otherSymbols).add(searchResult);
+                return projectSymbols.size() + otherSymbols.size() < LIMIT;
               })).get();
     } catch (InterruptedException | ExecutionException ignored) {
     }
-
-    return res.stream()
-        .sorted(Comparator.<Pair<WorkspaceSearchResult, Integer>>comparingInt(p -> p.getSecond()).reversed())
-        .map(p -> p.getFirst())
-        .distinct()
-        .toList();
+    final var comp = Comparator.comparingInt(WorkspaceSearchResult::weight).reversed();
+    projectSymbols.sort(comp);
+    otherSymbols.sort(comp);
+    return Stream.of(projectSymbols, otherSymbols).flatMap(List::stream).toList();
   }
 
-  private static @Nullable WorkspaceSymbol toWorkspaceSymbol(@NotNull Object o) {
-    if (!(o instanceof final PsiElement elem)) {
+  private static @Nullable WorkspaceSearchResult toSearchResult(@NotNull FoundItemDescriptor<@NotNull Object> descriptor,
+                                                                @NotNull SearchScope scope) {
+    if (!(descriptor.getItem() instanceof final PsiElement elem)) {
       return null;
     }
     final var provider = DocumentSymbolInfoUtil.getDocumentSymbolProvider(elem.getLanguage());
@@ -142,12 +151,21 @@ final public class WorkspaceSymbolService {
     if (psiFile == null) {
       return null;
     }
+    final var virtualFile = psiFile.getVirtualFile();
     final var containerName = elem.getParent() instanceof PsiNameIdentifierOwner
         ? ((PsiNameIdentifierOwner) elem.getParent()).getName()
         : null;
-    return new WorkspaceSymbol(info.getName(), info.getKind(),
+    final var location = new Location();
+    location.setUri(LspPath.fromVirtualFile(virtualFile).toLspUri());
+    final var symbol = new WorkspaceSymbol(info.getName(), info.getKind(),
         Either.forRight(new WorkspaceSymbolLocation(
-            LspPath.fromVirtualFile(psiFile.getVirtualFile()).toLspUri())
-        ), containerName);
+            normalizeUri(LspPath.fromVirtualFile(psiFile.getVirtualFile()).toLspUri())
+        )), containerName);
+    return new WorkspaceSearchResult(symbol, elem, descriptor.getWeight(), scope.contains(virtualFile));
+  }
+
+  @NotNull
+  private static String normalizeUri(@NotNull String uri) {
+    return uri.replaceAll("/+", "/");
   }
 }
