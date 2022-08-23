@@ -1,7 +1,10 @@
 package org.rri.server.symbol;
 
+import com.intellij.psi.PsiElement;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
-import org.eclipse.lsp4j.*;
+import org.eclipse.lsp4j.SymbolKind;
+import org.eclipse.lsp4j.WorkspaceSymbol;
+import org.eclipse.lsp4j.WorkspaceSymbolLocation;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -12,6 +15,7 @@ import org.rri.server.LspPath;
 import org.rri.server.TestUtil;
 
 import java.nio.file.Paths;
+import java.util.HashMap;
 import java.util.List;
 
 @RunWith(JUnit4.class)
@@ -41,14 +45,17 @@ public class WorkspaceSymbolServiceTest extends BasePlatformTestCase {
     final var class2SomeSymbolForWorkspaceSymbolUri = LspPath.fromVirtualFile(class2VirtualFile).toLspUri();
 
     final var orgSomeSymbolForWorkspaceSymbol = workspaceSymbol("SomeSymbolForWorkspaceSymbol", SymbolKind.Class,
-        location(orgSomeSymbolForWorkspaceSymbolUri, range(2, 13, 2, 41)));
+        workspaceSymbolLocation(orgSomeSymbolForWorkspaceSymbolUri));
     final var comSomeSymbolForWorkspaceSymbol = workspaceSymbol("SomeSymbolForWorkspaceSymbol", SymbolKind.Class,
-        location(comSomeSymbolForWorkspaceSymbolUri, range(2, 13, 2, 41)));
+        workspaceSymbolLocation(comSomeSymbolForWorkspaceSymbolUri));
     final var class2SomeSymbolForWorkspaceSymbol = workspaceSymbol("SomeSymbolForWorkspaceSymbol(int)", SymbolKind.Method,
-        location(class2SomeSymbolForWorkspaceSymbolUri, range(3, 16, 3, 44)));
+        workspaceSymbolLocation(class2SomeSymbolForWorkspaceSymbolUri));
     class2SomeSymbolForWorkspaceSymbol.setContainerName("Class2");
 
-    final var future = new WorkspaceSymbolService("SomeSymbolForWorkspaceSymbol").execute(getProject());
+    final var map = new HashMap<WorkspaceSymbol, PsiElement>();
+
+    final var future = new WorkspaceSymbolService("SomeSymbolForWorkspaceSymbol")
+        .runAsync(getProject(), map);
     final var result = TestUtil.getNonBlockingEdt(future, 30000).getRight();
 
     assertEquals(List.of(comSomeSymbolForWorkspaceSymbol, class2SomeSymbolForWorkspaceSymbol, orgSomeSymbolForWorkspaceSymbol), result);
@@ -69,15 +76,18 @@ public class WorkspaceSymbolServiceTest extends BasePlatformTestCase {
     final var workspaceSymbolUri = LspPath.fromVirtualFile(workspaceSymbolFile).toLspUri();
 
     final var class1Class1 = workspaceSymbol("Class1", SymbolKind.Class,
-        location(class1Uri, range(0, 6, 0, 12)));
+        workspaceSymbolLocation(class1Uri));
     final var otherClass1Class1 = workspaceSymbol("Class1", SymbolKind.Class,
-        location(otherClass1Uri, range(0, 6, 0, 12)));
+        workspaceSymbolLocation(otherClass1Uri));
     final var workspaceSymbolVarClass1 = workspaceSymbol("Class1", SymbolKind.Variable,
-        location(workspaceSymbolUri, range(0, 0, 0, 6)));
+        workspaceSymbolLocation(workspaceSymbolUri));
     final var workspaceSymbolFuncClass1 = workspaceSymbol("Class1(x, y)", SymbolKind.Function,
-        location(workspaceSymbolUri, range(2, 4, 2, 10)));
+        workspaceSymbolLocation(workspaceSymbolUri));
 
-    final var future = new WorkspaceSymbolService("Class1").execute(getProject());
+    final var map = new HashMap<WorkspaceSymbol, PsiElement>();
+
+    final var future = new WorkspaceSymbolService("Class1")
+        .runAsync(getProject(), map);
     final var result = TestUtil.getNonBlockingEdt(future, 30000).getRight();
 
     assertEquals(List.of(workspaceSymbolFuncClass1, workspaceSymbolVarClass1, otherClass1Class1, class1Class1), result);
@@ -93,35 +103,32 @@ public class WorkspaceSymbolServiceTest extends BasePlatformTestCase {
     final var uri = LspPath.fromVirtualFile(virtualFile).toLspUri();
 
     final var varSymbol = workspaceSymbol("symbol", SymbolKind.Field,
-        location(uri, range(3, 14, 3, 20)), "WorkspaceSymbol");
+        workspaceSymbolLocation(uri), "WorkspaceSymbol");
     final var funSymbol = workspaceSymbol("symbol(int, int)", SymbolKind.Function,
-        location(uri, range(5, 6, 5, 12)), "WorkspaceSymbol");
+        workspaceSymbolLocation(uri), "WorkspaceSymbol");
 
-    final var future = new WorkspaceSymbolService("symbol").execute(getProject());
+    final var map = new HashMap<WorkspaceSymbol, PsiElement>();
+
+    final var future = new WorkspaceSymbolService("symbol")
+        .runAsync(getProject(), map);
     final var result = TestUtil.getNonBlockingEdt(future, 30000).getRight();
 
     assertEquals(List.of(varSymbol, funSymbol), result);
   }
 
   @NotNull
-  private static WorkspaceSymbol workspaceSymbol(@NotNull String name, @NotNull SymbolKind kind, @NotNull Location location) {
+  private static WorkspaceSymbol workspaceSymbol(@NotNull String name, @NotNull SymbolKind kind, @NotNull WorkspaceSymbolLocation location) {
     return workspaceSymbol(name, kind, location, null);
   }
 
   @NotNull
-  private static WorkspaceSymbol workspaceSymbol(@NotNull String name, @NotNull SymbolKind kind, @NotNull Location location,
+  private static WorkspaceSymbol workspaceSymbol(@NotNull String name, @NotNull SymbolKind kind, @NotNull WorkspaceSymbolLocation location,
                                                  @Nullable String containerName) {
-    return new WorkspaceSymbol(name, kind, Either.forLeft(location), containerName);
+    return new WorkspaceSymbol(name, kind, Either.forRight(location), containerName);
   }
 
   @NotNull
-  private static Location location(@NotNull String uri, @NotNull Range range) {
-    return new Location(uri, range);
-  }
-
-  @SuppressWarnings("SameParameterValue")
-  @NotNull
-  private static Range range(int line1, int char1, int line2, int char2) {
-    return new Range(new Position(line1, char1), new Position(line2, char2));
+  private static WorkspaceSymbolLocation workspaceSymbolLocation(@NotNull String uri) {
+    return new WorkspaceSymbolLocation(uri);
   }
 }
