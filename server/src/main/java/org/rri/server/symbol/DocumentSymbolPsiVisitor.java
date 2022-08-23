@@ -78,7 +78,8 @@ class DocumentSymbolPsiVisitor extends PsiRecursiveElementVisitor {
     if (docSym != null) {
       final var lst = children.pop();
       if (lst.size() > 0) {
-        lst.sort(Comparator.comparingInt(sym -> MiscUtil.positionToOffset(document, sym.getRange().getStart())));
+        lst.sort(Comparator.<DocumentSymbol>comparingInt(it -> it.getRange().getStart().getLine())
+            .thenComparingInt(it -> it.getRange().getStart().getLine()));
         docSym.setChildren(lst);
       }
     }
