@@ -114,7 +114,7 @@ public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
             return false;
           }
         }
-        if (usage instanceof UsageInfo2UsageAdapter ui2ua) {
+        if (usage instanceof final UsageInfo2UsageAdapter ui2ua && !ui2ua.isNonCodeUsage()) {
           var elem = ui2ua.getElement();
           var loc = MiscUtil.psiElementToLocation(elem);
           if (loc != null) {
