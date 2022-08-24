@@ -21,8 +21,8 @@ import com.intellij.util.concurrency.AppExecutorUtil;
 import com.intellij.util.containers.ContainerUtil;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.SymbolInformation;
+import org.eclipse.lsp4j.SymbolTag;
 import org.eclipse.lsp4j.WorkspaceSymbol;
-import org.eclipse.lsp4j.WorkspaceSymbolLocation;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -32,10 +32,12 @@ import org.rri.server.LspPath;
 import org.rri.server.symbol.provider.DocumentSymbolInfoUtil;
 import org.rri.server.util.MiscUtil;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Comparator;
+import java.util.HashSet;
+import java.util.List;
 import java.util.concurrent.CancellationException;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ExecutionException;
 import java.util.stream.Stream;
 
@@ -43,8 +45,6 @@ import java.util.stream.Stream;
 final public class WorkspaceSymbolService {
   @NotNull
   private final Project project;
-  @NotNull
-  private final Map<@NotNull WorkspaceSymbol, @NotNull PsiElement> elements = new ConcurrentHashMap<>();
 
   private final int LIMIT = 100;
 
@@ -59,26 +59,11 @@ final public class WorkspaceSymbolService {
           if (DumbService.isDumb(project)) {
             return Either.forRight(null);
           }
-          final var result = execute(pattern, cancelToken);
-          result.forEach(searchResult -> elements.put(searchResult.symbol(), searchResult.element()));
-          final var lst = result.stream()
+          final var result = execute(pattern, cancelToken).stream()
               .map(WorkspaceSearchResult::symbol)
               .toList();
-          return Either.forRight(lst);
+          return Either.forRight(result);
         });
-  }
-
-  public @NotNull CompletableFuture<@NotNull WorkspaceSymbol> resolveWorkspaceSymbol(@NotNull WorkspaceSymbol workspaceSymbol) {
-    return CompletableFuture.supplyAsync(() -> {
-      final var uri = workspaceSymbol.getLocation().getRight().getUri();
-      final var normalizedLocation = new WorkspaceSymbolLocation(normalizeUri(LspPath.fromLspUri(uri).toLspUri()));
-      workspaceSymbol.setLocation(Either.forRight(normalizedLocation));
-      ApplicationManager.getApplication().runReadAction(() ->
-          workspaceSymbol.setLocation(Either.forLeft(MiscUtil.psiElementToLocation(elements.get(workspaceSymbol))))
-      );
-      elements.clear();
-      return workspaceSymbol;
-    }, AppExecutorUtil.getAppExecutorService());
   }
 
   private @NotNull List<@NotNull WorkspaceSearchResult> execute(@NotNull String pattern, @Nullable CancelChecker cancelToken) {
@@ -166,15 +151,12 @@ final public class WorkspaceSymbolService {
     final var location = new Location();
     location.setUri(LspPath.fromVirtualFile(virtualFile).toLspUri());
     final var symbol = new WorkspaceSymbol(info.getName(), info.getKind(),
-        Either.forRight(new WorkspaceSymbolLocation(
-            normalizeUri(LspPath.fromVirtualFile(psiFile.getVirtualFile()).toLspUri())
-        )), containerName);
+        Either.forLeft(MiscUtil.psiElementToLocation(elem)),
+        containerName);
+    if (provider.isDeprecated(elem)) {
+      symbol.setTags(List.of(SymbolTag.Deprecated));
+    }
     return new WorkspaceSearchResult(symbol, elem, descriptor.getWeight(), scope.contains(virtualFile));
-  }
-
-  @NotNull
-  private static String normalizeUri(@NotNull String uri) {
-    return uri.replaceAll("/+", "/");
   }
 
   private static class WorkspaceSymbolIndicator extends AbstractProgressIndicatorBase implements StandardProgressIndicator {

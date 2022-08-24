@@ -36,9 +36,4 @@ public class MyWorkspaceService implements WorkspaceService {
   public CompletableFuture<Either<List<? extends SymbolInformation>, List<? extends WorkspaceSymbol>>> symbol(WorkspaceSymbolParams params) {
     return workspaceSymbol().runSearch(params.getQuery());
   }
-
-  @Override
-  public CompletableFuture<WorkspaceSymbol> resolveWorkspaceSymbol(WorkspaceSymbol workspaceSymbol) {
-    return workspaceSymbol().resolveWorkspaceSymbol(workspaceSymbol);
-  }
 }
