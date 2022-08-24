@@ -67,7 +67,8 @@ public class TextUtil {
     }).collect(Collectors.toList());
   }
 
-  public static PsiFile getCopyByFileText(PsiFile psiFile) {
+  @NotNull
+  private static PsiFile getCopyByFileText(@NotNull PsiFile psiFile) {
     var manager = PsiDocumentManager.getInstance(psiFile.getProject());
     var doc = MiscUtil.getDocument(psiFile);
     assert doc != null;
@@ -83,14 +84,17 @@ public class TextUtil {
   }
 
   public static class TextEditWithOffsets implements Comparable<TextEditWithOffsets> {
+    @NotNull
     private final Pair<Integer, Integer> range;
+    @NotNull
     private String newText;
 
+    @NotNull
     public String getNewText() {
       return newText;
     }
 
-    public TextEditWithOffsets(Integer start, Integer end, String newText) {
+    public TextEditWithOffsets(@NotNull Integer start,@NotNull Integer end,@NotNull String newText) {
       this.range = new Pair<>(start, end);
       this.newText = newText;
     }
@@ -113,6 +117,7 @@ public class TextUtil {
     }
 
     @Override
+    @NotNull
     public String toString() {
       return "range: " + range + ", newText: " + newText;
     }
@@ -178,11 +183,13 @@ public class TextUtil {
         additionalEdits);
   }
 
-  static private TextEditWithOffsets mergeTextEditsToOne(TreeSet<TextEditWithOffsets> editsToMergeRangesAsOffsets,
-                                                         int replaceElementStartOffset,
-                                                         int replaceElementEndOffset,
-                                                         ArrayList<TextEditWithOffsets> additionalEdits,
-                                                         String originalText) {
+  @NotNull
+  static private TextEditWithOffsets mergeTextEditsToOne(
+      @NotNull TreeSet<TextEditWithOffsets> editsToMergeRangesAsOffsets,
+      int replaceElementStartOffset,
+      int replaceElementEndOffset,
+      @NotNull ArrayList<TextEditWithOffsets> additionalEdits,
+      @NotNull String originalText) {
     final var mergeRangeStartOffset = editsToMergeRangesAsOffsets.first().range.first;
     final var mergeRangeEndOffset = editsToMergeRangesAsOffsets.last().range.second;
     StringBuilder builder = new StringBuilder();
@@ -218,11 +225,12 @@ public class TextUtil {
     return new TextEditWithOffsets(replaceElementStartOffset, replaceElementEndOffset, builder.toString());
   }
 
+  @NotNull
   private static TreeSet<TextEditWithOffsets> findIntersectedEdits(
       int collisionRangeStartOffset,
       int collisionRangeEndOffset,
-      TreeSet<TextEditWithOffsets> diffRangesAsOffsetsTreeSet,
-      List<TextEditWithOffsets> uselessEdits) {
+      @NotNull TreeSet<TextEditWithOffsets> diffRangesAsOffsetsTreeSet,
+      @NotNull List<TextEditWithOffsets> uselessEdits) {
 
     var first = new TextEditWithOffsets(collisionRangeStartOffset,
         collisionRangeStartOffset, "");
@@ -232,27 +240,27 @@ public class TextUtil {
     var editsToMergeRangesAsOffsets = new TreeSet<>(diffRangesAsOffsetsTreeSet.subSet(first, true, last, true));
 
     if (floor != null) {
-      if (floor.range.second >= collisionRangeStartOffset) {
+      boolean isNotInclusive = floor.range.second >= collisionRangeStartOffset;
+      if (isNotInclusive) {
         editsToMergeRangesAsOffsets.add(floor);
-        uselessEdits.addAll(diffRangesAsOffsetsTreeSet.headSet(floor, false));
-      } else {
-        uselessEdits.addAll(diffRangesAsOffsetsTreeSet.headSet(floor, true));
       }
+      uselessEdits.addAll(diffRangesAsOffsetsTreeSet.headSet(floor, isNotInclusive));
     }
 
     if (ceil != null) {
-      if (ceil.range.first <= collisionRangeEndOffset) {
+      boolean isNotInclusive = ceil.range.first <= collisionRangeEndOffset;
+      if (isNotInclusive) {
         editsToMergeRangesAsOffsets.add(ceil);
-        uselessEdits.addAll(diffRangesAsOffsetsTreeSet.tailSet(ceil, false));
-      } else {
-        uselessEdits.addAll(diffRangesAsOffsetsTreeSet.tailSet(ceil, true));
       }
+      uselessEdits.addAll(diffRangesAsOffsetsTreeSet.tailSet(ceil, isNotInclusive));
     }
     return editsToMergeRangesAsOffsets;
   }
 
-  static private TextEditWithOffsets findEditWithCaret(TreeSet<TextEditWithOffsets> diffRangesAsOffsetsTreeSet,
-                                                       int caretOffsetAcc) {
+  @NotNull
+  static private TextEditWithOffsets findEditWithCaret(
+      @NotNull TreeSet<TextEditWithOffsets> diffRangesAsOffsetsTreeSet,
+      int caretOffsetAcc) {
     int sub;
     int prevEnd = 0;
     TextEditWithOffsets textEditWithCaret = null;
@@ -284,7 +292,7 @@ public class TextUtil {
     return textEditWithCaret;
   }
 
-  public record MergeEditsResult(TextEditWithOffsets mainEdit,
-                                 List<TextEditWithOffsets> additionalEdits) {
+  public record MergeEditsResult(@NotNull TextEditWithOffsets mainEdit,
+                                 @NotNull List<TextEditWithOffsets> additionalEdits) {
   }
 }
