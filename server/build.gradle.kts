@@ -19,12 +19,12 @@ dependencies {
 
 // Configure Gradle IntelliJ Plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
 intellij {
-  version.set("2022.2")
+  version.set("2022.2.1")
   type.set("IC") // Target IDE Platform
   pluginsRepositories {
     marketplace()
   }
-  plugins.set(listOf("Kotlin", "java", "PythonCore:222.3345.131"))
+  plugins.set(listOf("Kotlin", "java", "PythonCore:222.3739.68"))
 }
 
 open class PlainIdeTask : RunIdeTask()

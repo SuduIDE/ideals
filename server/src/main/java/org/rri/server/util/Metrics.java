@@ -23,16 +23,18 @@ public class Metrics {
     String prefix = blockNameSupplier.get();
     LOG.debug(prefix + ": started");
     final var start = System.nanoTime();
+    Throwable thrown = null;
     try {
       var result = block.get();
       prefix += ": took ";
       return result;
     } catch (Exception e) {
       prefix += ": exceptionally took ";
+      thrown = e;
       throw MiscUtil.wrap(e);
     } finally {
       var end = System.nanoTime();
-      LOG.debug(prefix + ((end - start) / 1_000_000) + " ms");
+      LOG.debug(prefix + ((end - start) / 1_000_000) + " ms", thrown);
     }
   }
 }

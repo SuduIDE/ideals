@@ -6,7 +6,6 @@ import com.intellij.codeInsight.daemon.impl.HighlightInfo;
 import com.intellij.codeInsight.daemon.impl.HighlightingSessionImpl;
 import com.intellij.lang.annotation.HighlightSeverity;
 import com.intellij.openapi.Disposable;
-import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.progress.ProcessCanceledException;
@@ -63,7 +62,7 @@ class DiagnosticsTask implements Runnable {
 
     final var range = MiscUtil.getRange(doc, info);
 
-    if(info.quickFixActionRanges != null) {
+    if (info.quickFixActionRanges != null) {
       registry.registerQuickFixes(
           range,
           info.quickFixActionRanges.stream().map(it -> it.first).collect(Collectors.toList()));
@@ -120,33 +119,30 @@ class DiagnosticsTask implements Runnable {
     var project = psiFile.getProject();
 
     return ProgressManager.getInstance().runProcess(() -> {
-      var analyzer = DaemonCodeAnalyzerEx.getInstanceEx(project);
 
       // ensure we get fresh results; the restart also seems to
-      //  prevent the "process canceled" issue (see #30)
+      // prevent the "process canceled" issue (see #30)
+      // TODO do we really need this?
       //PsiDocumentManager.getInstance(document).commitAllDocuments()
 
-      return ReadAction.<List<HighlightInfo>>nonBlocking(() -> {
-        try {
-          analyzer.restart(psiFile);
-          final var range = ProperTextRange.create(0, document.getTextLength());
+      try {
+        final var range = ProperTextRange.create(0, document.getTextLength());
 
-          // this shouldn't be needed but for some reason the next call fails without it
-          HighlightingSessionImpl.runInsideHighlightingSession(psiFile, progress, null, range, false, () -> {
-          });
+        // this shouldn't be needed but for some reason the next call fails without it
+        HighlightingSessionImpl.runInsideHighlightingSession(psiFile, progress, null, range, false, () -> {
+        });
 
-          final var result = analyzer.runMainPasses(psiFile, doc, progress);
-          if (LOG.isTraceEnabled()) LOG.trace("Analyzing file: produced items: " + result.size());
-          return result;
-        } catch (IndexNotReadyException e) {
-          LOG.warn("Analyzing file: index not ready");
-          return Collections.emptyList();
-        } catch (ProcessCanceledException e) {
-          if (LOG.isTraceEnabled())
-            LOG.trace("Analyzing file: highlighting has been cancelled: " + file.getVirtualFile());
-          throw e;
-        }
-      }).executeSynchronously();
+        final var result = DaemonCodeAnalyzerEx.getInstanceEx(project).runMainPasses(psiFile, doc, progress);
+        if (LOG.isTraceEnabled()) LOG.trace("Analyzing file: produced items: " + result.size());
+        return result;
+      } catch (IndexNotReadyException e) {
+        LOG.warn("Analyzing file: index not ready");
+        return Collections.emptyList();
+      } catch (ProcessCanceledException e) {
+        if (LOG.isTraceEnabled())
+          LOG.trace("Analyzing file: highlighting has been cancelled: " + file.getVirtualFile());
+        throw e;
+      }
 
     }, progress);
   }

@@ -1,6 +1,7 @@
 package org.rri.server.diagnostics;
 
 import com.google.gson.GsonBuilder;
+import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.application.WriteAction;
@@ -47,6 +48,8 @@ final public class DiagnosticsService {
       }
 
       var quickFixes = new QuickFixRegistry();
+
+      DaemonCodeAnalyzer.getInstance(project).restart(psiFile);
 
       var task = launchDelayedTask(path, psiFile, document, quickFixes);
 
