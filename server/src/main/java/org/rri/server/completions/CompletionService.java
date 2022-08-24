@@ -32,6 +32,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.server.LspPath;
+import org.rri.server.completions.util.TextEditUtil;
 import org.rri.server.util.EditorUtil;
 import org.rri.server.util.MiscUtil;
 import org.rri.server.util.TextUtil;
@@ -41,7 +42,6 @@ import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
 import static org.rri.server.util.IconUtil.compareIcons;
-import static org.rri.server.util.TextUtil.*;
 
 @Service(Service.Level.PROJECT)
 final public class CompletionService implements Disposable {
@@ -203,13 +203,13 @@ final public class CompletionService implements Disposable {
               unresolvedTextEdit.getRange().getEnd());
 
           var newTextAndAdditionalEdits =
-              findOverlappingTextEditsInRangeFromMainTextEditToCaretAndMergeThem(
-                  toListOfEditsWithOffsets(diff, copyThatCalledCompletionDoc),
+              TextEditUtil.findOverlappingTextEditsInRangeFromMainTextEditToCaretAndMergeThem(
+                  TextEditUtil.toListOfEditsWithOffsets(diff, copyThatCalledCompletionDoc),
                   replaceElementStartOffset, replaceElementEndOffset,
                   copyThatCalledCompletionDoc.getText(), caretOffsetAfterInsert
               );
           unresolved.setAdditionalTextEdits(
-              toListOfTextEdits(newTextAndAdditionalEdits.additionalEdits(), copyThatCalledCompletionDoc)
+              TextEditUtil.toListOfTextEdits(newTextAndAdditionalEdits.additionalEdits(), copyThatCalledCompletionDoc)
           );
           unresolvedTextEdit.setNewText(newTextAndAdditionalEdits.mainEdit().getNewText());
         } finally {
@@ -390,4 +390,8 @@ final public class CompletionService implements Disposable {
       Disposer.dispose(d);
     }
   }
+
+  private record CompletionResolveData(int resultIndex, int lookupElementIndex) {
+  }
+
 }
