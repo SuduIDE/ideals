@@ -115,7 +115,7 @@ public class MiscUtil {
   }
 
   @NotNull
-  public static RuntimeException wrap(@NotNull Exception e) {
+  public static RuntimeException wrap(@NotNull Throwable e) {
     return e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e);
   }
 

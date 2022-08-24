@@ -384,7 +384,7 @@ final public class CompletionService implements Disposable {
 
       return resItem;
     } catch (Throwable e) {
-      throw new RuntimeException(e);
+      throw MiscUtil.wrap(e);
     } finally {
       IconManager.deactivate();
       Disposer.dispose(d);

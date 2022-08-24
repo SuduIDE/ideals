@@ -109,7 +109,7 @@ public class CompletionInfo {
     var copyOffsets = topLevelOffsets.replaceInCopy(
         hostCopy, startOffset, endOffset, dummyIdentifier).get();
     if (!hostCopy.isValid()) {
-      throw new RuntimeException("PsiFile copy is not valid anymore");
+      throw new IllegalStateException("PsiFile copy is not valid anymore");
     }
     return copyOffsets;
   }
