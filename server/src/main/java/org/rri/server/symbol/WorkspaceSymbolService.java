@@ -48,6 +48,8 @@ final public class WorkspaceSymbolService {
 
   private final int LIMIT = 100;
 
+  final Comparator<WorkspaceSearchResult> comp = Comparator.comparingInt(WorkspaceSearchResult::weight).reversed();
+
   public WorkspaceSymbolService(@NotNull Project project) {
     this.project = project;
   }
@@ -94,6 +96,8 @@ final public class WorkspaceSymbolService {
                                        boolean isProjectFile) {
   }
 
+  // Returns: the list of founded symbols
+  // Note: Project symbols first then symbols from libraries, jdks, environments...
   public @NotNull List<@NotNull WorkspaceSearchResult> search(
       @NotNull SymbolSearchEverywhereContributor contributor,
       @NotNull String pattern,
@@ -121,7 +125,6 @@ final public class WorkspaceSymbolService {
               })).get();
     } catch (InterruptedException | ExecutionException ignored) {
     }
-    final var comp = Comparator.comparingInt(WorkspaceSearchResult::weight).reversed();
     projectSymbols.sort(comp);
     otherSymbols.sort(comp);
     return Stream.of(projectSymbols, otherSymbols).flatMap(List::stream).toList();

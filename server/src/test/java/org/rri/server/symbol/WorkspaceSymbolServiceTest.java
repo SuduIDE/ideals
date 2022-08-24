@@ -2,7 +2,10 @@ package org.rri.server.symbol;
 
 import com.intellij.openapi.project.Project;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
-import org.eclipse.lsp4j.*;
+import org.eclipse.lsp4j.Location;
+import org.eclipse.lsp4j.Range;
+import org.eclipse.lsp4j.SymbolKind;
+import org.eclipse.lsp4j.WorkspaceSymbol;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -14,6 +17,8 @@ import org.rri.server.TestUtil;
 
 import java.nio.file.Paths;
 import java.util.List;
+
+import static org.rri.server.TestUtil.newRange;
 
 @RunWith(JUnit4.class)
 public class WorkspaceSymbolServiceTest extends BasePlatformTestCase {
@@ -42,11 +47,11 @@ public class WorkspaceSymbolServiceTest extends BasePlatformTestCase {
     final var class2SomeSymbolForWorkspaceSymbolUri = LspPath.fromVirtualFile(class2VirtualFile).toLspUri();
 
     final var orgSomeSymbolForWorkspaceSymbol = workspaceSymbol("SomeSymbolForWorkspaceSymbol", SymbolKind.Class,
-        location(orgSomeSymbolForWorkspaceSymbolUri, range(2, 13, 2, 41)));
+        location(orgSomeSymbolForWorkspaceSymbolUri, newRange(2, 13, 2, 41)));
     final var comSomeSymbolForWorkspaceSymbol = workspaceSymbol("SomeSymbolForWorkspaceSymbol", SymbolKind.Class,
-        location(comSomeSymbolForWorkspaceSymbolUri, range(2, 13, 2, 41)));
+        location(comSomeSymbolForWorkspaceSymbolUri, newRange(2, 13, 2, 41)));
     final var class2SomeSymbolForWorkspaceSymbol = workspaceSymbol("SomeSymbolForWorkspaceSymbol(int)", SymbolKind.Method,
-        location(class2SomeSymbolForWorkspaceSymbolUri, range(3, 16, 3, 44)));
+        location(class2SomeSymbolForWorkspaceSymbolUri, newRange(3, 16, 3, 44)));
     class2SomeSymbolForWorkspaceSymbol.setContainerName("Class2");
 
     final var result = doSearch("SomeSymbolForWorkspaceSymbol", getProject());
@@ -70,13 +75,13 @@ public class WorkspaceSymbolServiceTest extends BasePlatformTestCase {
     final var workspaceSymbolUri = LspPath.fromVirtualFile(workspaceSymbolFile).toLspUri();
 
     final var class1Class1 = workspaceSymbol("Class1", SymbolKind.Class,
-        location(class1Uri, range(0, 6, 0, 12)));
+        location(class1Uri, newRange(0, 6, 0, 12)));
     final var otherClass1Class1 = workspaceSymbol("Class1", SymbolKind.Class,
-        location(otherClass1Uri, range(0, 6, 0, 12)));
+        location(otherClass1Uri, newRange(0, 6, 0, 12)));
     final var workspaceSymbolVarClass1 = workspaceSymbol("Class1", SymbolKind.Variable,
-        location(workspaceSymbolUri, range(0, 0, 0, 6)));
+        location(workspaceSymbolUri, newRange(0, 0, 0, 6)));
     final var workspaceSymbolFuncClass1 = workspaceSymbol("Class1(x, y)", SymbolKind.Function,
-        location(workspaceSymbolUri, range(2, 4, 2, 10)));
+        location(workspaceSymbolUri, newRange(2, 4, 2, 10)));
 
     final var result = doSearch("Class1", getProject());
     final var answer = List.of(workspaceSymbolFuncClass1, workspaceSymbolVarClass1, otherClass1Class1, class1Class1);
@@ -94,9 +99,9 @@ public class WorkspaceSymbolServiceTest extends BasePlatformTestCase {
     final var uri = LspPath.fromVirtualFile(virtualFile).toLspUri();
 
     final var varSymbol = workspaceSymbol("symbol", SymbolKind.Field,
-        location(uri, range(3, 14, 3, 20)), "WorkspaceSymbol");
+        location(uri, newRange(3, 14, 3, 20)), "WorkspaceSymbol");
     final var funSymbol = workspaceSymbol("symbol(int, int)", SymbolKind.Function,
-        location(uri, range(5, 6, 5, 12)), "WorkspaceSymbol");
+        location(uri, newRange(5, 6, 5, 12)), "WorkspaceSymbol");
 
     final var result = doSearch("symbol", getProject());
     final var answer = List.of(varSymbol, funSymbol);
@@ -118,12 +123,6 @@ public class WorkspaceSymbolServiceTest extends BasePlatformTestCase {
   @NotNull
   private static Location location(@NotNull String uri, @NotNull Range range) {
     return new Location(uri, range);
-  }
-
-  @SuppressWarnings("SameParameterValue")
-  @NotNull
-  private static Range range(int line1, int char1, int line2, int char2) {
-    return new Range(new Position(line1, char1), new Position(line2, char2));
   }
 
   @NotNull

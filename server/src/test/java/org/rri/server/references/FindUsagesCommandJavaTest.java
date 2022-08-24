@@ -10,6 +10,8 @@ import org.rri.server.LspPath;
 import java.util.HashSet;
 import java.util.List;
 
+import static org.rri.server.TestUtil.newRange;
+
 @RunWith(JUnit4.class)
 public class FindUsagesCommandJavaTest extends ReferencesCommandTestBase {
   @Before
@@ -25,9 +27,9 @@ public class FindUsagesCommandJavaTest extends ReferencesCommandTestBase {
     final var findUsagesJavaVariableUri = path.toLspUri();
 
     final var answers = new HashSet<>(List.of(
-            location(findUsagesJavaVariableUri, range(3, 8, 3, 9)),
-            location(findUsagesJavaVariableUri, range(7, 8, 7, 14)),
-            location(findUsagesJavaVariableUri, range(11, 15, 11, 16))));
+            location(findUsagesJavaVariableUri, newRange(3, 8, 3, 9)),
+            location(findUsagesJavaVariableUri, newRange(7, 8, 7, 14)),
+            location(findUsagesJavaVariableUri, newRange(11, 15, 11, 16))));
 
     final var positions = List.of(new Position(1, 16), new Position(3, 8));
     for (final var pos : positions) {
@@ -50,8 +52,8 @@ public class FindUsagesCommandJavaTest extends ReferencesCommandTestBase {
     final var definitionUri = definitionPath.toLspUri();
 
     final var answers = new HashSet<>(List.of(
-            location(anotherUri, range(11, 8, 11, 26)),
-            location(definitionUri, range(11, 8, 11, 11))));
+            location(anotherUri, newRange(11, 8, 11, 26)),
+            location(definitionUri, newRange(11, 8, 11, 11))));
 
     check(answers, new Position(11, 23), anotherPath);
     check(answers, new Position(5, 23), definitionPath);
@@ -72,11 +74,11 @@ public class FindUsagesCommandJavaTest extends ReferencesCommandTestBase {
     final var typeDefinitionJavaUri = PREFIX_FILE + "TypeDefinitionJava.java";
 
     final var answers = new HashSet<>(List.of(
-            location(definitionJavaUri, range(13, 8, 13, 19)),
-            location(definitionJavaUri, range(13, 28, 13, 39)),
-            location(typeDefinitionJavaUri, range(0, 7, 0, 18)),
-            location(typeDefinitionJavaUri, range(4, 8, 4, 15)),
-            location(typeDefinitionJavaUri, range(5, 8, 5, 19))));
+            location(definitionJavaUri, newRange(13, 8, 13, 19)),
+            location(definitionJavaUri, newRange(13, 28, 13, 39)),
+            location(typeDefinitionJavaUri, newRange(0, 7, 0, 18)),
+            location(typeDefinitionJavaUri, newRange(4, 8, 4, 15)),
+            location(typeDefinitionJavaUri, newRange(5, 8, 5, 19))));
 
     check(answers, new Position(13, 12), definitionPath);
     check(answers, new Position(2, 13), anotherPath);
