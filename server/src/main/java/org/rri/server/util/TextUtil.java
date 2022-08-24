@@ -86,6 +86,10 @@ public class TextUtil {
     private final Pair<Integer, Integer> range;
     private String newText;
 
+    public String getNewText() {
+      return newText;
+    }
+
     public TextEditWithOffsets(Integer start, Integer end, String newText) {
       this.range = new Pair<>(start, end);
       this.newText = newText;
@@ -137,8 +141,7 @@ public class TextUtil {
         editWithOffsets.newText)).toList();
   }
 
-
-  static public Pair<String, List<TextEditWithOffsets>> mergeTextEditsFromMainRangeToCaret(
+  static public MergeEditsResult mergeTextEditsFromMainRangeToCaret(
       @NotNull List<@NotNull TextEditWithOffsets> diffRangesAsOffsetsList,
       int replaceElementStartOffset,
       int replaceElementEndOffset,
@@ -165,8 +168,8 @@ public class TextUtil {
         diffRangesAsOffsetsTreeSet,
         additionalEdits);
 
-    return new Pair<>(
-        mergeTextEditsToOneEditsString(
+    return new MergeEditsResult(
+        mergeTextEditsToOne(
             editsToMergeRangesAsOffsets,
             replaceElementStartOffset,
             replaceElementEndOffset,
@@ -175,11 +178,11 @@ public class TextUtil {
         additionalEdits);
   }
 
-  static private String mergeTextEditsToOneEditsString(TreeSet<TextEditWithOffsets> editsToMergeRangesAsOffsets,
-                                                       int replaceElementStartOffset,
-                                                       int replaceElementEndOffset,
-                                                       ArrayList<TextEditWithOffsets> additionalEdits,
-                                                       String originalText) {
+  static private TextEditWithOffsets mergeTextEditsToOne(TreeSet<TextEditWithOffsets> editsToMergeRangesAsOffsets,
+                                                         int replaceElementStartOffset,
+                                                         int replaceElementEndOffset,
+                                                         ArrayList<TextEditWithOffsets> additionalEdits,
+                                                         String originalText) {
     final var mergeRangeStartOffset = editsToMergeRangesAsOffsets.first().range.first;
     final var mergeRangeEndOffset = editsToMergeRangesAsOffsets.last().range.second;
     StringBuilder builder = new StringBuilder();
@@ -212,7 +215,7 @@ public class TextUtil {
       additionalEdits.add(
           new TextEditWithOffsets(replaceElementEndOffset, mergeRangeEndOffset, ""));
     }
-    return builder.toString();
+    return new TextEditWithOffsets(replaceElementStartOffset, replaceElementEndOffset, builder.toString());
   }
 
   private static TreeSet<TextEditWithOffsets> findIntersectedEdits(
@@ -279,5 +282,9 @@ public class TextUtil {
               caretOffsetInOriginalDoc, caretOffsetInOriginalDoc, "$0");
     }
     return textEditWithCaret;
+  }
+
+  public record MergeEditsResult(TextEditWithOffsets mainEdit,
+                                 List<TextEditWithOffsets> additionalEdits) {
   }
 }

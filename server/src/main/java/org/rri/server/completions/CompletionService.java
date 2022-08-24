@@ -16,7 +16,6 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
-import com.intellij.openapi.util.Pair;
 import com.intellij.openapi.util.Ref;
 import com.intellij.openapi.util.registry.Registry;
 import com.intellij.psi.PsiClass;
@@ -203,16 +202,16 @@ final public class CompletionService implements Disposable {
           var replaceElementEndOffset = MiscUtil.positionToOffset(copyThatCalledCompletionDoc,
               unresolvedTextEdit.getRange().getEnd());
 
-          Pair<String, List<TextUtil.TextEditWithOffsets>> newTextAndAdditionalEdits =
+          var newTextAndAdditionalEdits =
               mergeTextEditsFromMainRangeToCaret(
                   toTreeSetOfEditsWithOffsets(diff, copyThatCalledCompletionDoc),
                   replaceElementStartOffset, replaceElementEndOffset,
                   copyThatCalledCompletionDoc.getText(), caretOffsetAfterInsert
               );
           unresolved.setAdditionalTextEdits(
-              toListOfTextEdits(newTextAndAdditionalEdits.second, copyThatCalledCompletionDoc)
+              toListOfTextEdits(newTextAndAdditionalEdits.additionalEdits(), copyThatCalledCompletionDoc)
           );
-          unresolvedTextEdit.setNewText(newTextAndAdditionalEdits.first);
+          unresolvedTextEdit.setNewText(newTextAndAdditionalEdits.mainEdit().getNewText());
         } finally {
           ApplicationManager.getApplication().runWriteAction(
               () -> WriteCommandAction.runWriteCommandAction(project, () -> Disposer.dispose(tempDisp))
