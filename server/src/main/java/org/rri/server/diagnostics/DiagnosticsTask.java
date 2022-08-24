@@ -30,29 +30,30 @@ import java.util.Objects;
 import java.util.stream.Collectors;
 
 class DiagnosticsTask implements Runnable {
-
   private final static Logger LOG = Logger.getInstance(DiagnosticsTask.class);
 
   @NotNull
   private final PsiFile file;
   @NotNull
   private final Document document;
+
   private static final Map<HighlightSeverity, DiagnosticSeverity> severityMap = Map.of(
       HighlightSeverity.INFORMATION, DiagnosticSeverity.Information,
       HighlightSeverity.WARNING, DiagnosticSeverity.Warning,
       HighlightSeverity.ERROR, DiagnosticSeverity.Error
   );
+
   @NotNull
-  private final QuickFixRegistry quickFixRegistry;
+  private final DiagnosticSession session;
 
   @NotNull
   private final LspPath path;
 
-  public DiagnosticsTask(@NotNull LspPath path, @NotNull PsiFile file, @NotNull Document document, @NotNull QuickFixRegistry quickFixRegistry) {
+  public DiagnosticsTask(@NotNull LspPath path, @NotNull PsiFile file, @NotNull Document document, @NotNull DiagnosticSession session) {
     this.path = path;
     this.file = file;
     this.document = document;
-    this.quickFixRegistry = quickFixRegistry;
+    this.session = session;
   }
 
   @Nullable
@@ -62,7 +63,7 @@ class DiagnosticsTask implements Runnable {
 
     final var range = MiscUtil.getRange(doc, info);
 
-    if (info.quickFixActionRanges != null) {
+    if(info.quickFixActionRanges != null) {
       registry.registerQuickFixes(
           range,
           info.quickFixActionRanges.stream().map(it -> it.first).collect(Collectors.toList()));
@@ -86,7 +87,7 @@ class DiagnosticsTask implements Runnable {
 
     try {
       var diags = getHighlights(file, document).stream()
-          .map(it -> toDiagnostic(it, document, quickFixRegistry))
+          .map(it -> toDiagnostic(it, document, session.getQuickFixRegistry()))
           .filter(Objects::nonNull)
           .collect(Collectors.toList());
       client.publishDiagnostics(new PublishDiagnosticsParams(path.toLspUri(), diags));
@@ -120,12 +121,9 @@ class DiagnosticsTask implements Runnable {
 
     return ProgressManager.getInstance().runProcess(() -> {
 
-      // ensure we get fresh results; the restart also seems to
-      // prevent the "process canceled" issue (see #30)
-      // TODO do we really need this?
-      //PsiDocumentManager.getInstance(document).commitAllDocuments()
-
       try {
+        // ensure we get fresh results
+        //PsiDocumentManager.getInstance(document).commitAllDocuments() // TODO do we really need this?
         final var range = ProperTextRange.create(0, document.getTextLength());
 
         // this shouldn't be needed but for some reason the next call fails without it
@@ -139,8 +137,12 @@ class DiagnosticsTask implements Runnable {
         LOG.warn("Analyzing file: index not ready");
         return Collections.emptyList();
       } catch (ProcessCanceledException e) {
-        if (LOG.isTraceEnabled())
-          LOG.trace("Analyzing file: highlighting has been cancelled: " + file.getVirtualFile());
+        if (LOG.isTraceEnabled()) LOG.trace("Analyzing file: highlighting has been cancelled: " + file.getVirtualFile());
+
+        // if highlighting was cancelled for a reason nor related to diagnostic state changes, restart diagnostics
+        if(!session.isOutdated())
+          session.signalRestart();
+
         throw e;
       }
 

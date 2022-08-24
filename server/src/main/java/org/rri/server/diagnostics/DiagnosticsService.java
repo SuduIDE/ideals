@@ -1,7 +1,6 @@
 package org.rri.server.diagnostics;
 
 import com.google.gson.GsonBuilder;
-import com.intellij.codeInsight.daemon.DaemonCodeAnalyzer;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.application.WriteAction;
@@ -28,7 +27,6 @@ import org.rri.server.util.TextUtil;
 
 import java.util.*;
 import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ScheduledFuture;
 import java.util.concurrent.TimeUnit;
 import java.util.stream.Collectors;
 
@@ -47,13 +45,7 @@ final public class DiagnosticsService {
         return;
       }
 
-      var quickFixes = new QuickFixRegistry();
-
-      DaemonCodeAnalyzer.getInstance(project).restart(psiFile);
-
-      var task = launchDelayedTask(path, psiFile, document, quickFixes);
-
-      Optional.ofNullable(states.put(path, new FileDiagnosticsState(quickFixes, task)))
+      Optional.ofNullable(states.put(path, launchDiagnostic(path, psiFile, document)))
           .ifPresent(FileDiagnosticsState::halt);
     });
   }
@@ -164,12 +156,36 @@ final public class DiagnosticsService {
   }
 
   @NotNull
-  private ScheduledFuture<?> launchDelayedTask(@NotNull LspPath path,
-                                               @NotNull PsiFile psiFile,
-                                               @NotNull Document doc,
-                                               @NotNull QuickFixRegistry quickFixes) {
-    return AppExecutorUtil.getAppScheduledExecutorService().schedule(
-        new DiagnosticsTask(path, psiFile, doc, quickFixes), DELAY, TimeUnit.MILLISECONDS);
+  private FileDiagnosticsState launchDiagnostic(@NotNull LspPath path,
+                                                @NotNull PsiFile psiFile,
+                                                @NotNull Document doc) {
+
+    var quickFixes = new QuickFixRegistry();
+
+    final var session = new DiagnosticsTask(path, psiFile, doc, new DiagnosticSession() {
+      @Override
+      public @NotNull QuickFixRegistry getQuickFixRegistry() {
+        return quickFixes;
+      }
+
+      @Override
+      public boolean isOutdated() {
+        return quickFixes != Optional.ofNullable(states.get(path))
+            .map(FileDiagnosticsState::getQuickFixes)
+            .orElse(null);
+      }
+
+      @Override
+      public void signalRestart() {
+        launchDiagnostics(path);
+      }
+    });
+
+    var task = AppExecutorUtil.getAppScheduledExecutorService().schedule(
+        session, DELAY, TimeUnit.MILLISECONDS);
+
+    return new FileDiagnosticsState(psiFile, quickFixes, task);
+
   }
 
   private static final class ActionData {
