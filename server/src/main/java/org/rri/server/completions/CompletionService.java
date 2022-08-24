@@ -18,6 +18,7 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.Pair;
 import com.intellij.openapi.util.Ref;
+import com.intellij.openapi.util.registry.Registry;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiFileFactory;
@@ -122,7 +123,7 @@ final public class CompletionService implements Disposable {
               var item =
                   createLSPCompletionItem(lookupElement, position,
                       prefix);
-              item.setData(new Pair<>(currentResultIndex, i));
+              item.setData(new CompletionResolveData(currentResultIndex, i));
               result.add(item);
             }
             cancelChecker.checkCanceled();
@@ -145,8 +146,8 @@ final public class CompletionService implements Disposable {
         (cancelChecker) -> {
           app.invokeAndWait(() -> {
             JsonObject jsonObject = (JsonObject) unresolved.getData();
-            var resultIndex = jsonObject.get("first").getAsInt();
-            var lookupElementIndex = jsonObject.get("second").getAsInt();
+            var resultIndex = jsonObject.get("resultIndex").getAsInt();
+            var lookupElementIndex = jsonObject.get("lookupElementIndex").getAsInt();
             doResolve(resultIndex, lookupElementIndex, unresolved);
           });
           cancelChecker.checkCanceled();
@@ -293,7 +294,7 @@ final public class CompletionService implements Disposable {
                                                         @NotNull Position position,
                                                         @NotNull String prefix) {
     var resItem = new CompletionItem();
-
+    Registry.get("psi.deferIconLoading").setValue(false); // todo set this flag in server setup
     var d = Disposer.newDisposable();
     try {
       IconManager.activate(new CoreIconManager());

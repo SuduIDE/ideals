@@ -40,7 +40,7 @@ final public class DiagnosticsService {
   private final ConcurrentHashMap<LspPath, FileDiagnosticsState> states = new ConcurrentHashMap<>();
 
   public void launchDiagnostics(@NotNull LspPath path) {
-    MiscUtil.withPsiFileInReadAction(project, path, (psiFile) -> {
+    MiscUtil.invokeWithPsiFileInReadAction(project, path, (psiFile) -> {
       final var document = MiscUtil.getDocument(psiFile);
       if (document == null) {
         LOG.error("document not found: " + path);
