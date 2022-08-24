@@ -204,7 +204,7 @@ final public class CompletionService implements Disposable {
 
           var newTextAndAdditionalEdits =
               findOverlappingTextEditsInRangeFromMainTextEditToCaretAndMergeThem(
-                  toTreeSetOfEditsWithOffsets(diff, copyThatCalledCompletionDoc),
+                  toListOfEditsWithOffsets(diff, copyThatCalledCompletionDoc),
                   replaceElementStartOffset, replaceElementEndOffset,
                   copyThatCalledCompletionDoc.getText(), caretOffsetAfterInsert
               );

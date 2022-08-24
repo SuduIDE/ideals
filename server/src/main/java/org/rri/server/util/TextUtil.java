@@ -124,7 +124,7 @@ public class TextUtil {
   }
 
   @NotNull
-  static public List<@NotNull TextEditWithOffsets> toTreeSetOfEditsWithOffsets(
+  static public List<@NotNull TextEditWithOffsets> toListOfEditsWithOffsets(
       @NotNull ArrayList<@NotNull TextEdit> list,
       @NotNull Document document) {
     return list.stream().map(textEdit -> {
