@@ -48,7 +48,7 @@ final public class WorkspaceSymbolService {
 
   private final int LIMIT = 100;
 
-  final Comparator<WorkspaceSearchResult> comp = Comparator.comparingInt(WorkspaceSearchResult::weight).reversed();
+  private static final Comparator<WorkspaceSearchResult> COMP = Comparator.comparingInt(WorkspaceSearchResult::weight).reversed();
 
   public WorkspaceSymbolService(@NotNull Project project) {
     this.project = project;
@@ -125,8 +125,8 @@ final public class WorkspaceSymbolService {
               })).get();
     } catch (InterruptedException | ExecutionException ignored) {
     }
-    projectSymbols.sort(comp);
-    otherSymbols.sort(comp);
+    projectSymbols.sort(COMP);
+    otherSymbols.sort(COMP);
     return Stream.of(projectSymbols, otherSymbols).flatMap(List::stream).toList();
   }
 
