@@ -151,7 +151,7 @@ final public class WorkspaceSymbolService {
     final var location = new Location();
     location.setUri(LspPath.fromVirtualFile(virtualFile).toLspUri());
     final var symbol = new WorkspaceSymbol(info.getName(), info.getKind(),
-        Either.forLeft(MiscUtil.psiElementToLocation(elem)),
+        Either.forLeft(MiscUtil.psiElementToLocation(elem, psiFile)),
         containerName);
     if (provider.isDeprecated(elem)) {
       symbol.setTags(List.of(SymbolTag.Deprecated));
