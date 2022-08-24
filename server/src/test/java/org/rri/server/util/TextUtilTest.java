@@ -42,8 +42,8 @@ public class TextUtilTest {
         replaceElementEndOffset,
         simpleSampleText,
         caretOffsetAfterInsert);
-    Assertions.assertEquals(expectedString, res.first);
-    Assertions.assertEquals(expectedAdditionalEdits, new HashSet<>(res.second));
+    Assertions.assertEquals(expectedString, res.mainEdit().getNewText());
+    Assertions.assertEquals(expectedAdditionalEdits, new HashSet<>(res.additionalEdits()));
   }
 
 
