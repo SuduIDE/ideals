@@ -240,19 +240,19 @@ public class TextUtil {
     var editsToMergeRangesAsOffsets = new TreeSet<>(diffRangesAsOffsetsTreeSet.subSet(first, true, last, true));
 
     if (floor != null) {
-      boolean isNotInclusive = floor.range.second >= collisionRangeStartOffset;
-      if (isNotInclusive) {
+      boolean isLowerBoundInclusive = floor.range.second >= collisionRangeStartOffset;
+      if (isLowerBoundInclusive) {
         editsToMergeRangesAsOffsets.add(floor);
       }
-      uselessEdits.addAll(diffRangesAsOffsetsTreeSet.headSet(floor, isNotInclusive));
+      uselessEdits.addAll(diffRangesAsOffsetsTreeSet.headSet(floor, !isLowerBoundInclusive));
     }
 
     if (ceil != null) {
-      boolean isNotInclusive = ceil.range.first <= collisionRangeEndOffset;
-      if (isNotInclusive) {
+      boolean isUpperBoundInclusive = ceil.range.first <= collisionRangeEndOffset;
+      if (isUpperBoundInclusive) {
         editsToMergeRangesAsOffsets.add(ceil);
       }
-      uselessEdits.addAll(diffRangesAsOffsetsTreeSet.tailSet(ceil, isNotInclusive));
+      uselessEdits.addAll(diffRangesAsOffsetsTreeSet.tailSet(ceil, !isUpperBoundInclusive));
     }
     return editsToMergeRangesAsOffsets;
   }
