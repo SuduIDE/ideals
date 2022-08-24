@@ -141,7 +141,7 @@ public class TextUtil {
         editWithOffsets.newText)).toList();
   }
 
-  static public MergeEditsResult mergeTextEditsFromMainRangeToCaret(
+  static public MergeEditsResult findOverlappingTextEditsInRangeFromMainTextEditToCaretAndMergeThem(
       @NotNull List<@NotNull TextEditWithOffsets> diffRangesAsOffsetsList,
       int replaceElementStartOffset,
       int replaceElementEndOffset,

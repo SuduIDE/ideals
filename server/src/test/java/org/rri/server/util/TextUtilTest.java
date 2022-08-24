@@ -36,7 +36,7 @@ public class TextUtilTest {
                                                      String expectedString,
                                                      Set<TextEditWithOffsets> expectedAdditionalEdits) {
 
-    var res = TextUtil.mergeTextEditsFromMainRangeToCaret(
+    var res = TextUtil.findOverlappingTextEditsInRangeFromMainTextEditToCaretAndMergeThem(
         diffRangesAsOffsetsList,
         replaceElementStartOffset,
         replaceElementEndOffset,
