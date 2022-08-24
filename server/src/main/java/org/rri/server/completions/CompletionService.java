@@ -13,6 +13,7 @@ import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
@@ -204,12 +205,12 @@ final public class CompletionService implements Disposable {
 
           var newTextAndAdditionalEdits =
               TextEditUtil.findOverlappingTextEditsInRangeFromMainTextEditToCaretAndMergeThem(
-                  TextEditUtil.toListOfEditsWithOffsets(diff, copyThatCalledCompletionDoc),
+                  toListOfEditsWithOffsets(diff, copyThatCalledCompletionDoc),
                   replaceElementStartOffset, replaceElementEndOffset,
                   copyThatCalledCompletionDoc.getText(), caretOffsetAfterInsert
               );
           unresolved.setAdditionalTextEdits(
-              TextEditUtil.toListOfTextEdits(newTextAndAdditionalEdits.additionalEdits(), copyThatCalledCompletionDoc)
+              toListOfTextEdits(newTextAndAdditionalEdits.additionalEdits(), copyThatCalledCompletionDoc)
           );
           unresolvedTextEdit.setNewText(newTextAndAdditionalEdits.mainEdit().getNewText());
         } finally {
@@ -220,7 +221,28 @@ final public class CompletionService implements Disposable {
       });
     }
   }
+  @NotNull
+  static private List<TextEditUtil.TextEditWithOffsets> toListOfEditsWithOffsets(
+      @NotNull ArrayList<@NotNull TextEdit> list,
+      @NotNull Document document) {
+    return list.stream().map(textEdit -> {
+      var range = textEdit.getRange();
+      return new TextEditUtil.TextEditWithOffsets(
+          MiscUtil.positionToOffset(document, range.getStart()),
+          MiscUtil.positionToOffset(document, range.getEnd()), textEdit.getNewText());
+    }).toList();
+  }
 
+  static private @NotNull List<@NotNull TextEdit> toListOfTextEdits(
+      @NotNull List<TextEditUtil.TextEditWithOffsets> additionalEdits,
+      @NotNull Document document) {
+    return additionalEdits.stream().map(editWithOffsets -> new TextEdit(
+        new Range(
+            MiscUtil.offsetToPosition(document, editWithOffsets.getRange().first),
+            MiscUtil.offsetToPosition(document, editWithOffsets.getRange().second)
+        ),
+        editWithOffsets.getNewText())).toList();
+  }
 
   private static class CachedCompletionResolveData {
     @NotNull

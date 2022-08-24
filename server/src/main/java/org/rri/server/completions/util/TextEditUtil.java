@@ -1,11 +1,7 @@
 package org.rri.server.completions.util;
 
-import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.util.Pair;
-import org.eclipse.lsp4j.Range;
-import org.eclipse.lsp4j.TextEdit;
 import org.jetbrains.annotations.NotNull;
-import org.rri.server.util.MiscUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -21,6 +17,10 @@ public class TextEditUtil {
     @NotNull
     public String getNewText() {
       return newText;
+    }
+
+    public @NotNull Pair<Integer, Integer> getRange() {
+      return range;
     }
 
     public TextEditWithOffsets(@NotNull Integer start, @NotNull Integer end, @NotNull String newText) {
@@ -52,28 +52,7 @@ public class TextEditUtil {
     }
   }
 
-  @NotNull
-  static public List<@NotNull TextEditWithOffsets> toListOfEditsWithOffsets(
-      @NotNull ArrayList<@NotNull TextEdit> list,
-      @NotNull Document document) {
-    return list.stream().map(textEdit -> {
-      var range = textEdit.getRange();
-      return new TextEditWithOffsets(
-          MiscUtil.positionToOffset(document, range.getStart()),
-          MiscUtil.positionToOffset(document, range.getEnd()), textEdit.getNewText());
-    }).toList();
-  }
 
-  static public @NotNull List<@NotNull TextEdit> toListOfTextEdits(
-      @NotNull List<@NotNull TextEditWithOffsets> additionalEdits,
-      @NotNull Document document) {
-    return additionalEdits.stream().map(editWithOffsets -> new TextEdit(
-        new Range(
-            MiscUtil.offsetToPosition(document, editWithOffsets.range.first),
-            MiscUtil.offsetToPosition(document, editWithOffsets.range.second)
-        ),
-        editWithOffsets.newText)).toList();
-  }
 
   static public MergeEditsResult findOverlappingTextEditsInRangeFromMainTextEditToCaretAndMergeThem(
       @NotNull List<@NotNull TextEditWithOffsets> diffRangesAsOffsetsList,
