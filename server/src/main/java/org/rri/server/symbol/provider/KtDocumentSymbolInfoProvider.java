@@ -1,6 +1,7 @@
 package org.rri.server.symbol.provider;
 
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.impl.light.LightFieldBuilder;
 import org.eclipse.lsp4j.SymbolKind;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -22,6 +23,8 @@ public class KtDocumentSymbolInfoProvider extends JVMDocumentSymbolInfoProvider 
       return composeInfo(elemLM.getContainingClass() instanceof KtLightClassForFacade
               ? SymbolKind.Method : SymbolKind.Function,
           () -> methodLabel(elemLM));
+    } else if (psiElement instanceof final LightFieldBuilder elemVar) {
+      return composeInfo(SymbolKind.Field, elemVar::getName);
     } else if (psiElement instanceof final KtElement elem) {
       if (elem instanceof final KtClass elemClass) {
         return composeInfo(elemClass instanceof KtEnumEntry ? SymbolKind.EnumMember

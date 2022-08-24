@@ -33,12 +33,6 @@ public abstract class ReferencesCommandTestBase extends BasePlatformTestCase {
     return new LocationLink(uri, targetRange, targetRange, originalRange);
   }
 
-  @SuppressWarnings("SameParameterValue")
-  @NotNull
-  protected static Range range(int line1, int char1, int line2, int char2) {
-    return new Range(new Position(line1, char1), new Position(line2, char2));
-  }
-
   protected void check(@NotNull Set<@NotNull Location> answers, @NotNull Position pos, @NotNull LspPath path) {
     final var future = new FindUsagesCommand(pos).runAsync(getProject(), path);
     final var lst = TestUtil.getNonBlockingEdt(future, 50000);

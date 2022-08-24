@@ -143,6 +143,11 @@ public class MiscUtil {
       return null;
     }
     var file = elem.getContainingFile();
+    return psiElementToLocation(elem, file);
+  }
+
+  @Nullable
+  public static Location psiElementToLocation(@Nullable PsiElement elem, @NotNull PsiFile file) {
     var doc = getDocument(file);
     if (doc == null) {
       return null;

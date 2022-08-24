@@ -14,6 +14,8 @@ import org.rri.server.util.MiscUtil;
 
 import java.util.Map;
 
+import static org.rri.server.TestUtil.newRange;
+
 @RunWith(JUnit4.class)
 public class TypeDefinitionCommandTest extends ReferencesCommandTestBase {
   @Test
@@ -22,12 +24,12 @@ public class TypeDefinitionCommandTest extends ReferencesCommandTestBase {
 
     final var orgAnotherUri = PREFIX_FILE + "org/Another.java";
     final var comAnotherUri = PREFIX_FILE + "com/Another.java";
-    final var classOrgAnother = range(2, 13, 2, 20);
-    final var classComAnother = range(2, 13, 2, 20);
+    final var classOrgAnother = newRange(2, 13, 2, 20);
+    final var classComAnother = newRange(2, 13, 2, 20);
 
-    final var checks = Map.of(new Position(4, 16), locationLink(orgAnotherUri, classOrgAnother, range(4, 16, 4, 17)),
-            new Position(5, 20), locationLink(orgAnotherUri, classOrgAnother, range(5, 20, 5, 22)),
-            new Position(6, 20), locationLink(comAnotherUri, classComAnother, range(6, 20, 6, 21)));
+    final var checks = Map.of(new Position(4, 16), locationLink(orgAnotherUri, classOrgAnother, newRange(4, 16, 4, 17)),
+            new Position(5, 20), locationLink(orgAnotherUri, classOrgAnother, newRange(5, 20, 5, 22)),
+            new Position(6, 20), locationLink(comAnotherUri, classComAnother, newRange(6, 20, 6, 21)));
 
     checkTypeDefinitions(virtualFile.findChild("TypeDefinitionJava.java"), checks);
   }
@@ -39,13 +41,13 @@ public class TypeDefinitionCommandTest extends ReferencesCommandTestBase {
     final var secondUri = PREFIX_FILE + "second.py";
     final var class1Uri = PREFIX_FILE + "class1.py";
     final var class2Uri = PREFIX_FILE + "class2.py";
-    final var A = range(0, 6, 0, 7);
-    final var class1B = range(0, 6, 0, 7);
-    final var class2B = range(0, 6, 0, 7);
+    final var A = newRange(0, 6, 0, 7);
+    final var class1B = newRange(0, 6, 0, 7);
+    final var class2B = newRange(0, 6, 0, 7);
 
-    final var checks = Map.of(new Position(5, 0), locationLink(secondUri, A, range(5, 0, 5, 1)),
-            new Position(6, 0), locationLink(class1Uri, class1B, range(6, 0, 6, 1)),
-            new Position(7, 0), locationLink(class2Uri, class2B, range(7, 0, 7, 2)));
+    final var checks = Map.of(new Position(5, 0), locationLink(secondUri, A, newRange(5, 0, 5, 1)),
+            new Position(6, 0), locationLink(class1Uri, class1B, newRange(6, 0, 6, 1)),
+            new Position(7, 0), locationLink(class2Uri, class2B, newRange(7, 0, 7, 2)));
 
     checkTypeDefinitions(virtualFile.findChild("typeDefinitionPython.py"), checks);
   }

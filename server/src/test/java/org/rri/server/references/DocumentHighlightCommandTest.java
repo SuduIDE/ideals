@@ -13,6 +13,8 @@ import org.rri.server.TestUtil;
 import java.util.HashSet;
 import java.util.Set;
 
+import static org.rri.server.TestUtil.newRange;
+
 @RunWith(JUnit4.class)
 public class DocumentHighlightCommandTest extends ReferencesCommandTestBase {
   @Test
@@ -24,20 +26,20 @@ public class DocumentHighlightCommandTest extends ReferencesCommandTestBase {
 
     // Test variable
     var answers = Set.of(
-        new DocumentHighlight(range(1, 14, 1, 17), DocumentHighlightKind.Text),
-        new DocumentHighlight(range(13, 4, 13, 7), DocumentHighlightKind.Write));
+        new DocumentHighlight(newRange(1, 14, 1, 17), DocumentHighlightKind.Text),
+        new DocumentHighlight(newRange(13, 4, 13, 7), DocumentHighlightKind.Write));
     checkHighlight(answers, new Position(1, 14), path);
 
     // Test method
     answers = Set.of(
-        new DocumentHighlight(range(6, 21, 6, 24), DocumentHighlightKind.Text),
-        new DocumentHighlight(range(14, 4, 14, 7), DocumentHighlightKind.Text));
+        new DocumentHighlight(newRange(6, 21, 6, 24), DocumentHighlightKind.Text),
+        new DocumentHighlight(newRange(14, 4, 14, 7), DocumentHighlightKind.Text));
     checkHighlight(answers, new Position(14, 4), path);
 
     // Test class
     answers = Set.of(
-        new DocumentHighlight(range(2, 14, 2, 26), DocumentHighlightKind.Read),
-        new DocumentHighlight(range(8, 18, 8, 30), DocumentHighlightKind.Read));
+        new DocumentHighlight(newRange(2, 14, 2, 26), DocumentHighlightKind.Read),
+        new DocumentHighlight(newRange(8, 18, 8, 30), DocumentHighlightKind.Read));
     checkHighlight(answers, new Position(2, 14), path);
   }
 
@@ -50,18 +52,18 @@ public class DocumentHighlightCommandTest extends ReferencesCommandTestBase {
 
     // Test variable
     var answers = Set.of(
-        new DocumentHighlight(range(8, 0, 8, 1), DocumentHighlightKind.Write),
-        new DocumentHighlight(range(9, 4, 9, 5), DocumentHighlightKind.Read));
+        new DocumentHighlight(newRange(8, 0, 8, 1), DocumentHighlightKind.Write),
+        new DocumentHighlight(newRange(9, 4, 9, 5), DocumentHighlightKind.Read));
     checkHighlight(answers, new Position(8, 0), path);
 
     // Test method
     answers = Set.of(
-        new DocumentHighlight(range(4, 4, 4, 7), DocumentHighlightKind.Text),
-        new DocumentHighlight(range(13, 0, 13, 3), DocumentHighlightKind.Text));
+        new DocumentHighlight(newRange(4, 4, 4, 7), DocumentHighlightKind.Text),
+        new DocumentHighlight(newRange(13, 0, 13, 3), DocumentHighlightKind.Text));
     checkHighlight(answers, new Position(13, 0), path);
 
     // Test class
-    answers = Set.of(new DocumentHighlight(range(15, 5, 15, 14), DocumentHighlightKind.Text));
+    answers = Set.of(new DocumentHighlight(newRange(15, 5, 15, 14), DocumentHighlightKind.Text));
     checkHighlight(answers, new Position(15, 5), path);
   }
 
