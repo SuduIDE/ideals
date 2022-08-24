@@ -46,16 +46,9 @@ public class SymbolTest extends LspServerTestBase {
 
     final var filePath = LspPath.fromLocalPath(getProjectPath().resolve("src/WorkspaceSymbolIntegratingTest.java"));
     final var workspaceSymbolIntegratingTest = new WorkspaceSymbol("WorkspaceSymbolIntegratingTest", SymbolKind.Class,
-        Either.forRight(new WorkspaceSymbolLocation(filePath.toLspUri().replaceAll("/+", "/"))));
+        Either.forLeft(new Location(filePath.toLspUri(), range(0, 13, 0, 43))));
 
     assertEquals(List.of(workspaceSymbolIntegratingTest), result);
-
-    final var nextFuture = server().getWorkspaceService().resolveWorkspaceSymbol(result.get(0));
-    final var nextResult = TestUtil.getNonBlockingEdt(nextFuture, 30000);
-
-    workspaceSymbolIntegratingTest.setLocation(Either.forLeft(new Location(filePath.toLspUri(), range(0, 13, 0, 43))));
-
-    assertEquals(workspaceSymbolIntegratingTest, nextResult);
   }
 
   @NotNull
