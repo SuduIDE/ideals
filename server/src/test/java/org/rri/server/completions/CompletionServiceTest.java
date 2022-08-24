@@ -10,9 +10,10 @@ import com.intellij.psi.PsiFile;
 import com.intellij.testFramework.TestModeFlags;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import com.jetbrains.python.PythonFileType;
-import org.eclipse.lsp4j.*;
+import org.eclipse.lsp4j.CompletionItem;
+import org.eclipse.lsp4j.CompletionItemKind;
+import org.eclipse.lsp4j.Position;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
@@ -20,7 +21,6 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.rri.server.LspPath;
 import org.rri.server.TestUtil;
-import org.rri.server.util.MiscUtil;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -30,9 +30,9 @@ import java.util.stream.Collectors;
 
 @RunWith(JUnit4.class)
 public class CompletionServiceTest extends BasePlatformTestCase {
-  private final Gson gson = new GsonBuilder().create();
   private static final Key<Boolean> ourShowTemplatesInTests = Key.create("ShowTemplatesInTests");
   private static final Key<Boolean> ourTemplateTesting = Key.create("TemplateTesting");
+  private final Gson gson = new GsonBuilder().create();
 
   @Test
   public void testCompletionForKeywordsThatContainsLetterD() {
@@ -41,30 +41,30 @@ public class CompletionServiceTest extends BasePlatformTestCase {
         file, new Position(0, 1));
 
     var expected = Set.of(
-        createCompletionItem(
+        CompletionServiceTestUtil.createCompletionItem(
             "del", "", null, new ArrayList<>(), "del", CompletionItemKind.Keyword
-        ), createCompletionItem(
+        ), CompletionServiceTestUtil.createCompletionItem(
             "def", "", null, new ArrayList<>(), "def", CompletionItemKind.Keyword
-        ), createCompletionItem(
+        ), CompletionServiceTestUtil.createCompletionItem(
             "and", "", null, new ArrayList<>(), "and", CompletionItemKind.Keyword
-        ), createCompletionItem(
+        ), CompletionServiceTestUtil.createCompletionItem(
             "lambda", "", null, new ArrayList<>(), "lambda", CompletionItemKind.Keyword)
     );
     Assert.assertNotNull(completionItemList);
     Assertions.assertEquals(expected,
-        completionItemList.stream().map(CompletionServiceTest::removeResolveInfo).collect(Collectors.toSet()));
+        completionItemList.stream().map(CompletionServiceTestUtil::removeResolveInfo).collect(Collectors.toSet()));
   }
 
   @Test
   public void testCompletionForKeywordAndFunctionPython() {
-    var expected = Set.of(createCompletionItem(
+    var expected = Set.of(CompletionServiceTestUtil.createCompletionItem(
         "for",
         "",
         null,
         new ArrayList<>(),
         "for",
         CompletionItemKind.Keyword
-    ), createCompletionItem(
+    ), CompletionServiceTestUtil.createCompletionItem(
         "formula",
         "(x)",
         null,
@@ -79,19 +79,19 @@ public class CompletionServiceTest extends BasePlatformTestCase {
     );
     Assert.assertNotNull(completionItemList);
     Assert.assertEquals(expected,
-        completionItemList.stream().map(CompletionServiceTest::removeResolveInfo).collect(Collectors.toSet()));
+        completionItemList.stream().map(CompletionServiceTestUtil::removeResolveInfo).collect(Collectors.toSet()));
   }
 
   @Test
   public void testCompletionForKeywordAndFunctionJava() {
-    var expected = Set.of(createCompletionItem(
+    var expected = Set.of(CompletionServiceTestUtil.createCompletionItem(
         "formula",
         "()",
         "void",
         new ArrayList<>(),
         "formula",
         CompletionItemKind.Method
-    ), createCompletionItem(
+    ), CompletionServiceTestUtil.createCompletionItem(
         "for",
         "",
         null,
@@ -107,7 +107,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
     );
     Assert.assertNotNull(completionItemList);
     Assert.assertEquals(expected,
-        completionItemList.stream().map(CompletionServiceTest::removeResolveInfo).collect(Collectors.toSet()));
+        completionItemList.stream().map(CompletionServiceTestUtil::removeResolveInfo).collect(Collectors.toSet()));
   }
 
   @Test
@@ -152,63 +152,67 @@ public class CompletionServiceTest extends BasePlatformTestCase {
 
   @Test
   public void testPythonLiveTemplate() {
-    testResolveWithTemplates(
-        """
-            iter
-            """,
-        """
-            for  in $0:
-            \s\s\s\s
-            """, new Position(0, 4),
-        completionItem -> completionItem.getLabel().equals("iter"), PythonFileType.INSTANCE
+    CompletionServiceTest.runWithTemplateFlags(
+        () -> testResolve(
+            """
+                iter
+                """,
+            """
+                for  in $0:
+                \s\s\s\s
+                """, new Position(0, 4),
+            completionItem -> completionItem.getLabel().equals("iter"), PythonFileType.INSTANCE
+        )
     );
   }
   @Test
   public void testPythonPostfixTemplate() {
-    testResolveWithTemplates(
-        """
-            x.if
-            """,
-        """
-            if x:
-            \s\s\s\s$0
-            """, new Position(0, 4),
-        completionItem -> completionItem.getLabel().equals("if"), PythonFileType.INSTANCE
+    CompletionServiceTest.runWithTemplateFlags(
+        () -> testResolve(
+            """
+                x.if
+                """,
+            """
+                if x:
+                \s\s\s\s$0
+                """, new Position(0, 4),
+            completionItem -> completionItem.getLabel().equals("if"), PythonFileType.INSTANCE)
     );
   }
 
   @Test
   public void testJavaLiveTemplate() {
-    testResolveWithTemplates(
-        """
-            class Templates {             
-                void test() {
-                    fori
-                }
-            }""",
-        """
-            class Templates {
-                void test() {
-                    for (int i$0 = 0; i < ; i++) {
-                    \s\s\s\s
+    CompletionServiceTest.runWithTemplateFlags(
+        () -> testResolve(
+            """
+                class Templates {
+                    void test() {
+                        fori
                     }
-                }
-            }""",
-        new Position(2, 12),
-        completionItem -> completionItem.getLabel().equals("fori"), JavaFileType.INSTANCE
-    );
+                }""",
+            """
+                class Templates {
+                    void test() {
+                        for (int i$0 = 0; i < ; i++) {
+                        \s\s\s\s
+                        }
+                    }
+                }""",
+            new Position(2, 12),
+            completionItem -> completionItem.getLabel().equals("fori"), JavaFileType.INSTANCE
+        ));
   }
 
   @Test
   public void testJavaPostfixTemplate() {
-    testResolveWithTemplates(
-        """
-            class Templates {             
+    CompletionServiceTest.runWithTemplateFlags(() -> testResolve(
+            """
+            class Templates {
                 void test() {
                     x.l
                 }
             }""",
-        """
+            """
             class Templates {
                 void test() {
                     () -> x$0
@@ -216,21 +220,10 @@ public class CompletionServiceTest extends BasePlatformTestCase {
             }""",
         new Position(2, 12),
         completionItem -> completionItem.getLabel().equals("lambda"), JavaFileType.INSTANCE
+        )
     );
   }
 
-  private void testResolveWithTemplates(String originalText, String expectedText, Position position,
-                                        Function<CompletionItem, Boolean> searchFunction,
-                                        FileType fileType) {
-    TestModeFlags.set(ourShowTemplatesInTests, true);
-    TestModeFlags.set(ourTemplateTesting, true);
-    try {
-      testResolve(originalText, expectedText, position, searchFunction, fileType);
-    } finally {
-      TestModeFlags.set(ourShowTemplatesInTests, false);
-      TestModeFlags.set(ourTemplateTesting, false);
-    }
-  }
 
   private void testResolve(String originalText, String expectedText, Position position,
                            Function<CompletionItem, Boolean> searchFunction, FileType fileType) {
@@ -256,36 +249,12 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   }
 
 
-  private static CompletionItem removeResolveInfo(CompletionItem completionItem) {
-    completionItem.setTextEdit(null);
-    completionItem.setData(null);
-    return completionItem;
-  }
 
   @Override
   protected String getTestDataPath() {
     return "test-data/completion/completion-project";
   }
 
-  @SuppressWarnings("SameParameterValue")
-  @NotNull
-  private CompletionItem createCompletionItem(@NotNull String label,
-                                              @NotNull String labelDetail,
-                                              @Nullable String detail,
-                                              @NotNull ArrayList<@NotNull CompletionItemTag> completionItemTags,
-                                              @NotNull String filterText,
-                                              @Nullable CompletionItemKind kind) {
-    return MiscUtil.with(new CompletionItem(), item -> {
-      item.setLabel(label);
-      item.setLabelDetails(MiscUtil.with(new CompletionItemLabelDetails(), completionItemLabelDetails -> completionItemLabelDetails.setDetail(labelDetail)));
-      item.setDetail(detail);
-      item.setTags(completionItemTags);
-      item.setInsertTextFormat(InsertTextFormat.Snippet);
-      item.setFilterText(filterText);
-      item.setInsertTextMode(InsertTextMode.AsIs);
-      item.setKind(kind);
-    });
-  }
 
   @NotNull
   private List<@NotNull CompletionItem> getCompletionListAtPosition(@NotNull PsiFile file, @NotNull Position position) {
@@ -297,5 +266,16 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   private CompletionItem getResolvedCompletionItem(@NotNull CompletionItem unresolved) {
     return TestUtil.getNonBlockingEdt(getProject().getService(CompletionService.class)
         .startCompletionResolveCalculation(unresolved), 3000);
+  }
+
+  static public void runWithTemplateFlags(@NotNull Runnable action) {
+    TestModeFlags.set(ourShowTemplatesInTests, true);
+    TestModeFlags.set(ourTemplateTesting, true);
+    try {
+      action.run();
+    } finally {
+      TestModeFlags.set(ourShowTemplatesInTests, false);
+      TestModeFlags.set(ourTemplateTesting, false);
+    }
   }
 }
