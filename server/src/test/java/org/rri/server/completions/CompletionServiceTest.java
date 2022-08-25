@@ -29,7 +29,7 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 
 @RunWith(JUnit4.class)
-public class CompletionsServiceTest extends BasePlatformTestCase {
+public class CompletionServiceTest extends BasePlatformTestCase {
   private static final Key<Boolean> ourShowTemplatesInTests = Key.create("ShowTemplatesInTests");
   private static final Key<Boolean> ourTemplateTesting = Key.create("TemplateTesting");
   private final Gson gson = new GsonBuilder().create();
@@ -152,7 +152,7 @@ public class CompletionsServiceTest extends BasePlatformTestCase {
 
   @Test
   public void testPythonLiveTemplate() {
-    CompletionsServiceTest.runWithTemplateFlags(
+    CompletionServiceTest.runWithTemplateFlags(
         () -> testResolve(
             """
                 iter
@@ -167,7 +167,7 @@ public class CompletionsServiceTest extends BasePlatformTestCase {
   }
   @Test
   public void testPythonPostfixTemplate() {
-    CompletionsServiceTest.runWithTemplateFlags(
+    CompletionServiceTest.runWithTemplateFlags(
         () -> testResolve(
             """
                 x.if
@@ -182,7 +182,7 @@ public class CompletionsServiceTest extends BasePlatformTestCase {
 
   @Test
   public void testJavaLiveTemplate() {
-    CompletionsServiceTest.runWithTemplateFlags(
+    CompletionServiceTest.runWithTemplateFlags(
         () -> testResolve(
             """
                 class Templates {
@@ -205,7 +205,7 @@ public class CompletionsServiceTest extends BasePlatformTestCase {
 
   @Test
   public void testJavaPostfixTemplate() {
-    CompletionsServiceTest.runWithTemplateFlags(() -> testResolve(
+    CompletionServiceTest.runWithTemplateFlags(() -> testResolve(
             """
             class Templates {
                 void test() {
@@ -259,13 +259,13 @@ public class CompletionsServiceTest extends BasePlatformTestCase {
   @NotNull
   private List<@NotNull CompletionItem> getCompletionListAtPosition(@NotNull PsiFile file,
                                                                      @NotNull Position position) {
-    return TestUtil.getNonBlockingEdt(getProject().getService(CompletionsService.class).startCompletionCalculation(
+    return TestUtil.getNonBlockingEdt(getProject().getService(CompletionService.class).startCompletionCalculation(
         LspPath.fromVirtualFile(file.getVirtualFile()), position), 3000).getLeft();
   }
 
   @NotNull
   private CompletionItem getResolvedCompletionItem(@NotNull CompletionItem unresolved) {
-    return TestUtil.getNonBlockingEdt(getProject().getService(CompletionsService.class)
+    return TestUtil.getNonBlockingEdt(getProject().getService(CompletionService.class)
         .startCompletionResolveCalculation(unresolved), 3000);
   }
 
