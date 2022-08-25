@@ -43,7 +43,7 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 
-import static org.rri.server.util.IconUtil.compareIcons;
+import static org.rri.server.completions.util.IconUtil.compareIcons;
 
 @Service(Service.Level.PROJECT)
 final public class CompletionService implements Disposable {

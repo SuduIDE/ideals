@@ -1,4 +1,4 @@
-package org.rri.server.util;
+package org.rri.server.completions.util;
 
 import com.intellij.ui.icons.CompositeIcon;
 import org.jetbrains.annotations.NotNull;
