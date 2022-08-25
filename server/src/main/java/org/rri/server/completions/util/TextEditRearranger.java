@@ -1,58 +1,12 @@
 package org.rri.server.completions.util;
 
-import com.intellij.openapi.util.Pair;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.TreeSet;
 
-public class TextEditUtil {
-  static public class TextEditWithOffsets implements Comparable<TextEditWithOffsets> {
-    @NotNull
-    private final Pair<Integer, Integer> range;
-    @NotNull
-    private String newText;
-
-    @NotNull
-    public String getNewText() {
-      return newText;
-    }
-
-    public @NotNull Pair<Integer, Integer> getRange() {
-      return range;
-    }
-
-    public TextEditWithOffsets(@NotNull Integer start, @NotNull Integer end, @NotNull String newText) {
-      this.range = new Pair<>(start, end);
-      this.newText = newText;
-    }
-
-    @Override
-    public int compareTo(@NotNull TextEditWithOffsets otherTextEditWithOffsets) {
-      int res = this.range.first - otherTextEditWithOffsets.range.first;
-      if (res == 0) {
-        return this.range.second - otherTextEditWithOffsets.range.second;
-      }
-      return res;
-    }
-
-    @Override
-    public boolean equals(Object obj) {
-      if (!(obj instanceof TextEditWithOffsets otherEdit)) {
-        return false;
-      }
-      return range.equals(otherEdit.range);
-    }
-
-    @Override
-    @NotNull
-    public String toString() {
-      return "range: " + range + ", newText: " + newText;
-    }
-  }
-
-
+public class TextEditRearranger {
 
   static public MergeEditsResult findOverlappingTextEditsInRangeFromMainTextEditToCaretAndMergeThem(
       @NotNull List<@NotNull TextEditWithOffsets> diffRangesAsOffsetsList,
@@ -67,8 +21,8 @@ public class TextEditUtil {
     var textEditWithCaret = findEditWithCaret(diffRangesAsOffsetsTreeSet, caretOffsetAfterInsert);
 
     diffRangesAsOffsetsTreeSet.add(textEditWithCaret);
-    final int selectedEditRangeStartOffset = textEditWithCaret.range.first;
-    final int selectedEditRangeEndOffset = textEditWithCaret.range.second;
+    final int selectedEditRangeStartOffset = textEditWithCaret.getRange().getStartOffset();
+    final int selectedEditRangeEndOffset = textEditWithCaret.getRange().getEndOffset();
 
     final int collisionRangeStartOffset = Integer.min(selectedEditRangeStartOffset,
         replaceElementStartOffset);
@@ -98,8 +52,8 @@ public class TextEditUtil {
       int replaceElementEndOffset,
       @NotNull ArrayList<TextEditWithOffsets> additionalEdits,
       @NotNull String originalText) {
-    final var mergeRangeStartOffset = editsToMergeRangesAsOffsets.first().range.first;
-    final var mergeRangeEndOffset = editsToMergeRangesAsOffsets.last().range.second;
+    final var mergeRangeStartOffset = editsToMergeRangesAsOffsets.first().getRange().getStartOffset();
+    final var mergeRangeEndOffset = editsToMergeRangesAsOffsets.last().getRange().getEndOffset();
     StringBuilder builder = new StringBuilder();
     if (mergeRangeStartOffset > replaceElementStartOffset) {
       builder.append(
@@ -110,16 +64,16 @@ public class TextEditUtil {
       additionalEdits.add(
           new TextEditWithOffsets(mergeRangeStartOffset, replaceElementStartOffset, ""));
     }
-    var prevEndOffset = editsToMergeRangesAsOffsets.first().range.first;
+    var prevEndOffset = editsToMergeRangesAsOffsets.first().getRange().getStartOffset();
     for (var editToMerge : editsToMergeRangesAsOffsets) {
       builder.append(
           originalText,
           prevEndOffset,
-          editToMerge.range.first);
+          editToMerge.getRange().getStartOffset());
 
-      prevEndOffset = editToMerge.range.second;
+      prevEndOffset = editToMerge.getRange().getEndOffset();
 
-      builder.append(editToMerge.newText);
+      builder.append(editToMerge.getNewText());
     }
 
     if (mergeRangeEndOffset < replaceElementEndOffset) {
@@ -148,7 +102,7 @@ public class TextEditUtil {
     var editsToMergeRangesAsOffsets = new TreeSet<>(diffRangesAsOffsetsTreeSet.subSet(first, true, last, true));
 
     if (floor != null) {
-      boolean isLowerBoundInclusive = floor.range.second >= collisionRangeStartOffset;
+      boolean isLowerBoundInclusive = floor.getRange().getEndOffset() >= collisionRangeStartOffset;
       if (isLowerBoundInclusive) {
         editsToMergeRangesAsOffsets.add(floor);
       }
@@ -156,7 +110,7 @@ public class TextEditUtil {
     }
 
     if (ceil != null) {
-      boolean isUpperBoundInclusive = ceil.range.first <= collisionRangeEndOffset;
+      boolean isUpperBoundInclusive = ceil.getRange().getStartOffset() <= collisionRangeEndOffset;
       if (isUpperBoundInclusive) {
         editsToMergeRangesAsOffsets.add(ceil);
       }
@@ -173,20 +127,21 @@ public class TextEditUtil {
     int prevEnd = 0;
     TextEditWithOffsets textEditWithCaret = null;
     for (TextEditWithOffsets editWithOffsets : diffRangesAsOffsetsTreeSet) {
-      sub = (editWithOffsets.range.first - prevEnd);
-      prevEnd = editWithOffsets.range.second;
+      sub = (editWithOffsets.getRange().getStartOffset() - prevEnd);
+      prevEnd = editWithOffsets.getRange().getEndOffset();
       caretOffsetAcc -= sub;
       if (caretOffsetAcc < 0) {
         caretOffsetAcc += sub;
         textEditWithCaret = new TextEditWithOffsets(caretOffsetAcc, caretOffsetAcc, "$0");
         break;
       }
-      sub = editWithOffsets.newText.length();
+      sub = editWithOffsets.getNewText().length();
       caretOffsetAcc -= sub;
       if (caretOffsetAcc <= 0) {
         caretOffsetAcc += sub;
-        editWithOffsets.newText = editWithOffsets.newText.substring(0, caretOffsetAcc) +
-                                  "$0" + editWithOffsets.newText.substring(caretOffsetAcc);
+        final var textWithCaret = editWithOffsets.getNewText().substring(0, caretOffsetAcc) +
+            "$0" + editWithOffsets.getNewText().substring(caretOffsetAcc);
+        editWithOffsets.setNewText(textWithCaret);
         textEditWithCaret = editWithOffsets;
         break;
       }
@@ -198,9 +153,5 @@ public class TextEditUtil {
               caretOffsetInOriginalDoc, caretOffsetInOriginalDoc, "$0");
     }
     return textEditWithCaret;
-  }
-
-  public record MergeEditsResult(@NotNull TextEditWithOffsets mainEdit,
-                          @NotNull List<TextEditWithOffsets> additionalEdits) {
   }
 }

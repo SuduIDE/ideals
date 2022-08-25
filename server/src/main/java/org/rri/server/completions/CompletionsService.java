@@ -33,7 +33,8 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.server.LspPath;
-import org.rri.server.completions.util.TextEditUtil;
+import org.rri.server.completions.util.TextEditRearranger;
+import org.rri.server.completions.util.TextEditWithOffsets;
 import org.rri.server.util.EditorUtil;
 import org.rri.server.util.MiscUtil;
 import org.rri.server.util.TextUtil;
@@ -155,6 +156,19 @@ final public class CompletionsService implements Disposable {
         });
   }
 
+  @NotNull
+  static private List<TextEditWithOffsets> toListOfEditsWithOffsets(
+      @NotNull ArrayList<@NotNull TextEdit> list,
+      @NotNull Document document) {
+    return list.stream().map(textEdit -> new TextEditWithOffsets(textEdit, document)).toList();
+  }
+
+  static private @NotNull List<@NotNull TextEdit> toListOfTextEdits(
+      @NotNull List<TextEditWithOffsets> additionalEdits,
+      @NotNull Document document) {
+    return additionalEdits.stream().map(editWithOffsets -> editWithOffsets.toTextEdit(document)).toList();
+  }
+
   private void doResolve(int resultIndex, int lookupElementIndex, @NotNull CompletionItem unresolved) {
     synchronized (cachedData) {
       var cachedLookupElement = cachedData.cachedLookupElements.get(lookupElementIndex);
@@ -204,7 +218,7 @@ final public class CompletionsService implements Disposable {
               unresolvedTextEdit.getRange().getEnd());
 
           var newTextAndAdditionalEdits =
-              TextEditUtil.findOverlappingTextEditsInRangeFromMainTextEditToCaretAndMergeThem(
+              TextEditRearranger.findOverlappingTextEditsInRangeFromMainTextEditToCaretAndMergeThem(
                   toListOfEditsWithOffsets(diff, copyThatCalledCompletionDoc),
                   replaceElementStartOffset, replaceElementEndOffset,
                   copyThatCalledCompletionDoc.getText(), caretOffsetAfterInsert
@@ -220,28 +234,6 @@ final public class CompletionsService implements Disposable {
         }
       });
     }
-  }
-  @NotNull
-  static private List<TextEditUtil.TextEditWithOffsets> toListOfEditsWithOffsets(
-      @NotNull ArrayList<@NotNull TextEdit> list,
-      @NotNull Document document) {
-    return list.stream().map(textEdit -> {
-      var range = textEdit.getRange();
-      return new TextEditUtil.TextEditWithOffsets(
-          MiscUtil.positionToOffset(document, range.getStart()),
-          MiscUtil.positionToOffset(document, range.getEnd()), textEdit.getNewText());
-    }).toList();
-  }
-
-  static private @NotNull List<@NotNull TextEdit> toListOfTextEdits(
-      @NotNull List<TextEditUtil.TextEditWithOffsets> additionalEdits,
-      @NotNull Document document) {
-    return additionalEdits.stream().map(editWithOffsets -> new TextEdit(
-        new Range(
-            MiscUtil.offsetToPosition(document, editWithOffsets.getRange().first),
-            MiscUtil.offsetToPosition(document, editWithOffsets.getRange().second)
-        ),
-        editWithOffsets.getNewText())).toList();
   }
 
   private static class CachedCompletionResolveData {
