@@ -6,7 +6,7 @@ import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import org.jetbrains.annotations.NotNull;
-import org.rri.server.completions.CompletionService;
+import org.rri.server.completions.CompletionsService;
 import org.rri.server.diagnostics.DiagnosticsService;
 import org.rri.server.formatting.FormattingCommand;
 import org.rri.server.formatting.OnTypeFormattingCommand;
@@ -143,14 +143,14 @@ public class MyTextDocumentService implements TextDocumentService {
   }
 
   @NotNull
-  private CompletionService completion() {
-    return session.getProject().getService(CompletionService.class);
+  private CompletionsService completions() {
+    return session.getProject().getService(CompletionsService.class);
   }
 
   @Override
   @NotNull
   public CompletableFuture<CompletionItem> resolveCompletionItem(@NotNull CompletionItem unresolved) {
-    return completion().startCompletionResolveCalculation(unresolved);
+    return completions().startCompletionResolveCalculation(unresolved);
   }
 
   @Override
@@ -164,7 +164,7 @@ public class MyTextDocumentService implements TextDocumentService {
       // todo Maybe we need to throw exception
       return CompletableFuture.completedFuture(Either.forLeft(new ArrayList<>()));
     }
-    return completion().startCompletionCalculation(path, params.getPosition());
+    return completions().startCompletionCalculation(path, params.getPosition());
   }
 
   @Override

@@ -45,16 +45,16 @@ import java.util.concurrent.CompletableFuture;
 import static org.rri.server.util.IconUtil.compareIcons;
 
 @Service(Service.Level.PROJECT)
-final public class CompletionService implements Disposable {
+final public class CompletionsService implements Disposable {
   @NotNull
   private final Project project;
-  private static final Logger LOG = Logger.getInstance(CompletionService.class);
+  private static final Logger LOG = Logger.getInstance(CompletionsService.class);
 
   @NotNull
   @Synchronized
   private final CachedCompletionResolveData cachedData = new CachedCompletionResolveData();
 
-  public CompletionService(@NotNull Project project) {
+  public CompletionsService(@NotNull Project project) {
     this.project = project;
   }
 
