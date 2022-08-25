@@ -7,6 +7,7 @@ import com.intellij.openapi.editor.impl.DocumentImpl;
 import com.intellij.openapi.fileEditor.FileDocumentManager;
 import com.intellij.openapi.fileEditor.impl.FileDocumentManagerImpl;
 import com.intellij.openapi.project.Project;
+import com.intellij.openapi.util.Computable;
 import com.intellij.openapi.util.Ref;
 import com.intellij.openapi.util.Segment;
 import com.intellij.openapi.util.TextRange;
@@ -24,6 +25,7 @@ import org.rri.server.LspPath;
 
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class MiscUtil {
   private static final Logger LOG = Logger.getInstance(MiscUtil.class);
@@ -51,28 +53,40 @@ public class MiscUtil {
   @Nullable
   public static PsiFile resolvePsiFile(@NotNull Project project, @NotNull LspPath path) {
     var result = new Ref<PsiFile>();
-    withPsiFileInReadAction(project, path, result::set);
+    invokeWithPsiFileInReadAction(project, path, result::set);
     return result.get();
   }
 
-  public static void withPsiFileInReadAction(@NotNull Project project, @NotNull LspPath path, @NotNull Consumer<@NotNull PsiFile> block) {
+  @Nullable
+  public static <T> T produceWithPsiFileInReadAction(@NotNull Project project,
+                                                     @NotNull LspPath path,
+                                                     @NotNull Function<@NotNull PsiFile, T> block) {
     final var virtualFile = path.findVirtualFile();
 
     if (virtualFile == null) {
       LOG.info("File not found: " + path);
-      return;
+      return null;
     }
 
-    ApplicationManager.getApplication().runReadAction(() -> {
+    return ApplicationManager.getApplication().runReadAction((Computable<T>) () -> {
       final var psiFile = PsiManager.getInstance(project).findFile(virtualFile);
 
       if (psiFile == null) {
         LOG.info("Unable to get PSI for virtual file: " + virtualFile);
-        return;
+        return null;
       }
 
-      block.accept(psiFile);
+      return block.apply(psiFile);
     });
+
+  }
+
+  public static void invokeWithPsiFileInReadAction(@NotNull Project project, @NotNull LspPath path, @NotNull Consumer<@NotNull PsiFile> block) {
+    produceWithPsiFileInReadAction(project, path,
+        (psiFile) -> {
+          block.accept(psiFile);
+          return null;
+        });
   }
 
   @Nullable
@@ -101,7 +115,7 @@ public class MiscUtil {
   }
 
   @NotNull
-  public static RuntimeException wrap(@NotNull Exception e) {
+  public static RuntimeException wrap(@NotNull Throwable e) {
     return e instanceof RuntimeException ? (RuntimeException) e : new RuntimeException(e);
   }
 

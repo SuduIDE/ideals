@@ -150,8 +150,7 @@ public class MyTextDocumentService implements TextDocumentService {
   @Override
   @NotNull
   public CompletableFuture<CompletionItem> resolveCompletionItem(@NotNull CompletionItem unresolved) {
-    // todo currently "completion resolve" == "insert completion item label"
-    return CompletableFuture.completedFuture(unresolved);
+    return completions().startCompletionResolveCalculation(unresolved);
   }
 
   @Override

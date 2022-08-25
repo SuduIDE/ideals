@@ -50,7 +50,7 @@ final public class ManagedDocuments {
 
     ApplicationManager.getApplication().invokeAndWait(MiscUtil.asWriteAction(() -> {
 
-      MiscUtil.withPsiFileInReadAction(project, path, (psi) -> {
+      MiscUtil.invokeWithPsiFileInReadAction(project, path, (psi) -> {
         var doc = MiscUtil.getDocument(psi);
         if (doc == null)
           return; // todo handle
@@ -154,7 +154,7 @@ final public class ManagedDocuments {
     }
 
     ApplicationManager.getApplication().invokeAndWait(
-        MiscUtil.asWriteAction(() -> MiscUtil.withPsiFileInReadAction(project, path, (psi) -> {
+        MiscUtil.asWriteAction(() -> MiscUtil.invokeWithPsiFileInReadAction(project, path, (psi) -> {
           var doc = MiscUtil.getDocument(psi);
           if (doc == null)
             return; // todo handle

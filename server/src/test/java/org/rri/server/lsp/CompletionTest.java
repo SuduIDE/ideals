@@ -1,5 +1,7 @@
 package org.rri.server.lsp;
 
+import com.google.gson.GsonBuilder;
+import com.google.gson.JsonObject;
 import com.intellij.openapi.util.Ref;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -9,8 +11,10 @@ import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.rri.server.LspPath;
 import org.rri.server.TestUtil;
-import org.rri.server.util.MiscUtil;
+import org.rri.server.completions.CompletionServiceTestUtil;
 
+import java.io.IOException;
+import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -28,9 +32,22 @@ public class CompletionTest extends LspServerTestBase {
     final String label = "completionVariant";
     final Position completionInvokePosition = new Position(8, 7);
 
-    final Set<CompletionItem> expected = Set.of(
-        newCompletionItem(label, "int", "()"),
-        newCompletionItem(label, "void", "(int x)")
+    final Set<CompletionItem> expectedCompletionList = Set.of(
+        CompletionServiceTestUtil.createCompletionItem(
+            label,
+            "()",
+            "int",
+            new ArrayList<>(),
+            label,
+            CompletionItemKind.Method
+        ),
+        CompletionServiceTestUtil.createCompletionItem(
+            label,
+            "(int x)",
+            "void",
+            new ArrayList<>(),
+            label,
+            CompletionItemKind.Method)
     );
 
     final var filePath = LspPath.fromLocalPath(getProjectPath().resolve("src/CompletionExampleTest.java"));
@@ -44,8 +61,51 @@ public class CompletionTest extends LspServerTestBase {
 
     Assertions.assertDoesNotThrow(() -> completionResRef.set(
         TestUtil.getNonBlockingEdt(server().getTextDocumentService().completion(params), 3000)));
+    var completionItemList = extractItemList(completionResRef.get());
 
-    Assert.assertEquals(expected, new HashSet<>(extractItemList(completionResRef.get())));
+    var itemForResolve = completionItemList
+        .stream()
+        .filter(completionItem ->
+            completionItem.getLabelDetails().getDetail().equals("()"))
+        .findFirst()
+        .orElseThrow(() -> new AssertionError("item wasn't found"));
+    var gson = new GsonBuilder().create();
+    itemForResolve.setData(gson.fromJson(gson.toJson(itemForResolve.getData()), JsonObject.class));
+    var resolvedItem = TestUtil.getNonBlockingEdt(
+        server()
+            .getTextDocumentService()
+            .resolveCompletionItem(
+                itemForResolve
+            ),
+        3000);
+    String originalText;
+    try {
+      originalText = new String(
+          Files.readAllBytes(LspPath.fromLspUri(params.getTextDocument().getUri()).toPath())
+      );
+    } catch (IOException e) {
+      throw new AssertionError(e);
+    }
+    var allEdits = new ArrayList<>(resolvedItem.getAdditionalTextEdits());
+    allEdits.add(resolvedItem.getTextEdit().getLeft());
+
+    var insertedText = TestUtil.applyEdits(originalText, allEdits);
+    var expectedText =
+        """
+        class CompletionExampleTest {
+          void completionVariant(int x) {
+          }
+                                
+          int completionVariant() {
+          }
+                                
+          void main() {
+            completionVariant()$0;
+          }
+        }""";
+    Assertions.assertEquals(expectedText, insertedText);
+    completionItemList.forEach(CompletionServiceTestUtil::removeResolveInfo);
+    Assert.assertEquals(expectedCompletionList, new HashSet<>(completionItemList));
   }
 
   @NotNull
@@ -58,21 +118,5 @@ public class CompletionTest extends LspServerTestBase {
       completionItemList = completionResult.getLeft();
     }
     return completionItemList;
-  }
-
-  @SuppressWarnings("SameParameterValue")
-  @NotNull
-  private static CompletionItem newCompletionItem(@NotNull String label, @NotNull String detail, @NotNull String completionItemLabelDetail) {
-    return MiscUtil.with(
-        new CompletionItem(),
-        item -> {
-          item.setLabel(label);
-          item.setInsertText(label);
-          item.setLabelDetails(MiscUtil.with(new CompletionItemLabelDetails(),
-              labelDetails -> labelDetails.setDetail(completionItemLabelDetail)));
-          item.setDetail(detail);
-          item.setTags(new ArrayList<>());
-        }
-    );
   }
 }

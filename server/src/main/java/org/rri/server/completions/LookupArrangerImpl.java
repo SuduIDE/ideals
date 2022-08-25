@@ -18,6 +18,8 @@ class LookupArrangerImpl extends LookupArranger {
   private final CompletionParameters parameters;
   @NotNull
   private final ArrayList<LookupElement> items = new ArrayList<>();
+  @NotNull
+  private final ArrayList<String> prefixes = new ArrayList<>();
 
 
   public LookupArrangerImpl(@NotNull CompletionParameters parameters) {
@@ -32,6 +34,7 @@ class LookupArrangerImpl extends LookupArranger {
     ReadAction.run(() -> completionItem.getLookupElement().renderElement(presentation));
 
     items.add(completionItem.getLookupElement());
+    prefixes.add(completionItem.getPrefixMatcher().getPrefix());
     super.addElement(completionItem.getLookupElement(), presentation);
   }
 
@@ -40,6 +43,16 @@ class LookupArrangerImpl extends LookupArranger {
   public Pair<List<LookupElement>, Integer> arrangeItems(@NotNull Lookup lookup, boolean onExplicitAction) {
     var toSelect = 0;
     return new Pair<>(items, toSelect);
+  }
+
+  @NotNull
+  public ArrayList<@NotNull LookupElement> getLookupItems() {
+    return items;
+  }
+
+  @NotNull
+  public ArrayList<@NotNull String> getPrefixes() {
+    return prefixes;
   }
 
   @Override
