@@ -25,9 +25,17 @@ At this time you can use any editor that support LSP (VSCode, Vim, Sublime and o
 ## How easy it is to use?
 
 1. Clone this project.
-2. Run server.
-3. Run extention in VSCode.
-4. Write code.
+2. Run plainIde task.
+3. Disable Android plugin in new IDEA window:
+
+    File -> Settings -> Plugins -> Installed -> Android -> Disable.
+4. Open project where you want to work, IDEA will generate .idea directory.
+5. Close environment.
+6. Run 'Run Plugin' task.
+7. Open VSCode.
+8. Run extension in VSCode (client/vscode).
+9. Open your project.
+10. Write code.
 
 ## Contribute with us.
 
