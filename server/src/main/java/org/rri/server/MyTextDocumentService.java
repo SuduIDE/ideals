@@ -41,7 +41,7 @@ public class MyTextDocumentService implements TextDocumentService {
 
     Metrics.run(() -> "didOpen: " + path, () -> {
       documents().startManaging(textDocument);
-      diagnostics().launchDiagnostics(path);
+//      diagnostics().launchDiagnostics(path);
 
       if (DumbService.isDumb(session.getProject())) {
         LOG.debug("Sending indexing started: " + path);
@@ -62,20 +62,20 @@ public class MyTextDocumentService implements TextDocumentService {
 
     Metrics.run(() -> "didChange: " + path, () -> {
       documents().updateDocument(params);
-      diagnostics().launchDiagnostics(path);
+//      diagnostics().launchDiagnostics(path);
     });
   }
 
   @Override
   public void didClose(DidCloseTextDocumentParams params) {
-    diagnostics().haltDiagnostics(LspPath.fromLspUri(params.getTextDocument().getUri()));
+//    diagnostics().haltDiagnostics(LspPath.fromLspUri(params.getTextDocument().getUri()));
     documents().stopManaging(params.getTextDocument());
   }
 
   @Override
   public void didSave(DidSaveTextDocumentParams params) {
     documents().syncDocument(params.getTextDocument());
-    diagnostics().launchDiagnostics(LspPath.fromLspUri(params.getTextDocument().getUri()));
+//    diagnostics().launchDiagnostics(LspPath.fromLspUri(params.getTextDocument().getUri()));
   }
 
   @Override
@@ -130,7 +130,7 @@ public class MyTextDocumentService implements TextDocumentService {
 
   public void refreshDiagnostics() {
     LOG.info("Start refreshing diagnostics for all opened documents");
-    documents().forEach(diagnostics()::launchDiagnostics);
+//    documents().forEach(diagnostics()::launchDiagnostics);
   }
 
   @NotNull

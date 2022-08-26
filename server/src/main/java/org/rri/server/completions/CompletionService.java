@@ -42,6 +42,7 @@ import org.rri.server.util.TextUtil;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.rri.server.completions.util.IconUtil.compareIcons;
 
@@ -50,6 +51,8 @@ final public class CompletionService implements Disposable {
   @NotNull
   private final Project project;
   private static final Logger LOG = Logger.getInstance(CompletionService.class);
+
+  private final ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
 
   @NotNull
   @Synchronized
@@ -108,7 +111,8 @@ final public class CompletionService implements Disposable {
                 });
 
             int currentResultIndex;
-            synchronized (cachedData) {
+            readWriteLock.writeLock().lock();
+            try {
               cachedData.cachedPosition = position;
               cachedData.cachedLookup = compInfo.getLookup();
               cachedData.cachedText = editor.getDocument().getText();
@@ -116,6 +120,8 @@ final public class CompletionService implements Disposable {
               currentResultIndex = ++cachedData.cachedResultIndex;
               cachedData.cachedLookupElements.clear();
               cachedData.cachedLookupElements.addAll(compInfo.getArranger().getLookupItems());
+            } finally {
+              readWriteLock.writeLock().unlock();
             }
             var result = new ArrayList<CompletionItem>();
             for (int i = 0; i < compInfo.getArranger().getLookupItems().size(); i++) {
@@ -140,20 +146,61 @@ final public class CompletionService implements Disposable {
 
   @NotNull
   public CompletableFuture<@NotNull CompletionItem> startCompletionResolveCalculation(@NotNull CompletionItem unresolved) {
-    var app = ApplicationManager.getApplication();
     LOG.info("start completion resolve");
     return CompletableFutures.computeAsync(
         AppExecutorUtil.getAppExecutorService(),
         (cancelChecker) -> {
-          app.invokeAndWait(() -> {
-            JsonObject jsonObject = (JsonObject) unresolved.getData();
-            var resultIndex = jsonObject.get("resultIndex").getAsInt();
-            var lookupElementIndex = jsonObject.get("lookupElementIndex").getAsInt();
-            doResolve(resultIndex, lookupElementIndex, unresolved);
-          });
-          cancelChecker.checkCanceled();
-          return unresolved;
-        });
+          JsonObject jsonObject = (JsonObject) unresolved.getData();
+          var resultIndex = jsonObject.get("resultIndex").getAsInt();
+          var lookupElementIndex = jsonObject.get("lookupElementIndex").getAsInt();
+          try {
+            return doResolve(resultIndex, lookupElementIndex, unresolved, cancelChecker);
+          } finally {
+            cancelChecker.checkCanceled();
+          }
+        }
+    );
+  }
+
+  private void prepareCompletionAndHandleInsert(
+      int lookupElementIndex,
+      CancelChecker cancelChecker,
+      Ref<Document> copyThatCalledCompletionDocRef,
+      Ref<Document> copyToInsertDocRef,
+      Ref<Integer> caretOffsetAfterInsertRef,
+      Disposable disposable) {
+    var cachedLookupElement = cachedData.cachedLookupElements.get(lookupElementIndex);
+    assert cachedData.cachedLanguage != null;
+    var copyToInsertRef = new Ref<PsiFile>();
+    ApplicationManager.getApplication().runReadAction(() -> {
+
+      cancelChecker.checkCanceled();
+      copyToInsertRef.set(PsiFileFactory.getInstance(project).createFileFromText(
+          "copy",
+          cachedData.cachedLanguage,
+          cachedData.cachedText,
+          true,
+          true,
+          true));
+      var copyThatCalledCompletion = (PsiFile) copyToInsertRef.get().copy();
+      cancelChecker.checkCanceled();
+
+      copyThatCalledCompletionDocRef.set(MiscUtil.getDocument(copyThatCalledCompletion));
+      copyToInsertDocRef.set(MiscUtil.getDocument(copyToInsertRef.get()));
+    });
+    var copyToInsert = copyToInsertRef.get();
+
+    ApplicationManager.getApplication().invokeAndWait(() -> {
+      var editor = EditorUtil.createEditor(disposable, copyToInsert,
+          cachedData.cachedPosition);
+      CompletionInfo completionInfo = new CompletionInfo(editor, project);
+
+      cancelChecker.checkCanceled();
+      handleInsert(cachedLookupElement, editor, copyToInsert, completionInfo);
+      cancelChecker.checkCanceled();
+
+      caretOffsetAfterInsertRef.set(editor.getCaretModel().getOffset());
+    });
   }
 
   @NotNull
@@ -169,70 +216,71 @@ final public class CompletionService implements Disposable {
     return additionalEdits.stream().map(editWithOffsets -> editWithOffsets.toTextEdit(document)).toList();
   }
 
-  private void doResolve(int resultIndex, int lookupElementIndex, @NotNull CompletionItem unresolved) {
-    synchronized (cachedData) {
-      var cachedLookupElement = cachedData.cachedLookupElements.get(lookupElementIndex);
+  private CompletionItem doResolve(int resultIndex, int lookupElementIndex,
+                       @NotNull CompletionItem unresolved, CancelChecker cancelChecker) {
 
-      assert cachedData.cachedLanguage != null;
-      var copyToInsert = PsiFileFactory.getInstance(project).createFileFromText(
-          "copy",
-          cachedData.cachedLanguage,
-          cachedData.cachedText,
-          true,
-          true,
-          true);
-      var copyThatCalledCompletion = (PsiFile) copyToInsert.copy();
+    Ref<Document> copyThatCalledCompletionDocRef = new Ref<>();
+    Ref<Document> copyToInsertDocRef = new Ref<>();
+    Ref<Integer> caretOffsetAfterInsertRef = new Ref<>();
 
-      var copyThatCalledCompletionDoc = MiscUtil.getDocument(copyThatCalledCompletion);
-      var copyToInsertDoc = MiscUtil.getDocument(copyToInsert);
+    ArrayList<TextEdit> diff;
+    int caretOffsetAfterInsert;
+    Document copyToInsertDoc;
+    Document copyThatCalledCompletionDoc;
+    var disposable = Disposer.newDisposable();
+    readWriteLock.readLock().lock();
+    try {
+      try {
+        assert cachedData.cachedLanguage != null;
+        if (resultIndex != cachedData.cachedResultIndex) {
+          return unresolved;
+        }
+        prepareCompletionAndHandleInsert(
+            lookupElementIndex,
+            cancelChecker,
+            copyThatCalledCompletionDocRef,
+            copyToInsertDocRef,
+            caretOffsetAfterInsertRef,
+            disposable);
+      } finally {
+        readWriteLock.readLock().unlock();
+      }
+      copyToInsertDoc = copyToInsertDocRef.get();
+      copyThatCalledCompletionDoc = copyThatCalledCompletionDocRef.get();
+      assert copyToInsertDoc != null;
+      assert copyThatCalledCompletionDoc != null;
 
-      if (resultIndex != cachedData.cachedResultIndex) {
-        return;
+      caretOffsetAfterInsert = caretOffsetAfterInsertRef.get();
+      diff = new ArrayList<>(TextUtil.textEditFromDocs(copyThatCalledCompletionDoc, copyToInsertDoc));
+
+      if (diff.isEmpty()) {
+        return unresolved;
       }
 
-      ApplicationManager.getApplication().runReadAction(() -> {
-        var tempDisp = Disposer.newDisposable();
-        int caretOffsetAfterInsert;
-        try {
-          var editor =
-              EditorUtil.createEditor(tempDisp, copyToInsert, cachedData.cachedPosition);
+      var unresolvedTextEdit = unresolved.getTextEdit().getLeft();
 
+      var replaceElementStartOffset =
+          MiscUtil.positionToOffset(copyThatCalledCompletionDoc, unresolvedTextEdit.getRange().getStart());
+      var replaceElementEndOffset =
+          MiscUtil.positionToOffset(copyThatCalledCompletionDoc, unresolvedTextEdit.getRange().getEnd());
 
-          CompletionInfo completionInfo = new CompletionInfo(editor, project);
-          assert copyToInsertDoc != null;
-          assert copyThatCalledCompletionDoc != null;
+      var newTextAndAdditionalEdits =
+          TextEditRearranger.findOverlappingTextEditsInRangeFromMainTextEditToCaretAndMergeThem(
+              toListOfEditsWithOffsets(diff, copyThatCalledCompletionDoc),
+              replaceElementStartOffset, replaceElementEndOffset,
+              copyThatCalledCompletionDoc.getText(), caretOffsetAfterInsert);
 
-          handleInsert(cachedLookupElement, editor, copyToInsert, completionInfo);
-          caretOffsetAfterInsert = editor.getCaretModel().getOffset();
+      unresolved.setAdditionalTextEdits(
+          toListOfTextEdits(newTextAndAdditionalEdits.additionalEdits(), copyThatCalledCompletionDoc)
+      );
 
-          var diff = new ArrayList<>(TextUtil.textEditFromDocs(copyThatCalledCompletionDoc, copyToInsertDoc));
-          if (diff.isEmpty()) {
-            return;
-          }
-
-          var unresolvedTextEdit = unresolved.getTextEdit().getLeft();
-
-          var replaceElementStartOffset = MiscUtil.positionToOffset(copyThatCalledCompletionDoc,
-              unresolvedTextEdit.getRange().getStart());
-          var replaceElementEndOffset = MiscUtil.positionToOffset(copyThatCalledCompletionDoc,
-              unresolvedTextEdit.getRange().getEnd());
-
-          var newTextAndAdditionalEdits =
-              TextEditRearranger.findOverlappingTextEditsInRangeFromMainTextEditToCaretAndMergeThem(
-                  toListOfEditsWithOffsets(diff, copyThatCalledCompletionDoc),
-                  replaceElementStartOffset, replaceElementEndOffset,
-                  copyThatCalledCompletionDoc.getText(), caretOffsetAfterInsert
-              );
-          unresolved.setAdditionalTextEdits(
-              toListOfTextEdits(newTextAndAdditionalEdits.additionalEdits(), copyThatCalledCompletionDoc)
-          );
-          unresolvedTextEdit.setNewText(newTextAndAdditionalEdits.mainEdit().getNewText());
-        } finally {
-          ApplicationManager.getApplication().runWriteAction(
-              () -> WriteCommandAction.runWriteCommandAction(project, () -> Disposer.dispose(tempDisp))
-          );
-        }
-      });
+      unresolvedTextEdit.setNewText(newTextAndAdditionalEdits.mainEdit().getNewText());
+      return unresolved;
+    } finally {
+      ApplicationManager.getApplication().invokeAndWait(
+          () -> WriteCommandAction.runWriteCommandAction(
+              project,
+              () -> Disposer.dispose(disposable)));
     }
   }
 
@@ -271,7 +319,6 @@ final public class CompletionService implements Disposable {
                             @NotNull Editor editor,
                             @NotNull PsiFile copyToInsert,
                             @NotNull CompletionInfo completionInfo) {
-    synchronized (cachedData) {
       prepareCompletionInfoForInsert(completionInfo, cachedLookupElement);
 
       completionInfo.getLookup().finishLookup('\n', cachedLookupElement);
@@ -298,7 +345,7 @@ final public class CompletionService implements Disposable {
                 cachedLookupElement.handleInsert(context);
 
               }));
-    }
+
   }
 
   @SuppressWarnings("UnstableApiUsage")

@@ -16,7 +16,6 @@ import org.eclipse.lsp4j.services.LanguageServer;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.server.util.Metrics;
-import org.rri.server.util.MiscUtil;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
@@ -100,7 +99,7 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
         syncOptions.setChange(TextDocumentSyncKind.Incremental);
         syncOptions.setSave(new SaveOptions(true));
       }));
-
+      
 //      it.setHoverProvider(true);
       it.setCompletionProvider(defaultCompletionOptions());
 //      it.setSignatureHelpProvider(null);
@@ -121,12 +120,12 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
 //      it.setDocumentLinkProvider(null);
 //      it.setExecuteCommandProvider(new ExecuteCommandOptions());
 
-      it.setCodeActionProvider(
-          MiscUtil.with(
-              new CodeActionOptions(List.of(CodeActionKind.QuickFix)),
-              cao -> cao.setResolveProvider(true)
-          )
-      );
+//      it.setCodeActionProvider(
+//          MiscUtil.with(
+//              new CodeActionOptions(List.of(CodeActionKind.QuickFix)),
+//              cao -> cao.setResolveProvider(true)
+//          )
+//      );
       it.setExperimental(null);
 
     });

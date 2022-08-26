@@ -32,7 +32,6 @@ public class TextEditWithOffsets implements Comparable<TextEditWithOffsets> {
     return newText;
   }
 
-  // TODO make it immutable
   void setNewText(@NotNull String newText) {
     this.newText = newText;
   }
