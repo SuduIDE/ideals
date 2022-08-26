@@ -121,7 +121,7 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
       it.setDocumentRangeFormattingProvider(true);
       it.setDocumentOnTypeFormattingProvider(defaultOnTypeFormattingOptions());
 
-//      it.setRenameProvider(false);
+      it.setRenameProvider(true);
 //      it.setDocumentLinkProvider(null);
 //      it.setExecuteCommandProvider(new ExecuteCommandOptions());
 

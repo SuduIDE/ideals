@@ -195,5 +195,24 @@ public class MyTextDocumentService implements TextDocumentService {
     );
   }
 
-
+  @Override
+  public CompletableFuture<WorkspaceEdit> rename(RenameParams params) {
+    return CompletableFuture.supplyAsync(() -> {
+//      try {
+//        final var project = session.getProject();
+//        final var pos = params.getPosition();
+//        final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
+//        final var usages = new FindUsagesCommand(pos).runAsync(project, path).get();
+//        final var file = MiscUtil.resolvePsiFile(project, path);
+//        assert file != null;
+//        final var doc = MiscUtil.getDocument(file);
+//        assert doc != null;
+//        final var old_name = Objects.requireNonNull(file.findElementAt(MiscUtil.positionToOffset(doc, pos))).getText();
+//        final var map = usages.stream().
+//      } catch (ExecutionException | InterruptedException ignore) {}
+//      return null;
+//      return new WorkspaceEdit(List.of(Either.forLeft()))
+      return null;
+    });
+  }
 }
