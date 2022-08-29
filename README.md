@@ -38,26 +38,26 @@ language features in IDE on server and client part. So, you can use any client t
 
 ## Feature list
 
-| Name                        | Method                            |                    | VSCode call                                    |
-|-----------------------------|-----------------------------------|--------------------|------------------------------------------------|
-| Workspace Symbols           | `workspace/symbol`                | :heavy_check_mark: | `Ctrl + t`                                     |
-| Execute Command             | `workspace/executeCommand`        | :x:                |                                                |
-| Diagnostics                 | `textDocument/publishDiagnostics` | :heavy_check_mark: | Nothing                                        |
-| Completion                  | `textDocument/completion`         | :heavy_check_mark: | `Enter` on typing                              |
-| Hover                       | `textDocument/hover`              | :x:                |                                                |
-| Signature Help              | `textDocument/signatureHelp`      | :x:                |                                                |
-| Goto Definition             | `textDocument/definition`         | :heavy_check_mark: | `Ctrl + Left mouse click`                      |
-| Goto Type Definition        | `textDocument/typeDefinition`     | :heavy_check_mark: | `Right mouse click -> Go to -> Type defintion` |
-| Goto Implementation         | `textDocument/implementation`     | :x:                |                                                |
-| Find References             | `textDocument/references`         | :heavy_check_mark: | `Right mouse click -> Go To -> References`     |
-| Document Highlights         | `textDocument/documentHighlight`  | :heavy_check_mark: | Nothing                                        |
-| Document Symbols            | `textDocument/documentSymbol`     | :heavy_check_mark: | `Ctrl + o`                                     |
-| Code Action                 | `textDocument/codeAction`         | :heavy_check_mark: | `Ctrl + .`                                     |
-| Code Lens                   | `textDocument/codeLens`           | :x:                |                                                |
-| Document Formatting         | `textDocument/formatting`         | :heavy_check_mark: | `Ctrl + Shift + p -> Document Formatting`      |
-| Document Range Formatting   | `textDocument/rangeFormatting`    | :heavy_check_mark: | Nothing                                        |
-| Document on Type Formatting | `textDocument/onTypeFormatting`   | :heavy_check_mark: | Nothing                                        |
-| Rename                      | `textDocument/rename`             | :x:                |                                                |
+| Name                        | Method                            |                    | VSCode call                                           |
+|-----------------------------|-----------------------------------|--------------------|-------------------------------------------------------|
+| Workspace Symbols           | `workspace/symbol`                | :heavy_check_mark: | `Ctrl + t`                                            |
+| Execute Command             | `workspace/executeCommand`        | :x:                |                                                       |
+| Diagnostics                 | `textDocument/publishDiagnostics` | :heavy_check_mark: | Nothing                                               |
+| Completion                  | `textDocument/completion`         | :heavy_check_mark: | `Enter` on typing                                     |
+| Hover                       | `textDocument/hover`              | :x:                |                                                       |
+| Signature Help              | `textDocument/signatureHelp`      | :x:                |                                                       |
+| Goto Definition             | `textDocument/definition`         | :heavy_check_mark: | `Ctrl + Left mouse click`                             |
+| Goto Type Definition        | `textDocument/typeDefinition`     | :heavy_check_mark: | `Right mouse click -> Go to -> Type defintion`        |
+| Goto Implementation         | `textDocument/implementation`     | :x:                |                                                       |
+| Find References             | `textDocument/references`         | :heavy_check_mark: | `Right mouse click -> Go To -> References`            |
+| Document Highlights         | `textDocument/documentHighlight`  | :heavy_check_mark: | Nothing                                               |
+| Document Symbols            | `textDocument/documentSymbol`     | :heavy_check_mark: | `Ctrl + o`                                            |
+| Code Action                 | `textDocument/codeAction`         | :heavy_check_mark: | `Ctrl + .`                                            |
+| Code Lens                   | `textDocument/codeLens`           | :x:                |                                                       |
+| Document Formatting         | `textDocument/formatting`         | :heavy_check_mark: | `Ctrl + Shift + p -> Format Document`                 |
+| Document Range Formatting   | `textDocument/rangeFormatting`    | :heavy_check_mark: | Nothing                                               |
+| Document on Type Formatting | `textDocument/onTypeFormatting`   | :heavy_check_mark: | `Select text -> Ctrl + Shift + p -> Format Selection` |
+| Rename                      | `textDocument/rename`             | :x:                |                                                       |
 
 
 ## Usage
