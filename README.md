@@ -23,18 +23,22 @@ In this way other editors can use IDEA's features.
 [LSP](https://microsoft.github.io/language-server-protocol/specifications/lsp/3.17/specification/) is a protocol that allow split
 language features in IDE on server and client part. So, you can use any client that support LSP if you have working LSP server.
 
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Requirements
 - IntelliJ IDEA 2022.1
    + Due to the way the plugin interacts with internal APIs, 
      there currently isn't support for other versions of IDEA.
 
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Caveats
 - Alpha-quality, and probably really unstable.
 - Java, Kotlin and Python are currently fully supported.
 - Editing in both IDEA and the LSP client at the same time isn't supported currently.
 - The server should work across any LSP client, but some nonstandard features (like using IntelliJ to build and run projects) are only implemented in the Emacs client.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Feature list
 
@@ -59,6 +63,7 @@ language features in IDE on server and client part. So, you can use any client t
 | Document on Type Formatting | `textDocument/onTypeFormatting`   | :heavy_check_mark: | `Select text -> Ctrl + Shift + p -> Format Selection` |
 | Rename                      | `textDocument/rename`             | :x:                |                                                       |
 
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Usage
 The server will start automatically on TCP port 8080 when the IDE is loaded. 
@@ -66,12 +71,18 @@ You must configure the project SDK inside IDEA before connecting your client.
 
 To use the server with Emacs/Spacemacs, see the [lsp-intellij](https://www.github.com/Ruin0x11/lsp-intellij) repository.
 
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
+
 ## Installation
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Contribute with us.
 
 Universal LSP server is opensource product. We welcome everyone who wants to make UTBot Java better.
 If you want to contribute with us, write @serganch in Telegram.
+
+<p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Contact
 
