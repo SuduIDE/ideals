@@ -1,46 +1,21 @@
 package org.rri.server.diagnostics;
 
-import com.google.gson.Gson;
-import com.google.gson.GsonBuilder;
-import com.google.gson.JsonObject;
-import com.intellij.psi.PsiDocumentManager;
-import com.intellij.psi.PsiFile;
-import com.intellij.psi.PsiManager;
-import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import com.jetbrains.python.PythonFileType;
-import org.eclipse.lsp4j.ClientCapabilities;
 import org.eclipse.lsp4j.Diagnostic;
 import org.eclipse.lsp4j.DiagnosticSeverity;
-import org.eclipse.lsp4j.PublishDiagnosticsParams;
-import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
-import org.junit.Before;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.rri.server.LspContext;
 import org.rri.server.LspPath;
 import org.rri.server.TestUtil;
-import org.rri.server.mocks.MockLanguageClient;
 import org.rri.server.util.MiscUtil;
 
 import java.util.List;
+import java.util.stream.Stream;
 
 @RunWith(JUnit4.class)
-public class DiagnosticsServiceTest extends BasePlatformTestCase {
-
-  @Before
-  public void setupContext() {
-    LspContext.createContext(getProject(),
-        new MockLanguageClient(),
-        new ClientCapabilities()
-    );
-  }
-
-  @NotNull
-  private MockLanguageClient getClient() {
-    return (MockLanguageClient) LspContext.getContext(getProject()).getClient();
-  }
+public class DiagnosticsServiceTest extends DiagnosticsTestBase {
 
   @Test
   public void testSimpleSyntaxErrors() {
@@ -91,23 +66,21 @@ public class DiagnosticsServiceTest extends BasePlatformTestCase {
   }
 
   @Test
-  public void testQuickFixFoundAndApplied() {
-    final var before = """
+  public void testGetQuickFixes() {
+
+    var expected = Stream.of(
+        "Wrap using 'java.util.Optional'",
+        "Wrap using 'null()'",
+        "Adapt using call or new object",
+        "<html>Migrate 'x' type to 'String'</html>",
+        "Change field 'x' type to 'String'"
+    ).sorted().toList();
+
+    final var file = myFixture.configureByText("test.java", """
         class A {
            final int x = "a";
         }
-        """;
-
-    final var after = """
-        class A {
-           final java.lang.String x = "a";
-        }
-        """;
-
-    final var actionTitle = "Change field 'x' type to 'String'";
-
-
-    final var file = myFixture.configureByText("test.java", before);
+        """);
 
     final var xVariableRange = TestUtil.newRange(1, 13, 1, 13);
 
@@ -115,35 +88,12 @@ public class DiagnosticsServiceTest extends BasePlatformTestCase {
 
     final var diagnosticsService = getProject().getService(DiagnosticsService.class);
 
+    Assert.assertTrue(diagnosticsService.getQuickFixes(path, xVariableRange).isEmpty());
+
     runAndGetDiagnostics(file);
 
-    final var codeActions = diagnosticsService.getCodeActions(path, xVariableRange);
+    final var quickFixes = diagnosticsService.getQuickFixes(path, xVariableRange);
 
-    var action = codeActions.stream()
-        .filter(it -> it.getTitle().equals(actionTitle))
-        .findFirst()
-        .orElseThrow(() -> new AssertionError("action not found"));
-
-    Gson gson = new GsonBuilder().create();
-    action.setData(gson.fromJson(gson.toJson(action.getData()), JsonObject.class));
-
-    final var edit = diagnosticsService.applyCodeAction(action);
-
-    Assert.assertEquals(after, TestUtil.applyEdits(file.getText(), edit.getChanges().get(path.toLspUri())));
-
-    // checking the quick fix doesn't actually change the file
-    final var reloaded = PsiManager.getInstance(getProject()).findFile(file.getVirtualFile());
-    Assert.assertNotNull(reloaded);
-    Assert.assertEquals(before, reloaded.getText());
-    final var reloadedDoc = PsiDocumentManager.getInstance(getProject()).getDocument(reloaded);
-    Assert.assertNotNull(reloadedDoc);
-    Assert.assertEquals(before, reloadedDoc.getText());
-
-  }
-
-  private PublishDiagnosticsParams runAndGetDiagnostics(@NotNull PsiFile file) {
-    getClient().resetDiagnosticsResult();
-    getProject().getService(DiagnosticsService.class).launchDiagnostics(LspPath.fromVirtualFile(file.getVirtualFile()));
-    return getClient().waitAndGetDiagnosticsPublished();
+    Assert.assertEquals(expected, quickFixes.stream().map(it -> it.getAction().getText()).sorted().toList());
   }
 }

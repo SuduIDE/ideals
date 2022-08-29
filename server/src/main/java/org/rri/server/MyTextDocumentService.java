@@ -6,6 +6,7 @@ import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import org.jetbrains.annotations.NotNull;
+import org.rri.server.codeactions.CodeActionService;
 import org.rri.server.completions.CompletionService;
 import org.rri.server.diagnostics.DiagnosticsService;
 import org.rri.server.formatting.FormattingCommand;
@@ -110,7 +111,7 @@ public class MyTextDocumentService implements TextDocumentService {
   @Override
   public CompletableFuture<List<Either<Command, CodeAction>>> codeAction(CodeActionParams params) {
     return CompletableFuture.completedFuture(
-        diagnostics().getCodeActions(
+        codeActions().getCodeActions(
             LspPath.fromLspUri(params.getTextDocument().getUri()),
             params.getRange()
         ).stream().map((Function<CodeAction, Either<Command, CodeAction>>) Either::forRight).collect(Collectors.toList())
@@ -121,7 +122,7 @@ public class MyTextDocumentService implements TextDocumentService {
   @Override
   public CompletableFuture<CodeAction> resolveCodeAction(CodeAction unresolved) {
     return CompletableFuture.supplyAsync(() -> {
-      var edit = diagnostics().applyCodeAction(unresolved);
+      var edit = codeActions().applyCodeAction(unresolved);
       unresolved.setEdit(edit);
       return unresolved;
     });
@@ -140,6 +141,11 @@ public class MyTextDocumentService implements TextDocumentService {
   @NotNull
   private DiagnosticsService diagnostics() {
     return session.getProject().getService(DiagnosticsService.class);
+  }
+
+  @NotNull
+  private CodeActionService codeActions() {
+    return session.getProject().getService(CodeActionService.class);
   }
 
   @NotNull
