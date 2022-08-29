@@ -65,15 +65,32 @@ language features in IDE on server and client part. So, you can use any client t
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-## Usage
-The server will start automatically on TCP port 8080 when the IDE is loaded. 
-You must configure the project SDK inside IDEA before connecting your client.
-
-To use the server with Emacs/Spacemacs, see the [lsp-intellij](https://www.github.com/Ruin0x11/lsp-intellij) repository.
-
-<p align="right">(<a href="#readme-top">back to top</a>)</p>
-
 ## Installation
+
+### Trying it out
+By now we have start up bug, so you need to run `plainIde` gradle task, open plugin settings and turn off Android plugin.
+Run `runIde` gradle task to open a testing instance of IDEA. After that you need to run client extension, that described inside *Running client* section  
+
+### Installing the plugin
+Run `:clean :buildPlugin` gradle tasks to create the plugin distribution. In IDEA, go to `File -> Plugins -> Install plugin from disk...` and select the `.zip` file that was output inside `build/distributions`.
+
+Before trying server functionality, you need to open the project where you want to work in common idea. Specify SDK and plugins that you want to use.
+
+### Running server
+Find where `idea.sh` (on Linux) or `idea.bat` (on Windows) is placed. Near this script you can find `idea*.vmoptions`. Add -Djava.awt.headless=true into end of this file.
+
+Run `idea.sh` or `idea.bat` with `lsp-server` argument. 
+```
+./idea.sh lsp-server
+```
+Now server is working on 8989 port.
+
+### Running client
+You need to build vscode extension, that is placed in `client/vscode` folder. [Extension building guide](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#packaging-extensions)
+
+In vscode go to Extensions -> Install from VSIX... and choose built extension.
+
+Remember, that by now you need to enable on extension just before, not after server running. If you installed extension before server run, you can always disable or enable it in extension settings
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
