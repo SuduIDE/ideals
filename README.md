@@ -32,7 +32,7 @@ If you are working on a multi-language project you don't need many language-spec
 Just install IntelliJ IDEA with appropriate set of plugins and turn it into one LSP server for all the languages you need. 
 
 Universal LSP Server is designed to be as much language agnostic as possible.
-However, for better user experience some parts are still dependent on language-specific API. 
+However, for a better user experience some parts are still dependent on language-specific API. 
 
 The project was heavily inspired by [intellij-lsp](https://github.com/Ruin0x11/intellij-lsp-server)
 
@@ -68,7 +68,7 @@ NOTE: the project code name (Universal LSP Server) is a subject to change in the
 | Goto Type Definition        | `textDocument/typeDefinition`     | :heavy_check_mark: | `Right mouse click -> Go to -> Type defintion`        |
 | Goto Implementation         | `textDocument/implementation`     | :x:                |                                                       |
 | Find References             | `textDocument/references`         | :heavy_check_mark: | `Right mouse click -> Go To -> References`            |
-| Document Highlights         | `textDocument/documentHighlight`  | :heavy_check_mark: | N/A                                                   |
+| Document Highlights         | `textDocument/documentHighlight`  | :heavy_check_mark: | `Left mouse click on symbol`                          |
 | Document Symbols            | `textDocument/documentSymbol`     | :heavy_check_mark: | `Ctrl + O`                                            |
 | Code Action                 | `textDocument/codeAction`         | :heavy_check_mark: | `Ctrl + .`                                            |
 | Code Lens                   | `textDocument/codeLens`           | :x:                |                                                       |
@@ -116,7 +116,7 @@ Note, that you need to enable extension before, not after the server has started
 ## Contribute with us.
 
 Universal LSP Server is an opensource product. We welcome everyone who wants to make it better.
-If you want to contribute with us, write @serganch in Telegram.
+If you want to contribute with us, write [@serganch](https://t.me/serganch) in Telegram.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
