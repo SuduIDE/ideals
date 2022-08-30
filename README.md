@@ -56,7 +56,7 @@ NOTE: the project code name (Universal LSP Server) is a subject to change in the
 
 ## Feature list
 
-| Name                        | Method                            |                    | VSCode call                                           |
+| Name                        | Method                            |                    | VSCode Action                                         |
 |-----------------------------|-----------------------------------|--------------------|-------------------------------------------------------|
 | Workspace Symbols           | `workspace/symbol`                | :heavy_check_mark: | `Ctrl + T`                                            |
 | Execute Command             | `workspace/executeCommand`        | :x:                |                                                       |
