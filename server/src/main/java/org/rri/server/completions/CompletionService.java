@@ -166,11 +166,11 @@ final public class CompletionService implements Disposable {
 
   private void prepareCompletionAndHandleInsert(
       int lookupElementIndex,
-      CancelChecker cancelChecker,
-      Ref<Document> copyThatCalledCompletionDocRef,
-      Ref<Document> copyToInsertDocRef,
-      Ref<Integer> caretOffsetAfterInsertRef,
-      Disposable disposable) {
+      @NotNull CancelChecker cancelChecker,
+      @NotNull Ref<Document> copyThatCalledCompletionDocRef,
+      @NotNull Ref<Document> copyToInsertDocRef,
+      @NotNull Ref<Integer> caretOffsetAfterInsertRef,
+      @NotNull Disposable disposable) {
     var cachedLookupElement = cachedData.lookupElements.get(lookupElementIndex);
     assert cachedData.language != null;
     var copyToInsertRef = new Ref<PsiFile>();
@@ -219,7 +219,7 @@ final public class CompletionService implements Disposable {
   }
 
   private CompletionItem doResolve(int resultIndex, int lookupElementIndex,
-                       @NotNull CompletionItem unresolved, CancelChecker cancelChecker) {
+                       @NotNull CompletionItem unresolved, @NotNull CancelChecker cancelChecker) {
 
     Ref<Document> copyThatCalledCompletionDocRef = new Ref<>();
     Ref<Document> copyToInsertDocRef = new Ref<>();
