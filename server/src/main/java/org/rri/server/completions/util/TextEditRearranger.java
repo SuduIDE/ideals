@@ -137,10 +137,10 @@ public class TextEditRearranger {
     TextEditWithOffsets textEditWithCaret = null;
     for (TextEditWithOffsets editWithOffsets : sortedDiffRanges) {
       sub = (editWithOffsets.getRange().getStartOffset() - prevEnd);
-      prevEnd = editWithOffsets.getRange().getEndOffset();
-
       if (currentRelativeCaretOffset < sub) { // not found
-        textEditWithCaret = new TextEditWithOffsets(currentRelativeCaretOffset, currentRelativeCaretOffset, "$0");
+        var caretOffsetInOriginalDoc = prevEnd + currentRelativeCaretOffset;
+        textEditWithCaret = new TextEditWithOffsets(
+            caretOffsetInOriginalDoc, caretOffsetInOriginalDoc, "$0");
         break;
       }
 
@@ -158,6 +158,7 @@ public class TextEditRearranger {
       }
 
       currentRelativeCaretOffset -= sub;
+      prevEnd = editWithOffsets.getRange().getEndOffset();
     }
 
     if (textEditWithCaret == null) {  // still not found
