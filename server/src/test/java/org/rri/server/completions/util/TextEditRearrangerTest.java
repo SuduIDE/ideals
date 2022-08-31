@@ -26,6 +26,19 @@ public class TextEditRearrangerTest {
             "01_3$0", // merged string
             Set.of(new TextEditWithOffsets(1, 4, "")) // expected additional edits
         ),
+        // |__| [__] ! [__]
+        Arguments.of(
+            0, 1, // start, end
+            4, // caret
+            List.of(
+                new TextEditWithOffsets(2, 3, "_"),
+                new TextEditWithOffsets(5, 6, "_")
+            ), // textEdits
+            "01_3$0", // merged string
+            Set.of(
+                new TextEditWithOffsets(1, 4, ""),
+                new TextEditWithOffsets(5, 6, "_")) // expected additional edits
+        ),
         // |__| [_!]
         Arguments.of(
             0, 1, // start, end
