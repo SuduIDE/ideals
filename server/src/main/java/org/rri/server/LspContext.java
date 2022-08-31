@@ -55,4 +55,4 @@ public class LspContext {
   public String getConfigValue(@NotNull String key) {
     return config.get(key);
   }
-  }
+}
