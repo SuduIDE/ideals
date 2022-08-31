@@ -57,28 +57,101 @@ final public class CompletionService implements Disposable {
     this.project = project;
   }
 
+  @SuppressWarnings("UnstableApiUsage")
   @NotNull
-  public List<CompletionItem> applyCompletionPerform(
-      @NotNull LspPath path,
-      @NotNull Position position,
-      @NotNull CancelChecker cancelChecker) {
-    LOG.info("start completion");
-    final var app = ApplicationManager.getApplication();
-    final Ref<List<CompletionItem>> ref = new Ref<>();
+  private static CompletionItem createLSPCompletionItem(@NotNull LookupElement lookupElement,
+                                                        @NotNull Range textEditRange) {
+    var resItem = new CompletionItem();
+    Registry.get("psi.deferIconLoading").setValue(false); // todo set this flag in server setup
+    var d = Disposer.newDisposable();
     try {
-      // invokeAndWait is necessary for editor creation. We can create editor only inside EDT
-      app.invokeAndWait(
-          () -> ref.set(MiscUtil.produceWithPsiFileInReadAction(
-                  project,
-                  path,
-                  (psiFile) -> createCompletionResults(psiFile, position, cancelChecker)
-              )
-          ),
-          app.getDefaultModalityState()
-      );
-      return ref.get();
+      IconManager.activate(new CoreIconManager());
+      var presentation = LookupElementPresentation.renderElement(lookupElement);
+
+      StringBuilder contextInfo = new StringBuilder();
+      for (var textFragment : presentation.getTailFragments()) {
+        contextInfo.append(textFragment.text);
+      }
+
+      var lDetails = new CompletionItemLabelDetails();
+      lDetails.setDetail(contextInfo.toString());
+
+      var tagList = new ArrayList<CompletionItemTag>();
+      if (presentation.isStrikeout()) {
+        tagList.add(CompletionItemTag.Deprecated);
+      }
+      resItem.setInsertTextFormat(InsertTextFormat.Snippet);
+      resItem.setLabel(presentation.getItemText());
+      resItem.setLabelDetails(lDetails);
+      resItem.setInsertTextMode(InsertTextMode.AsIs);
+      resItem.setFilterText(lookupElement.getLookupString());
+      resItem.setTextEdit(
+          Either.forLeft(new TextEdit(
+              textEditRange,
+              lookupElement.getLookupString()
+          )));
+
+      resItem.setDetail(presentation.getTypeText());
+      resItem.setTags(tagList);
+
+      var icon = presentation.getIcon();
+
+      if (icon == null) {
+        resItem.setKind(CompletionItemKind.Keyword);
+        return resItem;
+      }
+      CompletionItemKind kind = null;
+
+      if (compareIcons(icon, AllIcons.Nodes.Method) ||
+          compareIcons(icon, AllIcons.Nodes.AbstractMethod)) {
+        kind = CompletionItemKind.Method;
+      } else if (compareIcons(icon, AllIcons.Nodes.Module)
+          || compareIcons(icon, AllIcons.Nodes.IdeaModule)
+          || compareIcons(icon, AllIcons.Nodes.JavaModule)
+          || compareIcons(icon, AllIcons.Nodes.ModuleGroup)) {
+        kind = CompletionItemKind.Module;
+      } else if (compareIcons(icon, AllIcons.Nodes.Function)) {
+        kind = CompletionItemKind.Function;
+      } else if (compareIcons(icon, AllIcons.Nodes.Interface)) {
+        kind = CompletionItemKind.Interface;
+      } else if (compareIcons(icon, AllIcons.Nodes.Folder)) {
+        kind = CompletionItemKind.Folder;
+      } else if (compareIcons(icon, AllIcons.Nodes.MethodReference)) {
+        kind = CompletionItemKind.Reference;
+      } else if (compareIcons(icon, AllIcons.Nodes.TextArea)) {
+        kind = CompletionItemKind.Text;
+      } else if (compareIcons(icon, AllIcons.Nodes.Type)) {
+        kind = CompletionItemKind.TypeParameter;
+      } else if (compareIcons(icon, AllIcons.Nodes.Property)) {
+        kind = CompletionItemKind.Property;
+      } else if (compareIcons(icon, AllIcons.FileTypes.Any_type) /* todo can we find that?*/) {
+        kind = CompletionItemKind.File;
+      } else if (compareIcons(icon, AllIcons.Nodes.Enum)) {
+        kind = CompletionItemKind.Enum;
+      } else if (compareIcons(icon, AllIcons.Nodes.Variable) ||
+          compareIcons(icon, AllIcons.Nodes.Parameter) ||
+          compareIcons(icon, AllIcons.Nodes.NewParameter)) {
+        kind = CompletionItemKind.Variable;
+      } else if (compareIcons(icon, AllIcons.Nodes.Constant)) {
+        kind = CompletionItemKind.Constant;
+      } else if (
+          lookupElement.getPsiElement() instanceof PsiClass || // todo find another way for classes in java
+              compareIcons(icon, AllIcons.Nodes.Class) ||
+              compareIcons(icon, AllIcons.Nodes.AbstractClass)) {
+        kind = CompletionItemKind.Class;
+      } else if (compareIcons(icon, AllIcons.Nodes.Field)) {
+        kind = CompletionItemKind.Field;
+      } else if (compareIcons(icon, AllIcons.Nodes.Template)) {
+        kind = CompletionItemKind.Snippet;
+      }
+      resItem.setKind(kind);
+
+      return resItem;
+    } catch (Throwable e) {
+      throw MiscUtil.wrap(e);
     } finally {
-      cancelChecker.checkCanceled();
+      IconManager.deactivate();
+      Disposer.dispose(d);
     }
   }
 
@@ -218,6 +291,44 @@ final public class CompletionService implements Disposable {
     return additionalEdits.stream().map(editWithOffsets -> editWithOffsets.toTextEdit(document)).toList();
   }
 
+  @NotNull
+  public List<CompletionItem> performCompletion(
+      @NotNull LspPath path,
+      @NotNull Position position,
+      @NotNull CancelChecker cancelChecker) {
+    LOG.info("start completion");
+    final var app = ApplicationManager.getApplication();
+    final Ref<List<CompletionItem>> ref = new Ref<>();
+    try {
+      // invokeAndWait is necessary for editor creation. We can create editor only inside EDT
+      app.invokeAndWait(
+          () -> ref.set(MiscUtil.produceWithPsiFileInReadAction(
+                  project,
+                  path,
+                  (psiFile) -> createCompletionResults(psiFile, position, cancelChecker)
+              )
+          ),
+          app.getDefaultModalityState()
+      );
+      return ref.get();
+    } finally {
+      cancelChecker.checkCanceled();
+    }
+  }
+
+  private void prepareCompletionInfoForInsert(@NotNull CompletionInfo completionInfo,
+                                              @NotNull LookupElement cachedLookupElement) {
+    assert cachedData.lookup != null;
+    var prefix = cachedData.lookup.itemPattern(cachedLookupElement);
+
+    completionInfo.getLookup().addItem(cachedLookupElement,
+        new CamelHumpMatcher(prefix));
+
+    completionInfo.getArranger().addElement(cachedLookupElement,
+        new LookupElementPresentation());
+  }
+
+  @NotNull
   private CompletionItem doResolve(int resultIndex, int lookupElementIndex,
                        @NotNull CompletionItem unresolved, @NotNull CancelChecker cancelChecker) {
 
@@ -286,52 +397,6 @@ final public class CompletionService implements Disposable {
     }
   }
 
-  private void prepareCompletionInfoForInsert(@NotNull CompletionInfo completionInfo,
-                                              @NotNull LookupElement cachedLookupElement) {
-    assert cachedData.lookup != null;
-    var prefix = cachedData.lookup.itemPattern(cachedLookupElement);
-
-    completionInfo.getLookup().addItem(cachedLookupElement,
-        new CamelHumpMatcher(prefix));
-
-    completionInfo.getArranger().addElement(cachedLookupElement,
-        new LookupElementPresentation());
-  }
-
-  @SuppressWarnings("UnstableApiUsage")
-  private void handleInsert(@NotNull LookupElement cachedLookupElement,
-                            @NotNull Editor editor,
-                            @NotNull PsiFile copyToInsert,
-                            @NotNull CompletionInfo completionInfo) {
-      prepareCompletionInfoForInsert(completionInfo, cachedLookupElement);
-
-      completionInfo.getLookup().finishLookup('\n', cachedLookupElement);
-
-      var currentOffset = editor.getCaretModel().getOffset();
-
-      ApplicationManager.getApplication().runWriteAction(() ->
-          WriteCommandAction.runWriteCommandAction(project,
-              () -> {
-                var context =
-                    CompletionUtil.createInsertionContext(
-                        cachedData.lookupElements,
-                        cachedLookupElement,
-                        '\n',
-                        editor,
-                        copyToInsert,
-                        currentOffset,
-                        CompletionUtil.calcIdEndOffset(
-                            completionInfo.getInitContext().getOffsetMap(),
-                            editor,
-                            currentOffset),
-                        completionInfo.getInitContext().getOffsetMap());
-
-                cachedLookupElement.handleInsert(context);
-
-              }));
-
-  }
-
   private static class CachedCompletionResolveData {
     @NotNull
     private final List<@NotNull LookupElement> lookupElements = new ArrayList<>();
@@ -350,101 +415,36 @@ final public class CompletionService implements Disposable {
   }
 
   @SuppressWarnings("UnstableApiUsage")
-  @NotNull
-  private static CompletionItem createLSPCompletionItem(@NotNull LookupElement lookupElement,
-                                                        @NotNull Range textEditRange) {
-    var resItem = new CompletionItem();
-    Registry.get("psi.deferIconLoading").setValue(false); // todo set this flag in server setup
-    var d = Disposer.newDisposable();
-    try {
-      IconManager.activate(new CoreIconManager());
-      var presentation = LookupElementPresentation.renderElement(lookupElement);
+  private void handleInsert(@NotNull LookupElement cachedLookupElement,
+                            @NotNull Editor editor,
+                            @NotNull PsiFile copyToInsert,
+                            @NotNull CompletionInfo completionInfo) {
+    prepareCompletionInfoForInsert(completionInfo, cachedLookupElement);
 
-      StringBuilder contextInfo = new StringBuilder();
-      for (var textFragment : presentation.getTailFragments()) {
-        contextInfo.append(textFragment.text);
-      }
+    completionInfo.getLookup().finishLookup('\n', cachedLookupElement);
 
-      var lDetails = new CompletionItemLabelDetails();
-      lDetails.setDetail(contextInfo.toString());
+    var currentOffset = editor.getCaretModel().getOffset();
 
-      var tagList = new ArrayList<CompletionItemTag>();
-      if (presentation.isStrikeout()) {
-        tagList.add(CompletionItemTag.Deprecated);
-      }
-      resItem.setInsertTextFormat(InsertTextFormat.Snippet);
-      resItem.setLabel(presentation.getItemText());
-      resItem.setLabelDetails(lDetails);
-      resItem.setInsertTextMode(InsertTextMode.AsIs);
-      resItem.setFilterText(lookupElement.getLookupString());
-      resItem.setTextEdit(
-          Either.forLeft(new TextEdit(
-              textEditRange,
-              lookupElement.getLookupString()
-          )));
+    WriteCommandAction.runWriteCommandAction(project,
+        () -> {
+          var context =
+              CompletionUtil.createInsertionContext(
+                  cachedData.lookupElements,
+                  cachedLookupElement,
+                  '\n',
+                  editor,
+                  copyToInsert,
+                  currentOffset,
+                  CompletionUtil.calcIdEndOffset(
+                      completionInfo.getInitContext().getOffsetMap(),
+                      editor,
+                      currentOffset),
+                  completionInfo.getInitContext().getOffsetMap());
 
-      resItem.setDetail(presentation.getTypeText());
-      resItem.setTags(tagList);
+          cachedLookupElement.handleInsert(context);
 
-      var icon = presentation.getIcon();
+        });
 
-      if (icon == null) {
-        resItem.setKind(CompletionItemKind.Keyword);
-        return resItem;
-      }
-      CompletionItemKind kind = null;
-
-      if (compareIcons(icon, AllIcons.Nodes.Method) ||
-          compareIcons(icon, AllIcons.Nodes.AbstractMethod)) {
-        kind = CompletionItemKind.Method;
-      } else if (compareIcons(icon, AllIcons.Nodes.Module)
-                 || compareIcons(icon, AllIcons.Nodes.IdeaModule)
-                 || compareIcons(icon, AllIcons.Nodes.JavaModule)
-                 || compareIcons(icon, AllIcons.Nodes.ModuleGroup)) {
-        kind = CompletionItemKind.Module;
-      } else if (compareIcons(icon, AllIcons.Nodes.Function)) {
-        kind = CompletionItemKind.Function;
-      } else if (compareIcons(icon, AllIcons.Nodes.Interface)) {
-        kind = CompletionItemKind.Interface;
-      } else if (compareIcons(icon, AllIcons.Nodes.Folder)) {
-        kind = CompletionItemKind.Folder;
-      } else if (compareIcons(icon, AllIcons.Nodes.MethodReference)) {
-        kind = CompletionItemKind.Reference;
-      } else if (compareIcons(icon, AllIcons.Nodes.TextArea)) {
-        kind = CompletionItemKind.Text;
-      } else if (compareIcons(icon, AllIcons.Nodes.Type)) { // todo what is type parameter
-        kind = CompletionItemKind.TypeParameter;
-      } else if (compareIcons(icon, AllIcons.Nodes.Property)) {
-        kind = CompletionItemKind.Property;
-      } else if (compareIcons(icon, AllIcons.FileTypes.Any_type) /* todo can we find that?*/) {
-        kind = CompletionItemKind.File;
-      } else if (compareIcons(icon, AllIcons.Nodes.Enum)) {
-        kind = CompletionItemKind.Enum;
-      } else if (compareIcons(icon, AllIcons.Nodes.Variable) ||
-                 compareIcons(icon, AllIcons.Nodes.Parameter) ||
-                 compareIcons(icon, AllIcons.Nodes.NewParameter)) {
-        kind = CompletionItemKind.Variable;
-      } else if (compareIcons(icon, AllIcons.Nodes.Constant)) {
-        kind = CompletionItemKind.Constant;
-      } else if (
-          lookupElement.getPsiElement() instanceof PsiClass || // todo find another way for classes in java
-                 compareIcons(icon, AllIcons.Nodes.Class) ||
-                 compareIcons(icon, AllIcons.Nodes.AbstractClass)) {
-        kind = CompletionItemKind.Class;
-      } else if (compareIcons(icon, AllIcons.Nodes.Field)) {
-        kind = CompletionItemKind.Field;
-      } else if (compareIcons(icon, AllIcons.Nodes.Template)) {
-        kind = CompletionItemKind.Snippet;
-      }
-      resItem.setKind(kind);
-
-      return resItem;
-    } catch (Throwable e) {
-      throw MiscUtil.wrap(e);
-    } finally {
-      IconManager.deactivate();
-      Disposer.dispose(d);
-    }
   }
 
   private record CompletionResolveData(int resultIndex, int lookupElementIndex) {

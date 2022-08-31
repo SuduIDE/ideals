@@ -9,6 +9,7 @@ import java.util.TreeSet;
 
 public class TextEditRearranger {
 
+  @NotNull
   static public MergeEditsResult findOverlappingTextEditsInRangeFromMainTextEditToCaretAndMergeThem(
       @NotNull List<@NotNull TextEditWithOffsets> diffRangesAsOffsetsList,
       int replaceElementStartOffset,
