@@ -29,10 +29,7 @@ public class CompletionTest extends LspServerTestBase {
 
   @Test
   public void completion() {
-    
-    
     final String label = "completionVariant";
-    
     final Position completionInvokePosition = new Position(8, 7);
     final Set<CompletionItem> expectedCompletionList = Set.of(
         CompletionServiceTestUtil.createCompletionItem(
