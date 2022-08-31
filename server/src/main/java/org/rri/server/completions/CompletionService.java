@@ -25,7 +25,6 @@ import com.intellij.psi.PsiFileFactory;
 import com.intellij.ui.CoreIconManager;
 import com.intellij.ui.IconManager;
 import com.intellij.util.concurrency.AppExecutorUtil;
-import jnr.ffi.annotations.Synchronized;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
@@ -41,6 +40,7 @@ import org.rri.server.util.TextUtil;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
@@ -55,7 +55,6 @@ final public class CompletionService implements Disposable {
   private final ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
 
   @NotNull
-  @Synchronized
   private final CachedCompletionResolveData cachedData = new CachedCompletionResolveData();
 
   public CompletionService(@NotNull Project project) {
@@ -127,13 +126,23 @@ final public class CompletionService implements Disposable {
             } finally {
               readWriteLock.writeLock().unlock();
             }
+            int currentCaretOffset = editor.getCaretModel().getOffset();
             var result = new ArrayList<CompletionItem>();
             for (int i = 0; i < compInfo.getArranger().getLookupItems().size(); i++) {
               var lookupElement = compInfo.getArranger().getLookupItems().get(i);
               var prefix = compInfo.getArranger().getPrefixes().get(i);
               var item =
-                  createLSPCompletionItem(lookupElement, position,
-                      prefix);
+                  createLSPCompletionItem(
+                      lookupElement,
+                      MiscUtil.with(new Range(),
+                          range -> {
+                            range.setStart(
+                                MiscUtil.offsetToPosition(
+                                    Objects.requireNonNull(MiscUtil.getDocument(psiFile)),
+                                    currentCaretOffset - prefix.length())
+                            );
+                            range.setEnd(position);
+                          }));
               item.setData(new CompletionResolveData(currentResultIndex, i));
               result.add(item);
             }
@@ -355,8 +364,7 @@ final public class CompletionService implements Disposable {
   @SuppressWarnings("UnstableApiUsage")
   @NotNull
   private static CompletionItem createLSPCompletionItem(@NotNull LookupElement lookupElement,
-                                                        @NotNull Position position,
-                                                        @NotNull String prefix) {
+                                                        @NotNull Range textEditRange) {
     var resItem = new CompletionItem();
     Registry.get("psi.deferIconLoading").setValue(false); // todo set this flag in server setup
     var d = Disposer.newDisposable();
@@ -382,13 +390,8 @@ final public class CompletionService implements Disposable {
       resItem.setInsertTextMode(InsertTextMode.AsIs);
       resItem.setFilterText(lookupElement.getLookupString());
       resItem.setTextEdit(
-          Either.forLeft(new TextEdit(new Range(
-              MiscUtil.with(new Position(),
-                  positionIDStarts -> {
-                    positionIDStarts.setLine(position.getLine());
-                    positionIDStarts.setCharacter(position.getCharacter() - prefix.length());
-                  }),
-              position),
+          Either.forLeft(new TextEdit(
+              textEditRange,
               lookupElement.getLookupString()
           )));
 
