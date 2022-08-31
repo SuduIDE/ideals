@@ -100,7 +100,7 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
         syncOptions.setChange(TextDocumentSyncKind.Incremental);
         syncOptions.setSave(new SaveOptions(true));
       }));
-      
+
 //      it.setHoverProvider(true);
       it.setCompletionProvider(defaultCompletionOptions());
 //      it.setSignatureHelpProvider(null);
