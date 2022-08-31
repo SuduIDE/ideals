@@ -49,7 +49,7 @@ final public class CompletionService implements Disposable {
   @NotNull
   private final Project project;
 
-  private final ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
+  private final ReentrantReadWriteLock cachedDataLock = new ReentrantReadWriteLock();
 
   private final CachedCompletionResolveData cachedData = new CachedCompletionResolveData();
 
@@ -181,17 +181,17 @@ final public class CompletionService implements Disposable {
             cancelChecker.checkCanceled();
 
             int currentResultIndex;
-            readWriteLock.writeLock().lock();
+            cachedDataLock.writeLock().lock();
             try {
               cachedData.position = position;
               cachedData.lookup = compInfo.getLookup();
-              cachedData.text = editor.getDocument().getText();
+              cachedData.fileText = editor.getDocument().getText();
               cachedData.language = psiFile.getLanguage();
               currentResultIndex = ++cachedData.resultIndex;
               cachedData.lookupElements.clear();
               cachedData.lookupElements.addAll(compInfo.getArranger().getLookupItems());
             } finally {
-              readWriteLock.writeLock().unlock();
+              cachedDataLock.writeLock().unlock();
             }
             int currentCaretOffset = editor.getCaretModel().getOffset();
             var result = new ArrayList<CompletionItem>();
@@ -253,7 +253,7 @@ final public class CompletionService implements Disposable {
       copyToInsertRef.set(PsiFileFactory.getInstance(project).createFileFromText(
           "copy",
           cachedData.language,
-          cachedData.text,
+          cachedData.fileText,
           true,
           true,
           true));
@@ -341,7 +341,7 @@ final public class CompletionService implements Disposable {
     Document copyToInsertDoc;
     Document copyThatCalledCompletionDoc;
     var disposable = Disposer.newDisposable();
-    readWriteLock.readLock().lock();
+    cachedDataLock.readLock().lock();
     try {
       try {
         assert cachedData.language != null;
@@ -356,7 +356,7 @@ final public class CompletionService implements Disposable {
             caretOffsetAfterInsertRef,
             disposable);
       } finally {
-        readWriteLock.readLock().unlock();
+        cachedDataLock.readLock().unlock();
       }
       copyToInsertDoc = copyToInsertDocRef.get();
       copyThatCalledCompletionDoc = copyThatCalledCompletionDocRef.get();
@@ -406,7 +406,7 @@ final public class CompletionService implements Disposable {
     @NotNull
     private Position position = new Position();
     @NotNull
-    private String text = "";
+    private String fileText = "";
     @Nullable
     private Language language = null;
 
