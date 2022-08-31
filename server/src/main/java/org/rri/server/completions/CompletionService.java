@@ -48,13 +48,12 @@ import static org.rri.server.completions.util.IconUtil.compareIcons;
 
 @Service(Service.Level.PROJECT)
 final public class CompletionService implements Disposable {
+  private static final Logger LOG = Logger.getInstance(CompletionService.class);
   @NotNull
   private final Project project;
-  private static final Logger LOG = Logger.getInstance(CompletionService.class);
 
   private final ReentrantReadWriteLock readWriteLock = new ReentrantReadWriteLock();
 
-  @NotNull
   private final CachedCompletionResolveData cachedData = new CachedCompletionResolveData();
 
   public CompletionService(@NotNull Project project) {
@@ -116,13 +115,13 @@ final public class CompletionService implements Disposable {
             int currentResultIndex;
             readWriteLock.writeLock().lock();
             try {
-              cachedData.cachedPosition = position;
-              cachedData.cachedLookup = compInfo.getLookup();
-              cachedData.cachedText = editor.getDocument().getText();
-              cachedData.cachedLanguage = psiFile.getLanguage();
-              currentResultIndex = ++cachedData.cachedResultIndex;
-              cachedData.cachedLookupElements.clear();
-              cachedData.cachedLookupElements.addAll(compInfo.getArranger().getLookupItems());
+              cachedData.position = position;
+              cachedData.lookup = compInfo.getLookup();
+              cachedData.text = editor.getDocument().getText();
+              cachedData.language = psiFile.getLanguage();
+              currentResultIndex = ++cachedData.resultIndex;
+              cachedData.lookupElements.clear();
+              cachedData.lookupElements.addAll(compInfo.getArranger().getLookupItems());
             } finally {
               readWriteLock.writeLock().unlock();
             }
@@ -182,16 +181,16 @@ final public class CompletionService implements Disposable {
       Ref<Document> copyToInsertDocRef,
       Ref<Integer> caretOffsetAfterInsertRef,
       Disposable disposable) {
-    var cachedLookupElement = cachedData.cachedLookupElements.get(lookupElementIndex);
-    assert cachedData.cachedLanguage != null;
+    var cachedLookupElement = cachedData.lookupElements.get(lookupElementIndex);
+    assert cachedData.language != null;
     var copyToInsertRef = new Ref<PsiFile>();
     ApplicationManager.getApplication().runReadAction(() -> {
 
       cancelChecker.checkCanceled();
       copyToInsertRef.set(PsiFileFactory.getInstance(project).createFileFromText(
           "copy",
-          cachedData.cachedLanguage,
-          cachedData.cachedText,
+          cachedData.language,
+          cachedData.text,
           true,
           true,
           true));
@@ -205,7 +204,7 @@ final public class CompletionService implements Disposable {
 
     ApplicationManager.getApplication().invokeAndWait(() -> {
       var editor = EditorUtil.createEditor(disposable, copyToInsert,
-          cachedData.cachedPosition);
+          cachedData.position);
       CompletionInfo completionInfo = new CompletionInfo(editor, project);
 
       cancelChecker.checkCanceled();
@@ -244,8 +243,8 @@ final public class CompletionService implements Disposable {
     readWriteLock.readLock().lock();
     try {
       try {
-        assert cachedData.cachedLanguage != null;
-        if (resultIndex != cachedData.cachedResultIndex) {
+        assert cachedData.language != null;
+        if (resultIndex != cachedData.resultIndex) {
           return unresolved;
         }
         prepareCompletionAndHandleInsert(
@@ -297,28 +296,10 @@ final public class CompletionService implements Disposable {
     }
   }
 
-  private static class CachedCompletionResolveData {
-    @NotNull
-    private final List<@NotNull LookupElement> cachedLookupElements = new ArrayList<>();
-    @Nullable
-    private LookupImpl cachedLookup = null;
-    private int cachedResultIndex = 0;
-    @NotNull
-    private Position cachedPosition = new Position();
-    @NotNull
-    private String cachedText = "";
-    @Nullable
-    private Language cachedLanguage = null;
-
-    public CachedCompletionResolveData() {
-    }
-  }
-
-
   private void prepareCompletionInfoForInsert(@NotNull CompletionInfo completionInfo,
                                               @NotNull LookupElement cachedLookupElement) {
-    assert cachedData.cachedLookup != null;
-    var prefix = cachedData.cachedLookup.itemPattern(cachedLookupElement);
+    assert cachedData.lookup != null;
+    var prefix = cachedData.lookup.itemPattern(cachedLookupElement);
 
     completionInfo.getLookup().addItem(cachedLookupElement,
         new CamelHumpMatcher(prefix));
@@ -343,7 +324,7 @@ final public class CompletionService implements Disposable {
               () -> {
                 var context =
                     CompletionUtil.createInsertionContext(
-                        cachedData.cachedLookupElements,
+                        cachedData.lookupElements,
                         cachedLookupElement,
                         '\n',
                         editor,
@@ -359,6 +340,23 @@ final public class CompletionService implements Disposable {
 
               }));
 
+  }
+
+  private static class CachedCompletionResolveData {
+    @NotNull
+    private final List<@NotNull LookupElement> lookupElements = new ArrayList<>();
+    @Nullable
+    private LookupImpl lookup = null;
+    private int resultIndex = 0;
+    @NotNull
+    private Position position = new Position();
+    @NotNull
+    private String text = "";
+    @Nullable
+    private Language language = null;
+
+    public CachedCompletionResolveData() {
+    }
   }
 
   @SuppressWarnings("UnstableApiUsage")

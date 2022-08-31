@@ -4,6 +4,7 @@ import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.SortedSet;
 import java.util.TreeSet;
 
 public class TextEditRearranger {
@@ -18,9 +19,8 @@ public class TextEditRearranger {
     var diffRangesAsOffsetsTreeSet = new TreeSet<>(diffRangesAsOffsetsList);
     var additionalEdits = new ArrayList<TextEditWithOffsets>();
 
-    var textEditWithCaret = findEditWithCaret(diffRangesAsOffsetsTreeSet, caretOffsetAfterInsert);
+    var textEditWithCaret = findAndTransformEditWithCaret(diffRangesAsOffsetsTreeSet, caretOffsetAfterInsert);
 
-    diffRangesAsOffsetsTreeSet.add(textEditWithCaret);
     final int selectedEditRangeStartOffset = textEditWithCaret.getRange().getStartOffset();
     final int selectedEditRangeEndOffset = textEditWithCaret.getRange().getEndOffset();
 
@@ -119,39 +119,54 @@ public class TextEditRearranger {
     return editsToMergeRangesAsOffsets;
   }
 
+  /**
+   * Finds (or creates and adds into the given sorted set) an edit, inside which the caret is positioned,
+   * and places caret marker inside its text into the proper position.
+   * @param sortedDiffRanges mutable set with text edits sorted by position
+   * @param caretOffset absolute caret offset
+   * @return the found or created text edit with marked text
+   */
   @NotNull
-  static private TextEditWithOffsets findEditWithCaret(
-      @NotNull TreeSet<TextEditWithOffsets> diffRangesAsOffsetsTreeSet,
-      int caretOffsetAcc) {
+  static private TextEditWithOffsets findAndTransformEditWithCaret(
+      @NotNull SortedSet<TextEditWithOffsets> sortedDiffRanges,
+      int caretOffset) {
     int sub;
     int prevEnd = 0;
+    int currentRelativeCaretOffset = caretOffset;
+
     TextEditWithOffsets textEditWithCaret = null;
-    for (TextEditWithOffsets editWithOffsets : diffRangesAsOffsetsTreeSet) {
+    for (TextEditWithOffsets editWithOffsets : sortedDiffRanges) {
       sub = (editWithOffsets.getRange().getStartOffset() - prevEnd);
       prevEnd = editWithOffsets.getRange().getEndOffset();
-      caretOffsetAcc -= sub;
-      if (caretOffsetAcc < 0) {
-        caretOffsetAcc += sub;
-        textEditWithCaret = new TextEditWithOffsets(caretOffsetAcc, caretOffsetAcc, "$0");
+
+      if (currentRelativeCaretOffset < sub) { // not found
+        textEditWithCaret = new TextEditWithOffsets(currentRelativeCaretOffset, currentRelativeCaretOffset, "$0");
         break;
       }
+
+      currentRelativeCaretOffset -= sub;
+
       sub = editWithOffsets.getNewText().length();
-      caretOffsetAcc -= sub;
-      if (caretOffsetAcc <= 0) {
-        caretOffsetAcc += sub;
-        final var textWithCaret = editWithOffsets.getNewText().substring(0, caretOffsetAcc) +
-            "$0" + editWithOffsets.getNewText().substring(caretOffsetAcc);
-        editWithOffsets.setNewText(textWithCaret);
+      if (currentRelativeCaretOffset <= sub) {
+        final var textWithCaret = editWithOffsets.getNewText().substring(0, currentRelativeCaretOffset) +
+            "$0" + editWithOffsets.getNewText().substring(currentRelativeCaretOffset);
+        sortedDiffRanges.remove(editWithOffsets);
+
+        editWithOffsets = new TextEditWithOffsets(editWithOffsets.getRange(), textWithCaret);
         textEditWithCaret = editWithOffsets;
         break;
       }
+
+      currentRelativeCaretOffset -= sub;
     }
-    if (textEditWithCaret == null) {
-      var caretOffsetInOriginalDoc = prevEnd + caretOffsetAcc;
-      textEditWithCaret =
-          new TextEditWithOffsets(
-              caretOffsetInOriginalDoc, caretOffsetInOriginalDoc, "$0");
+
+    if (textEditWithCaret == null) {  // still not found
+      var caretOffsetInOriginalDoc = prevEnd + currentRelativeCaretOffset;
+      textEditWithCaret = new TextEditWithOffsets(caretOffsetInOriginalDoc, caretOffsetInOriginalDoc, "$0");
     }
+
+    sortedDiffRanges.add(textEditWithCaret);
+
     return textEditWithCaret;
   }
 }

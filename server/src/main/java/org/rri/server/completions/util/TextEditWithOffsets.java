@@ -7,11 +7,13 @@ import org.eclipse.lsp4j.TextEdit;
 import org.jetbrains.annotations.NotNull;
 import org.rri.server.util.MiscUtil;
 
+import java.util.Objects;
+
 public class TextEditWithOffsets implements Comparable<TextEditWithOffsets> {
   @NotNull
   private final TextRange range;
   @NotNull
-  private String newText;
+  private final String newText;
 
   public TextEditWithOffsets(@NotNull TextRange range, @NotNull String newText) {
     this.range = range;
@@ -30,10 +32,6 @@ public class TextEditWithOffsets implements Comparable<TextEditWithOffsets> {
   @NotNull
   public String getNewText() {
     return newText;
-  }
-
-  void setNewText(@NotNull String newText) {
-    this.newText = newText;
   }
 
   public @NotNull TextRange getRange() {
@@ -60,11 +58,16 @@ public class TextEditWithOffsets implements Comparable<TextEditWithOffsets> {
   }
 
   @Override
-  public boolean equals(Object obj) {
-    if (!(obj instanceof TextEditWithOffsets otherEdit)) {
-      return false;
-    }
-    return range.equals(otherEdit.range);
+  public boolean equals(Object o) {
+    if (this == o) return true;
+    if (o == null || getClass() != o.getClass()) return false;
+    TextEditWithOffsets that = (TextEditWithOffsets) o;
+    return range.equals(that.range) && newText.equals(that.newText);
+  }
+
+  @Override
+  public int hashCode() {
+    return Objects.hash(range, newText);
   }
 
   @Override
