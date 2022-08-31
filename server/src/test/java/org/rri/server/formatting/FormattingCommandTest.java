@@ -6,7 +6,6 @@ import com.jetbrains.python.PythonFileType;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.TextEdit;
-import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
@@ -173,7 +172,7 @@ public class FormattingCommandTest extends BasePlatformTestCase {
                                                                @Nullable Range lspRange) {
     final var actualPsiFile = myFixture.configureByText(fileType, actualText);
 
-    var context = new ExecutorContext(actualPsiFile, getProject(), new DumbCancelChecker());
+    var context = new ExecutorContext(actualPsiFile, getProject(), new TestUtil.DumbCancelChecker());
     var command = new FormattingCommand(lspRange, FormattingTestUtil.defaultOptions());
 
     return TextUtil.differenceAfterAction(actualPsiFile, (copy) -> {
@@ -187,16 +186,5 @@ public class FormattingCommandTest extends BasePlatformTestCase {
   @Override
   protected String getTestDataPath() {
     return "test-data/formatting/formatting-project";
-  }
-
-  private static class DumbCancelChecker implements CancelChecker {
-
-    @Override
-    public void checkCanceled() {}
-
-    @Override
-    public boolean isCanceled() {
-      return false;
-    }
   }
 }

@@ -2,7 +2,9 @@ package org.rri.server;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.DumbService;
+import com.intellij.util.concurrency.AppExecutorUtil;
 import org.eclipse.lsp4j.*;
+import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import org.jetbrains.annotations.NotNull;
@@ -18,7 +20,6 @@ import org.rri.server.references.FindUsagesCommand;
 import org.rri.server.symbol.DocumentSymbolCommand;
 import org.rri.server.util.Metrics;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
 import java.util.function.Function;
@@ -156,21 +157,22 @@ public class MyTextDocumentService implements TextDocumentService {
   @Override
   @NotNull
   public CompletableFuture<CompletionItem> resolveCompletionItem(@NotNull CompletionItem unresolved) {
-    return completions().startCompletionResolveCalculation(unresolved);
+    return CompletableFutures.computeAsync(
+        AppExecutorUtil.getAppExecutorService(),
+        (cancelChecker) ->
+            completions().applyCompletionResolve(unresolved, cancelChecker)
+    );
   }
 
   @Override
   @NotNull
   public CompletableFuture<Either<List<CompletionItem>, CompletionList>> completion(@NotNull CompletionParams params) {
     final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
-
-    final var virtualFile = path.findVirtualFile();
-    if (virtualFile == null) {
-      LOG.info("File not found: " + path);
-      // todo Maybe we need to throw exception
-      return CompletableFuture.completedFuture(Either.forLeft(new ArrayList<>()));
-    }
-    return completions().startCompletionCalculation(path, params.getPosition());
+    return CompletableFutures.computeAsync(
+        AppExecutorUtil.getAppExecutorService(),
+        (cancelChecker) ->
+            Either.forLeft(completions().applyCompletionPerform(path, params.getPosition(), cancelChecker))
+    );
   }
 
   @Override

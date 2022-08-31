@@ -8,6 +8,7 @@ import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.eclipse.lsp4j.TextEdit;
+import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.jetbrains.annotations.NotNull;
 import org.rri.server.util.MiscUtil;
 
@@ -107,5 +108,16 @@ public class TestUtil {
         throw new IllegalArgumentException("position doesn't match text");
     }
     return hereIndex;
+  }
+
+  public static class DumbCancelChecker implements CancelChecker {
+
+    @Override
+    public void checkCanceled() {}
+
+    @Override
+    public boolean isCanceled() {
+      return false;
+    }
   }
 }

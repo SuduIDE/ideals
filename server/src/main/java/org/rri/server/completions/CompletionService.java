@@ -24,10 +24,8 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiFileFactory;
 import com.intellij.ui.CoreIconManager;
 import com.intellij.ui.IconManager;
-import com.intellij.util.concurrency.AppExecutorUtil;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
-import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -41,7 +39,6 @@ import org.rri.server.util.TextUtil;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.locks.ReentrantReadWriteLock;
 
 import static org.rri.server.completions.util.IconUtil.compareIcons;
@@ -61,41 +58,37 @@ final public class CompletionService implements Disposable {
   }
 
   @NotNull
-  public CompletableFuture<Either<List<CompletionItem>, CompletionList>> startCompletionCalculation(
+  public List<CompletionItem> applyCompletionPerform(
       @NotNull LspPath path,
-      @NotNull Position position) {
+      @NotNull Position position,
+      @NotNull CancelChecker cancelChecker) {
     LOG.info("start completion");
-    var app = ApplicationManager.getApplication();
-    return CompletableFutures.computeAsync(
-        AppExecutorUtil.getAppExecutorService(),
-        (cancelChecker) -> {
-          final Ref<Either<List<CompletionItem>, CompletionList>> ref = new Ref<>();
-          // invokeAndWait is necessary for editor creation. We can create editor only inside EDT
-          try {
-            app.invokeAndWait(
-                () -> ref.set(MiscUtil.produceWithPsiFileInReadAction(
-                        project,
-                        path,
-                        (psiFile) -> createCompletionResults(psiFile, position, cancelChecker)
-                    )
-                ),
-                app.getDefaultModalityState()
-            );
-            return ref.get();
-          } finally {
-            cancelChecker.checkCanceled();
-          }
-        }
-    );
+    final var app = ApplicationManager.getApplication();
+    final Ref<List<CompletionItem>> ref = new Ref<>();
+    try {
+      // invokeAndWait is necessary for editor creation. We can create editor only inside EDT
+      app.invokeAndWait(
+          () -> ref.set(MiscUtil.produceWithPsiFileInReadAction(
+                  project,
+                  path,
+                  (psiFile) -> createCompletionResults(psiFile, position, cancelChecker)
+              )
+          ),
+          app.getDefaultModalityState()
+      );
+      return ref.get();
+    } finally {
+      cancelChecker.checkCanceled();
+    }
   }
 
   @Override
   public void dispose() {
   }
 
-  public @NotNull Either<List<CompletionItem>, CompletionList> createCompletionResults(@NotNull PsiFile psiFile,
-                                                                                       @NotNull Position position,
-                                                                                       @NotNull CancelChecker cancelChecker) {
+  public @NotNull List<CompletionItem> createCompletionResults(@NotNull PsiFile psiFile,
+                                                               @NotNull Position position,
+                                                               @NotNull CancelChecker cancelChecker) {
     VoidCompletionProcess process = new VoidCompletionProcess();
     Ref<List<CompletionItem>> resultRef = new Ref<>();
     try {
@@ -106,11 +99,13 @@ final public class CompletionService implements Disposable {
             var ideaCompService = com.intellij.codeInsight.completion.CompletionService.getCompletionService();
             assert ideaCompService != null;
 
+            cancelChecker.checkCanceled();
             ideaCompService.performCompletion(compInfo.getParameters(),
                 (result) -> {
                   compInfo.getLookup().addItem(result.getLookupElement(), result.getPrefixMatcher());
                   compInfo.getArranger().addElement(result);
                 });
+            cancelChecker.checkCanceled();
 
             int currentResultIndex;
             readWriteLock.writeLock().lock();
@@ -145,7 +140,6 @@ final public class CompletionService implements Disposable {
               item.setData(new CompletionResolveData(currentResultIndex, i));
               result.add(item);
             }
-            cancelChecker.checkCanceled();
             resultRef.set(result);
           }
       );
@@ -153,25 +147,21 @@ final public class CompletionService implements Disposable {
       Disposer.dispose(process);
     }
 
-    return Either.forLeft(resultRef.get());
+    return resultRef.get();
   }
 
   @NotNull
-  public CompletableFuture<@NotNull CompletionItem> startCompletionResolveCalculation(@NotNull CompletionItem unresolved) {
+  public CompletionItem applyCompletionResolve(
+      @NotNull CompletionItem unresolved, @NotNull CancelChecker cancelChecker) {
     LOG.info("start completion resolve");
-    return CompletableFutures.computeAsync(
-        AppExecutorUtil.getAppExecutorService(),
-        (cancelChecker) -> {
-          JsonObject jsonObject = (JsonObject) unresolved.getData();
-          var resultIndex = jsonObject.get("resultIndex").getAsInt();
-          var lookupElementIndex = jsonObject.get("lookupElementIndex").getAsInt();
-          try {
-            return doResolve(resultIndex, lookupElementIndex, unresolved, cancelChecker);
-          } finally {
-            cancelChecker.checkCanceled();
-          }
-        }
-    );
+    JsonObject jsonObject = (JsonObject) unresolved.getData();
+    var resultIndex = jsonObject.get("resultIndex").getAsInt();
+    var lookupElementIndex = jsonObject.get("lookupElementIndex").getAsInt();
+    try {
+      return doResolve(resultIndex, lookupElementIndex, unresolved, cancelChecker);
+    } finally {
+      cancelChecker.checkCanceled();
+    }
   }
 
   private void prepareCompletionAndHandleInsert(
