@@ -21,6 +21,7 @@ import com.intellij.openapi.util.registry.Registry;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiFileFactory;
+import com.intellij.psi.PsiManager;
 import com.intellij.ui.CoreIconManager;
 import com.intellij.ui.IconManager;
 import org.eclipse.lsp4j.*;
@@ -163,64 +164,64 @@ final public class CompletionService implements Disposable {
     VoidCompletionProcess process = new VoidCompletionProcess();
     Ref<List<CompletionItem>> resultRef = new Ref<>();
     try {
-      EditorUtil.withEditor(process, psiFile,
+      var compInfoRef = new Ref<CompletionInfo>();
+      var currentCaretOffsetRef = new Ref<Integer>();
+
+      ApplicationManager.getApplication().invokeAndWait(
+          () -> EditorUtil.withEditor(process, psiFile,
+              position,
+              (editor) -> {
+                var compInfo = new CompletionInfo(editor, project);
+                compInfoRef.set(compInfo);
+                var ideaCompService = com.intellij.codeInsight.completion.CompletionService.getCompletionService();
+                assert ideaCompService != null;
+
+                cancelChecker.checkCanceled();
+                ideaCompService.performCompletion(compInfo.getParameters(),
+                    (result) -> {
+                      compInfo.getLookup().addItem(result.getLookupElement(), result.getPrefixMatcher());
+                      compInfo.getArranger().addElement(result);
+                    });
+                cancelChecker.checkCanceled();
+                currentCaretOffsetRef.set(editor.getCaretModel().getOffset());
+              }
+          ));
+      var compInfo = compInfoRef.get();
+      var currentCaretOffset = currentCaretOffsetRef.get();
+      var document = MiscUtil.getDocument(psiFile);
+      assert document != null;
+      int currentResultIndex = 1 + cachedDataRef.get().resultIndex;
+      var cachedData = new CachedCompletionResolveData(
+          compInfo.getArranger().getItemsWithPrefix(),
+          currentResultIndex,
           position,
-          (editor) -> {
-            var compInfo = new CompletionInfo(editor, project);
-            var ideaCompService = com.intellij.codeInsight.completion.CompletionService.getCompletionService();
-            assert ideaCompService != null;
-
-            cancelChecker.checkCanceled();
-            ideaCompService.performCompletion(compInfo.getParameters(),
-                (result) -> {
-                  compInfo.getLookup().addItem(result.getLookupElement(), result.getPrefixMatcher());
-                  compInfo.getArranger().addElement(result);
-                });
-            cancelChecker.checkCanceled();
-
-            int currentResultIndex;
-            currentResultIndex = 1 + cachedDataRef.get().resultIndex;
-            var cachedData = new CachedCompletionResolveData(
-                compInfo.getArranger()
-                    .getLookupItems()
-                    .stream()
-                    .map(lookupElement ->
-                        new LookupElementWithPrefix(lookupElement, compInfo.getLookup().itemPattern(lookupElement)))
-                    .toList(),
-                currentResultIndex,
-                position,
-                editor.getDocument().getText(),
-                psiFile.getLanguage()
-            );
-            cachedDataRef.set(cachedData);
-
-            int currentCaretOffset = editor.getCaretModel().getOffset();
-            var result = new ArrayList<CompletionItem>();
-            for (int i = 0; i < compInfo.getArranger().getLookupItems().size(); i++) {
-              var lookupElement = compInfo.getArranger().getLookupItems().get(i);
-              var prefix = compInfo.getArranger().getPrefixes().get(i);
-              var item =
-                  createLSPCompletionItem(
-                      lookupElement,
-                      MiscUtil.with(new Range(),
-                          range -> {
-                            range.setStart(
-                                MiscUtil.offsetToPosition(
-                                    Objects.requireNonNull(MiscUtil.getDocument(psiFile)),
-                                    currentCaretOffset - prefix.length())
-                            );
-                            range.setEnd(position);
-                          }));
-              item.setData(new CompletionResolveData(currentResultIndex, i));
-              result.add(item);
-            }
-            resultRef.set(result);
-          }
+          document.getText(),
+          psiFile.getLanguage()
       );
+      cachedDataRef.set(cachedData);
+
+      var result = new ArrayList<CompletionItem>();
+      for (int i = 0; i < compInfo.getArranger().getItemsWithPrefix().size(); i++) {
+        var lookupElementWithPrefix = compInfo.getArranger().getItemsWithPrefix().get(i);
+        var item =
+            createLSPCompletionItem(
+                lookupElementWithPrefix.lookupElement(),
+                MiscUtil.with(new Range(),
+                    range -> {
+                      range.setStart(
+                          MiscUtil.offsetToPosition(
+                              document,
+                              currentCaretOffset - lookupElementWithPrefix.prefix().length())
+                      );
+                      range.setEnd(position);
+                    }));
+        item.setData(new CompletionResolveData(currentResultIndex, i));
+        result.add(item);
+      }
+      resultRef.set(result);
     } finally {
       Disposer.dispose(process);
     }
-
     return resultRef.get();
   }
 
@@ -303,12 +304,18 @@ final public class CompletionService implements Disposable {
     try {
       // invokeAndWait is necessary for editor creation. We can create editor only inside EDT
       app.invokeAndWait(
-          () -> ref.set(MiscUtil.produceWithPsiFileInReadAction(
-                  project,
-                  path,
-                  (psiFile) -> createCompletionResults(psiFile, position, cancelChecker)
-              )
-          ),
+
+          () ->
+          {
+            var virtualFile = path.findVirtualFile();
+            if (virtualFile == null) {
+              return;
+            }
+            final var psiFile =
+                PsiManager.getInstance(project).findFile(Objects.requireNonNull(path.findVirtualFile()));
+            assert psiFile != null;
+            ref.set(createCompletionResults(psiFile, position, cancelChecker));
+          },
           app.getDefaultModalityState()
       );
       return ref.get();
@@ -319,12 +326,12 @@ final public class CompletionService implements Disposable {
 
   private void prepareCompletionInfoForInsert(@NotNull CompletionInfo completionInfo,
                                               @NotNull LookupElementWithPrefix lookupElementWithPrefix) {
-    var prefix = lookupElementWithPrefix.prefix;
+    var prefix = lookupElementWithPrefix.prefix();
 
-    completionInfo.getLookup().addItem(lookupElementWithPrefix.lookupElement,
+    completionInfo.getLookup().addItem(lookupElementWithPrefix.lookupElement(),
         new CamelHumpMatcher(prefix));
 
-    completionInfo.getArranger().addElement(lookupElementWithPrefix.lookupElement,
+    completionInfo.getArranger().addElement(lookupElementWithPrefix.lookupElement(),
         new LookupElementPresentation());
   }
 
@@ -393,10 +400,6 @@ final public class CompletionService implements Disposable {
     }
   }
 
-  private record LookupElementWithPrefix(@NotNull LookupElement lookupElement,
-                                         @NotNull String prefix) {
-  }
-
   private record CachedCompletionResolveData(
       @NotNull List<LookupElementWithPrefix> lookupElementWithPrefixList, int resultIndex,
       @NotNull Position position, @NotNull String fileText, @NotNull Language language) {
@@ -410,7 +413,7 @@ final public class CompletionService implements Disposable {
                             @NotNull CompletionInfo completionInfo) {
     prepareCompletionInfoForInsert(completionInfo, cachedLookupElementWithPrefix);
 
-    completionInfo.getLookup().finishLookup('\n', cachedLookupElementWithPrefix.lookupElement);
+    completionInfo.getLookup().finishLookup('\n', cachedLookupElementWithPrefix.lookupElement());
 
     var currentOffset = editor.getCaretModel().getOffset();
 
@@ -419,7 +422,7 @@ final public class CompletionService implements Disposable {
           var context =
               CompletionUtil.createInsertionContext(
                   cachedData.lookupElementWithPrefixList.stream().map(LookupElementWithPrefix::lookupElement).toList(),
-                  cachedLookupElementWithPrefix.lookupElement,
+                  cachedLookupElementWithPrefix.lookupElement(),
                   '\n',
                   editor,
                   copyToInsert,
@@ -430,7 +433,7 @@ final public class CompletionService implements Disposable {
                       currentOffset),
                   completionInfo.getInitContext().getOffsetMap());
 
-          cachedLookupElementWithPrefix.lookupElement.handleInsert(context);
+          cachedLookupElementWithPrefix.lookupElement().handleInsert(context);
 
         });
 

@@ -16,11 +16,9 @@ import java.util.List;
 class LookupArrangerImpl extends LookupArranger {
   @NotNull
   private final CompletionParameters parameters;
-  @NotNull
-  private final ArrayList<LookupElement> items = new ArrayList<>();
-  @NotNull
-  private final ArrayList<String> prefixes = new ArrayList<>();
 
+  @NotNull
+  private final ArrayList<LookupElementWithPrefix> itemsWithPrefix = new ArrayList<>();
 
   public LookupArrangerImpl(@NotNull CompletionParameters parameters) {
     this.parameters = parameters;
@@ -32,9 +30,8 @@ class LookupArrangerImpl extends LookupArranger {
   public void addElement(@NotNull CompletionResult completionItem) {
     var presentation = new LookupElementPresentation();
     ReadAction.run(() -> completionItem.getLookupElement().renderElement(presentation));
-
-    items.add(completionItem.getLookupElement());
-    prefixes.add(completionItem.getPrefixMatcher().getPrefix());
+    itemsWithPrefix.add(new LookupElementWithPrefix(completionItem.getLookupElement(),
+        completionItem.getPrefixMatcher().getPrefix()));
     super.addElement(completionItem.getLookupElement(), presentation);
   }
 
@@ -42,17 +39,11 @@ class LookupArrangerImpl extends LookupArranger {
   @NotNull
   public Pair<List<LookupElement>, Integer> arrangeItems(@NotNull Lookup lookup, boolean onExplicitAction) {
     var toSelect = 0;
-    return new Pair<>(items, toSelect);
+    return new Pair<>(itemsWithPrefix.stream().map(LookupElementWithPrefix::lookupElement).toList(), toSelect);
   }
 
-  @NotNull
-  public ArrayList<@NotNull LookupElement> getLookupItems() {
-    return items;
-  }
-
-  @NotNull
-  public ArrayList<@NotNull String> getPrefixes() {
-    return prefixes;
+  public @NotNull ArrayList<LookupElementWithPrefix> getItemsWithPrefix() {
+    return itemsWithPrefix;
   }
 
   @Override
