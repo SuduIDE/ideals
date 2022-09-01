@@ -9,8 +9,6 @@ import org.eclipse.lsp4j.SymbolTag;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.rri.server.symbol.provider.DocumentSymbolInfoProvider;
-import org.rri.server.symbol.provider.DocumentSymbolInfoUtil;
 import org.rri.server.util.MiscUtil;
 
 import java.util.ArrayList;
@@ -37,7 +35,7 @@ class DocumentSymbolPsiVisitor extends PsiRecursiveElementVisitor {
     this.psiFile = psiFile;
     this.cancelToken = cancelToken;
     this.document = document;
-    provider = DocumentSymbolInfoUtil.getDocumentSymbolProvider(psiFile.getLanguage());
+    provider = DocumentSymbolInfoProvider.findFor(psiFile.getLanguage());
     children = new Stack<>();
   }
 

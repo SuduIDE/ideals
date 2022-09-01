@@ -1,5 +1,6 @@
-package org.rri.server.symbol.provider;
+package org.rri.server.kotlin.symbol;
 
+import com.intellij.lang.Language;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.impl.light.LightFieldBuilder;
 import org.eclipse.lsp4j.SymbolKind;
@@ -7,16 +8,23 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.jetbrains.kotlin.asJava.classes.KtLightClassForFacade;
 import org.jetbrains.kotlin.asJava.elements.KtLightMethod;
+import org.jetbrains.kotlin.idea.KotlinLanguage;
 import org.jetbrains.kotlin.idea.refactoring.memberInfo.MemberInfoUtilsKt;
 import org.jetbrains.kotlin.lexer.KtTokens;
 import org.jetbrains.kotlin.psi.*;
 import org.jetbrains.kotlin.psi.psiUtil.KtPsiUtilKt;
+import org.rri.server.java.symbol.JVMDocumentSymbolInfoProvider;
 
 import java.util.stream.Collectors;
 
-import static org.rri.server.symbol.provider.DocumentSymbolInfoProvider.Info.composeInfo;
+import static org.rri.server.symbol.DocumentSymbolInfoProvider.Info.composeInfo;
 
 public class KtDocumentSymbolInfoProvider extends JVMDocumentSymbolInfoProvider {
+  @Override
+  public @NotNull Language getLanguage() {
+    return KotlinLanguage.INSTANCE;
+  }
+
   @Override
   public @Nullable Info calculateSymbolInfo(@NotNull PsiElement psiElement) {
     if (psiElement instanceof final KtLightMethod elemLM) {

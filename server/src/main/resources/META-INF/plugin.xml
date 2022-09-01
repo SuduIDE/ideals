@@ -21,9 +21,10 @@
   <!-- Product and plugin compatibility requirements.
        Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
   <depends>com.intellij.modules.platform</depends>
-  <depends>com.intellij.java</depends>
-  <depends>com.intellij.modules.python</depends>
-  <depends>org.jetbrains.kotlin</depends>
+
+  <depends optional="true" config-file="org.rri.server-java.xml">com.intellij.java</depends>
+  <depends optional="true" config-file="org.rri.server-kotlin.xml">org.jetbrains.kotlin</depends>
+  <depends optional="true" config-file="org.rri.server-python.xml">com.intellij.modules.python</depends>
 
   <!-- Extension points defined by the plugin.
        Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
@@ -36,5 +37,12 @@
                         serviceImplementation="com.intellij.openapi.fileEditor.impl.FileDocumentManagerImpl"
                         testServiceImplementation="org.rri.server.components.TestFileDocumentManager"/>
 
+
   </extensions>
+
+  <extensionPoints>
+    <extensionPoint qualifiedName="org.rri.lsp.server.documentSymbolInfoProvider"
+                    interface="org.rri.server.symbol.DocumentSymbolInfoProvider"
+                    dynamic="true" />
+  </extensionPoints>
 </idea-plugin>

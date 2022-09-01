@@ -1,0 +1,9 @@
+<idea-plugin>
+  <id>org.rri.server.java</id>
+  <depends>org.rri.server</depends>
+  <depends>com.intellij.java</depends>
+
+  <extensions defaultExtensionNs="org.rri.lsp.server">
+    <documentSymbolInfoProvider implementation="org.rri.server.java.symbol.JavaDocumentSymbolInfoProvider"/>
+  </extensions>
+</idea-plugin>

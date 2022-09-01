@@ -1,17 +1,25 @@
-package org.rri.server.symbol.provider;
+package org.rri.server.java.symbol;
 
+import com.intellij.lang.Language;
+import com.intellij.lang.java.JavaLanguage;
 import com.intellij.lang.jvm.JvmModifier;
 import com.intellij.psi.*;
 import org.eclipse.lsp4j.SymbolKind;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.rri.server.symbol.DocumentSymbolInfoProvider;
 
-import static org.rri.server.symbol.provider.DocumentSymbolInfoProvider.Info.composeInfo;
+import static org.rri.server.symbol.DocumentSymbolInfoProvider.Info.composeInfo;
 
 public class JavaDocumentSymbolInfoProvider extends JVMDocumentSymbolInfoProvider {
+  @Override
+  public @NotNull Language getLanguage() {
+    return JavaLanguage.INSTANCE;
+  }
+
   @SuppressWarnings("UnstableApiUsage")
   @Override
-  public @Nullable Info calculateSymbolInfo(@NotNull PsiElement elem) {
+  public @Nullable DocumentSymbolInfoProvider.Info calculateSymbolInfo(@NotNull PsiElement elem) {
     if (elem instanceof final PsiClass elemClass) {
       return composeInfo(elemClass.isAnnotationType() || elemClass.isInterface() ? SymbolKind.Interface
               : elemClass.isEnum() ? SymbolKind.Enum

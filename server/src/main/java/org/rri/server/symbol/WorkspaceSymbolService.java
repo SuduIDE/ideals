@@ -29,7 +29,6 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.server.LspPath;
-import org.rri.server.symbol.provider.DocumentSymbolInfoUtil;
 import org.rri.server.util.MiscUtil;
 
 import java.util.ArrayList;
@@ -135,7 +134,7 @@ final public class WorkspaceSymbolService {
     if (!(descriptor.getItem() instanceof final PsiElement elem)) {
       return null;
     }
-    final var provider = DocumentSymbolInfoUtil.getDocumentSymbolProvider(elem.getLanguage());
+    final var provider = DocumentSymbolInfoProvider.findFor(elem.getLanguage());
     if (provider == null) {
       return null;
     }

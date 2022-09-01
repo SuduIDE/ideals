@@ -1,5 +1,7 @@
-package org.rri.server.symbol.provider;
+package org.rri.server.symbol;
 
+import com.intellij.lang.Language;
+import com.intellij.openapi.extensions.ExtensionPointName;
 import com.intellij.psi.PsiElement;
 import org.eclipse.lsp4j.SymbolKind;
 import org.jetbrains.annotations.NotNull;
@@ -8,6 +10,17 @@ import org.jetbrains.annotations.Nullable;
 import java.util.function.Supplier;
 
 public interface DocumentSymbolInfoProvider {
+  ExtensionPointName<DocumentSymbolInfoProvider> EP_NAME =
+      ExtensionPointName.create("org.rri.lsp.server.documentSymbolInfoProvider");
+
+  @Nullable
+  static DocumentSymbolInfoProvider findFor(@NotNull Language language) {
+    return EP_NAME.extensions()
+        .filter(it -> it.getLanguage().equals(language))
+        .findFirst()
+        .orElse(null);
+  }
+
   class Info {
     @NotNull
     private final String name;
@@ -44,4 +57,6 @@ public interface DocumentSymbolInfoProvider {
   default boolean isDeprecated(@NotNull PsiElement elem) {
     return false;
   }
+
+  @NotNull Language getLanguage();
 }

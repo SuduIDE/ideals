@@ -1,10 +1,11 @@
-package org.rri.server.symbol.provider;
+package org.rri.server.java.symbol;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.IndexNotReadyException;
 import com.intellij.psi.*;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.rri.server.symbol.DocumentSymbolInfoProvider;
 
 import java.util.Arrays;
 import java.util.List;

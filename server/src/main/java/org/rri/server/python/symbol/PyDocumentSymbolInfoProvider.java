@@ -1,20 +1,28 @@
-package org.rri.server.symbol.provider;
+package org.rri.server.python.symbol;
 
+import com.intellij.lang.Language;
 import com.intellij.psi.PsiElement;
+import com.jetbrains.python.PythonLanguage;
 import com.jetbrains.python.psi.*;
 import com.jetbrains.python.psi.impl.PyFunctionImpl;
 import com.jetbrains.python.psi.types.TypeEvalContext;
 import org.eclipse.lsp4j.SymbolKind;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.rri.server.symbol.DocumentSymbolInfoProvider;
 
 import java.util.Arrays;
 import java.util.Objects;
 import java.util.stream.Collectors;
 
-import static org.rri.server.symbol.provider.DocumentSymbolInfoProvider.Info.composeInfo;
+import static org.rri.server.symbol.DocumentSymbolInfoProvider.Info.composeInfo;
 
 public class PyDocumentSymbolInfoProvider implements DocumentSymbolInfoProvider {
+  @Override
+  public @NotNull Language getLanguage() {
+    return PythonLanguage.INSTANCE;
+  }
+
   public @Nullable Info calculateSymbolInfo(@NotNull PsiElement psiElement) {
     if (!(psiElement instanceof final PyElement elem)) {
       return null;
