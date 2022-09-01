@@ -9,6 +9,7 @@ import com.intellij.icons.AllIcons;
 import com.intellij.lang.Language;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
@@ -21,7 +22,6 @@ import com.intellij.openapi.util.registry.Registry;
 import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiFileFactory;
-import com.intellij.psi.PsiManager;
 import com.intellij.ui.CoreIconManager;
 import com.intellij.ui.IconManager;
 import org.eclipse.lsp4j.*;
@@ -37,7 +37,6 @@ import org.rri.server.util.TextUtil;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
 
 import static org.rri.server.completions.util.IconUtil.compareIcons;
@@ -164,15 +163,13 @@ final public class CompletionService implements Disposable {
     VoidCompletionProcess process = new VoidCompletionProcess();
     Ref<List<CompletionItem>> resultRef = new Ref<>();
     try {
-      var compInfoRef = new Ref<CompletionInfo>();
-      var currentCaretOffsetRef = new Ref<Integer>();
-
+      var lookupItemsWithPrefixRef = new Ref<List<LookupElementWithPrefix>>();
+      var currentResultIndexRef = new Ref<Integer>();
       ApplicationManager.getApplication().invokeAndWait(
           () -> EditorUtil.withEditor(process, psiFile,
               position,
               (editor) -> {
                 var compInfo = new CompletionInfo(editor, project);
-                compInfoRef.set(compInfo);
                 var ideaCompService = com.intellij.codeInsight.completion.CompletionService.getCompletionService();
                 assert ideaCompService != null;
 
@@ -183,46 +180,66 @@ final public class CompletionService implements Disposable {
                       compInfo.getArranger().addElement(result);
                     });
                 cancelChecker.checkCanceled();
-                currentCaretOffsetRef.set(editor.getCaretModel().getOffset());
-              }
-          ));
-      var compInfo = compInfoRef.get();
-      var currentCaretOffset = currentCaretOffsetRef.get();
-      var document = MiscUtil.getDocument(psiFile);
-      assert document != null;
-      int currentResultIndex = 1 + cachedDataRef.get().resultIndex;
-      var cachedData = new CachedCompletionResolveData(
-          compInfo.getArranger().getItemsWithPrefix(),
-          currentResultIndex,
-          position,
-          document.getText(),
-          psiFile.getLanguage()
-      );
-      cachedDataRef.set(cachedData);
 
-      var result = new ArrayList<CompletionItem>();
-      for (int i = 0; i < compInfo.getArranger().getItemsWithPrefix().size(); i++) {
-        var lookupElementWithPrefix = compInfo.getArranger().getItemsWithPrefix().get(i);
-        var item =
-            createLSPCompletionItem(
-                lookupElementWithPrefix.lookupElement(),
-                MiscUtil.with(new Range(),
-                    range -> {
-                      range.setStart(
-                          MiscUtil.offsetToPosition(
-                              document,
-                              currentCaretOffset - lookupElementWithPrefix.prefix().length())
-                      );
-                      range.setEnd(position);
-                    }));
-        item.setData(new CompletionResolveData(currentResultIndex, i));
-        result.add(item);
-      }
-      resultRef.set(result);
+                var itemsWithPrefix = compInfo.getArranger().getItemsWithPrefix();
+                lookupItemsWithPrefixRef.set(itemsWithPrefix);
+
+                var document = MiscUtil.getDocument(psiFile);
+                assert document != null;
+
+                int currentResultIndex = 1 + cachedDataRef.get().resultIndex;
+                currentResultIndexRef.set(currentResultIndex);
+
+                var cachedData = new CachedCompletionResolveData(
+                    itemsWithPrefix,
+                    currentResultIndex,
+                    position,
+                    document.getText(),
+                    psiFile.getLanguage()
+                );
+                cachedDataRef.set(cachedData);
+              }
+          )
+      );
+      ReadAction.run(() -> {
+        var document = MiscUtil.getDocument(psiFile);
+        assert document != null;
+        resultRef.set(convertLookupItemsWithPrefixToCompletionItems(
+            lookupItemsWithPrefixRef.get(), document, position, currentResultIndexRef.get()));
+      });
     } finally {
-      Disposer.dispose(process);
+      WriteCommandAction.runWriteCommandAction(project, () -> Disposer.dispose(process));
     }
     return resultRef.get();
+  }
+
+  @NotNull
+  private List<CompletionItem> convertLookupItemsWithPrefixToCompletionItems(
+      @NotNull List<LookupElementWithPrefix> lookupElementWithPrefixes,
+      @NotNull Document document,
+      @NotNull Position position,
+      int currentResultIndex
+  ) {
+    var result = new ArrayList<CompletionItem>();
+    var currentCaretOffset = MiscUtil.positionToOffset(document, position);
+    for (int i = 0; i < lookupElementWithPrefixes.size(); i++) {
+      var lookupElementWithPrefix = lookupElementWithPrefixes.get(i);
+      var item =
+          createLSPCompletionItem(
+              lookupElementWithPrefix.lookupElement(),
+              MiscUtil.with(new Range(),
+                  range -> {
+                    range.setStart(
+                        MiscUtil.offsetToPosition(
+                            document,
+                            currentCaretOffset - lookupElementWithPrefix.prefix().length())
+                    );
+                    range.setEnd(position);
+                  }));
+      item.setData(new CompletionResolveData(currentResultIndex, i));
+      result.add(item);
+    }
+    return result;
   }
 
   @NotNull
@@ -299,26 +316,16 @@ final public class CompletionService implements Disposable {
       @NotNull Position position,
       @NotNull CancelChecker cancelChecker) {
     LOG.info("start completion");
-    final var app = ApplicationManager.getApplication();
-    final Ref<List<CompletionItem>> ref = new Ref<>();
     try {
       // invokeAndWait is necessary for editor creation. We can create editor only inside EDT
-      app.invokeAndWait(
-
-          () ->
-          {
-            var virtualFile = path.findVirtualFile();
-            if (virtualFile == null) {
-              return;
-            }
-            final var psiFile =
-                PsiManager.getInstance(project).findFile(Objects.requireNonNull(path.findVirtualFile()));
-            assert psiFile != null;
-            ref.set(createCompletionResults(psiFile, position, cancelChecker));
-          },
-          app.getDefaultModalityState()
-      );
-      return ref.get();
+      var virtualFile = path.findVirtualFile();
+      if (virtualFile == null) {
+        LOG.warn("file not found: " + path);
+        return List.of();
+      }
+      final var psiFile = MiscUtil.resolvePsiFile(project, path);
+      assert psiFile != null;
+     return createCompletionResults(psiFile, position, cancelChecker);
     } finally {
       cancelChecker.checkCanceled();
     }
