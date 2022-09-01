@@ -107,7 +107,7 @@ public class CompletionInfo {
       return new Pair<>(itemsWithPrefix.stream().map(LookupElementWithPrefix::lookupElement).toList(), toSelect);
     }
 
-    @NotNull ArrayList<LookupElementWithPrefix> getItemsWithPrefix() {
+    @NotNull ArrayList<LookupElementWithPrefix> getElementsWithPrefix() {
       return itemsWithPrefix;
     }
 

@@ -163,7 +163,7 @@ final public class CompletionService implements Disposable {
     VoidCompletionProcess process = new VoidCompletionProcess();
     Ref<List<CompletionItem>> resultRef = new Ref<>();
     try {
-      var lookupItemsWithPrefixRef = new Ref<List<LookupElementWithPrefix>>();
+      var lookupElementWithPrefixRef = new Ref<List<LookupElementWithPrefix>>();
       var currentResultIndexRef = new Ref<Integer>();
       ApplicationManager.getApplication().invokeAndWait(
           () -> EditorUtil.withEditor(process, psiFile,
@@ -181,8 +181,8 @@ final public class CompletionService implements Disposable {
                     });
                 cancelChecker.checkCanceled();
 
-                var itemsWithPrefix = compInfo.getArranger().getItemsWithPrefix();
-                lookupItemsWithPrefixRef.set(itemsWithPrefix);
+                var elementsWithPrefix = compInfo.getArranger().getElementsWithPrefix();
+                lookupElementWithPrefixRef.set(elementsWithPrefix);
 
                 var document = MiscUtil.getDocument(psiFile);
                 assert document != null;
@@ -191,7 +191,7 @@ final public class CompletionService implements Disposable {
                 currentResultIndexRef.set(currentResultIndex);
 
                 var cachedData = new CachedCompletionResolveData(
-                    itemsWithPrefix,
+                    elementsWithPrefix,
                     currentResultIndex,
                     position,
                     document.getText(),
@@ -204,8 +204,8 @@ final public class CompletionService implements Disposable {
       ReadAction.run(() -> {
         var document = MiscUtil.getDocument(psiFile);
         assert document != null;
-        resultRef.set(convertLookupItemsWithPrefixToCompletionItems(
-            lookupItemsWithPrefixRef.get(), document, position, currentResultIndexRef.get()));
+        resultRef.set(convertLookupElementsWithPrefixToCompletionItems(
+            lookupElementWithPrefixRef.get(), document, position, currentResultIndexRef.get()));
       });
     } finally {
       WriteCommandAction.runWriteCommandAction(project, () -> Disposer.dispose(process));
@@ -214,7 +214,7 @@ final public class CompletionService implements Disposable {
   }
 
   @NotNull
-  private List<CompletionItem> convertLookupItemsWithPrefixToCompletionItems(
+  private List<CompletionItem> convertLookupElementsWithPrefixToCompletionItems(
       @NotNull List<LookupElementWithPrefix> lookupElementWithPrefixes,
       @NotNull Document document,
       @NotNull Position position,
@@ -264,7 +264,7 @@ final public class CompletionService implements Disposable {
       @NotNull Ref<Document> copyToInsertDocRef,
       @NotNull Ref<Integer> caretOffsetAfterInsertRef,
       @NotNull Disposable disposable) {
-    var cachedLookupElementWithPrefix = cachedData.lookupElementWithPrefixList.get(lookupElementIndex);
+    var cachedLookupElementWithPrefix = cachedData.lookupElementsWithPrefix.get(lookupElementIndex);
     var copyToInsertRef = new Ref<PsiFile>();
     ApplicationManager.getApplication().runReadAction(() -> {
 
@@ -408,7 +408,7 @@ final public class CompletionService implements Disposable {
   }
 
   private record CachedCompletionResolveData(
-      @NotNull List<LookupElementWithPrefix> lookupElementWithPrefixList,
+      @NotNull List<LookupElementWithPrefix> lookupElementsWithPrefix,
       int resultIndex,
       @NotNull Position position, @NotNull String fileText, @NotNull Language language) {
   }
@@ -429,7 +429,7 @@ final public class CompletionService implements Disposable {
         () -> {
           var context =
               CompletionUtil.createInsertionContext(
-                  cachedData.lookupElementWithPrefixList.stream().map(LookupElementWithPrefix::lookupElement).toList(),
+                  cachedData.lookupElementsWithPrefix.stream().map(LookupElementWithPrefix::lookupElement).toList(),
                   cachedLookupElementWithPrefix.lookupElement(),
                   '\n',
                   editor,
