@@ -157,7 +157,7 @@ final public class CompletionService implements Disposable {
   public void dispose() {
   }
 
-  public @NotNull List<CompletionItem> createCompletionResults(@NotNull PsiFile psiFile,
+  private @NotNull List<CompletionItem> createCompletionResults(@NotNull PsiFile psiFile,
                                                                @NotNull Position position,
                                                                @NotNull CancelChecker cancelChecker) {
     VoidCompletionProcess process = new VoidCompletionProcess();
