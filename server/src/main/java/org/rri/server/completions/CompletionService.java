@@ -408,7 +408,8 @@ final public class CompletionService implements Disposable {
   }
 
   private record CachedCompletionResolveData(
-      @NotNull List<LookupElementWithPrefix> lookupElementWithPrefixList, int resultIndex,
+      @NotNull List<LookupElementWithPrefix> lookupElementWithPrefixList,
+      int resultIndex,
       @NotNull Position position, @NotNull String fileText, @NotNull Language language) {
   }
 
