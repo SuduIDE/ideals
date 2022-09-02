@@ -27,7 +27,6 @@ import org.rri.ideals.server.util.Metrics;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -203,40 +202,7 @@ public class MyTextDocumentService implements TextDocumentService {
 
   @Override
   public CompletableFuture<WorkspaceEdit> rename(RenameParams params) {
-    return CompletableFuture.supplyAsync(() -> {
-      try {
-        final var project = session.getProject();
-        final var pos = params.getPosition();
-        final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
-        final Ref<PsiElement> targetRef = new Ref<>();
-        final var usages = new FindUsagesCommand(pos, true, targetRef).runAsync(project, path).get();
-        final var file = MiscUtil.resolvePsiFile(project, path);
-        assert file != null;
-        final Ref<Document> ref = new Ref<>();
-        ApplicationManager.getApplication().runReadAction(() -> ref.set(MiscUtil.getDocument(file)));
-        final var doc = ref.get();
-        assert doc != null;
-        final var oldText = ((NavigationItem) targetRef.get()).getName();
-        final var map = usages.stream()
-            .collect(
-                Collectors.groupingBy(Location::getUri, Collectors.mapping(Location::getRange, Collectors.toList()))
-            );
-        final var newName = params.getNewName();
-        final var textDocumentEdits = map.entrySet().stream()
-            .map(entry -> Either.<TextDocumentEdit, ResourceOperation>forLeft(
-                new TextDocumentEdit(
-                    new VersionedTextDocumentIdentifier(entry.getKey(), 1),
-                    entry.getValue().stream().map(range -> {
-                      final var end = range.getEnd();
-                      assert oldText != null;
-                      final var start = new Position(end.getLine(), end.getCharacter() - oldText.length());
-                      return new TextEdit(new Range(start, end), newName);
-                    }).toList()
-                )))
-            .toList();
-        return new WorkspaceEdit(textDocumentEdits);
-      } catch (ExecutionException | InterruptedException ignore) {}
-      return null;
-    });
+    return new RenameCommand(params.getPosition(), params.getNewName())
+        .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
   }
 }

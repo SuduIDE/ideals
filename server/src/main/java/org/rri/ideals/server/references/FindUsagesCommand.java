@@ -7,14 +7,12 @@ import com.intellij.find.findUsages.FindUsagesHandlerBase;
 import com.intellij.find.findUsages.FindUsagesHandlerFactory;
 import com.intellij.find.findUsages.FindUsagesOptions;
 import com.intellij.find.impl.FindManagerImpl;
-import com.intellij.navigation.NavigationItem;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.progress.ProcessCanceledException;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.ui.DialogWrapper;
 import com.intellij.openapi.util.Disposer;
-import com.intellij.openapi.util.Ref;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiInvalidElementAccessException;
@@ -56,19 +54,9 @@ public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
   private static final Logger LOG = Logger.getInstance(FindUsagesCommand.class);
   @NotNull
   private final Position pos;
-  private final boolean withTargetElement;
-  private final Ref<PsiElement> targetRef;
 
   public FindUsagesCommand(@NotNull Position pos) {
     this.pos = pos;
-    withTargetElement = false;
-    targetRef = null;
-  }
-
-  public FindUsagesCommand(@NotNull Position pos, boolean withTargetElement, Ref<PsiElement> targetRef) {
-    this.pos = pos;
-    this.withTargetElement = withTargetElement;
-    this.targetRef = targetRef;
   }
 
   @Override
@@ -92,24 +80,16 @@ public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
     try {
       EditorUtil.withEditor(this, file, pos, editor -> {
         var targetElement = TargetElementUtil.findTargetElement(editor, TargetElementUtil.getInstance().getAllAccepted());
-        if (targetRef != null && targetElement instanceof NavigationItem) { targetRef.set(targetElement); }
         ref.set(targetElement);
       });
     } finally {
       Disposer.dispose(this);
     }
-    final var target = ref.get();
+    var target = ref.get();
     if (target == null) {
       return List.of();
     }
-    final var lst = findUsages(ctx.getProject(), target, ctx.getCancelToken());
-    if (withTargetElement) {
-      final var targetLoc = MiscUtil.psiElementToLocation(target, target.getContainingFile());
-      if (targetLoc != null) {
-        lst.add(targetLoc);
-      }
-    }
-    return lst;
+    return findUsages(ctx.getProject(), target, ctx.getCancelToken());
   }
 
   private static @NotNull List<@NotNull Location> findUsages(@NotNull Project project,
@@ -146,10 +126,10 @@ public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
       result = new ArrayList<>(saver);
     } else {
       result = ReferencesSearch.search(target).findAll().stream()
-              .map(PsiReference::getElement)
-              .map(MiscUtil::psiElementToLocation)
-              .filter(Objects::nonNull)
-              .collect(Collectors.toList());
+          .map(PsiReference::getElement)
+          .map(MiscUtil::psiElementToLocation)
+          .filter(Objects::nonNull)
+          .collect(Collectors.toList());
     }
     return result;
   }
