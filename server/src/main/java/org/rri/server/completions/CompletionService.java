@@ -1,6 +1,6 @@
 package org.rri.server.completions;
 
-import com.google.gson.JsonObject;
+import com.google.gson.Gson;
 import com.intellij.codeInsight.completion.CompletionUtil;
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementPresentation;
@@ -45,9 +45,7 @@ final public class CompletionService implements Disposable {
   @NotNull
   private final Project project;
 
-  private final AtomicReference<CachedCompletionResolveData> cachedDataRef =
-      new AtomicReference<>(
-          new CachedCompletionResolveData(List.of(), 0, new Position(), "", Language.ANY));
+  private final AtomicReference<CompletionData> cachedDataRef = new AtomicReference<>(CompletionData.EMPTY_DATA);
 
   public CompletionService(@NotNull Project project) {
     this.project = project;
@@ -78,6 +76,20 @@ final public class CompletionService implements Disposable {
   }
 
   @NotNull
+  public CompletionItem resolveCompletion(@NotNull CompletionItem unresolved, @NotNull CancelChecker cancelChecker) {
+    LOG.info("start completion resolve");
+    final var completionResolveData =
+        new Gson().fromJson(unresolved.getData().toString(), CompletionItemData.class);
+    try {
+      return doResolve(completionResolveData.getCompletionDataVersion(),
+          completionResolveData.getLookupElementIndex(), unresolved, cancelChecker);
+    } finally {
+      cancelChecker.checkCanceled();
+    }
+  }
+
+
+  @NotNull
   private static List<TextEditWithOffsets> toListOfEditsWithOffsets(
       @NotNull ArrayList<@NotNull TextEdit> list,
       @NotNull Document document) {
@@ -85,8 +97,8 @@ final public class CompletionService implements Disposable {
   }
 
   @NotNull
-  private CompletionItem doResolve(int resultIndex, int lookupElementIndex,
-                       @NotNull CompletionItem unresolved, @NotNull CancelChecker cancelChecker) {
+  private CompletionItem doResolve(int completionDataVersion, int lookupElementIndex,
+                                   @NotNull CompletionItem unresolved, @NotNull CancelChecker cancelChecker) {
 
     Ref<Document> copyThatCalledCompletionDocRef = new Ref<>();
     Ref<Document> copyToInsertDocRef = new Ref<>();
@@ -99,17 +111,18 @@ final public class CompletionService implements Disposable {
     var disposable = Disposer.newDisposable();
     var cachedData = cachedDataRef.get();
     try {
-        if (resultIndex != cachedData.resultIndex) {
-          return unresolved;
-        }
-        prepareCompletionAndHandleInsert(
-            cachedData,
-            lookupElementIndex,
-            cancelChecker,
-            copyThatCalledCompletionDocRef,
-            copyToInsertDocRef,
-            caretOffsetAfterInsertRef,
-            disposable);
+      if (completionDataVersion != cachedData.version) {
+        return unresolved;
+      }
+
+      prepareCompletionAndHandleInsert(
+          cachedData,
+          lookupElementIndex,
+          cancelChecker,
+          copyThatCalledCompletionDocRef,
+          copyToInsertDocRef,
+          caretOffsetAfterInsertRef,
+          disposable);
 
       copyToInsertDoc = copyToInsertDocRef.get();
       copyThatCalledCompletionDoc = copyThatCalledCompletionDocRef.get();
@@ -144,8 +157,8 @@ final public class CompletionService implements Disposable {
       return unresolved;
     } finally {
       WriteCommandAction.runWriteCommandAction(
-              project,
-              () -> Disposer.dispose(disposable));
+          project,
+          () -> Disposer.dispose(disposable));
     }
   }
 
@@ -261,7 +274,7 @@ final public class CompletionService implements Disposable {
     Ref<List<CompletionItem>> resultRef = new Ref<>();
     try {
       var lookupElementsWithMatcherRef = new Ref<List<LookupElementWithMatcher>>();
-      var currentResultIndexRef = new Ref<Integer>();
+      var completionDataVersionRef = new Ref<Integer>();
 
       // invokeAndWait is necessary for editor creation. We can create editor only inside EDT
       ApplicationManager.getApplication().invokeAndWait(
@@ -286,17 +299,18 @@ final public class CompletionService implements Disposable {
                 var document = MiscUtil.getDocument(psiFile);
                 assert document != null;
 
-                int currentResultIndex = 1 + cachedDataRef.get().resultIndex;
-                currentResultIndexRef.set(currentResultIndex);
+                // version and data manipulations here are thread safe because they are done inside invokeAndWait
+                int newVersion = 1 + cachedDataRef.get().version;
+                completionDataVersionRef.set(newVersion);
 
-                var cachedData = new CachedCompletionResolveData(
-                    elementsWithMatcher,
-                    currentResultIndex,
-                    position,
-                    document.getText(),
-                    psiFile.getLanguage()
-                );
-                cachedDataRef.set(cachedData);
+                cachedDataRef.set(
+                    new CompletionData(
+                        elementsWithMatcher,
+                        newVersion,
+                        position,
+                        document.getText(),
+                        psiFile.getLanguage()
+                    ));
               }
           )
       );
@@ -304,7 +318,7 @@ final public class CompletionService implements Disposable {
         var document = MiscUtil.getDocument(psiFile);
         assert document != null;
         resultRef.set(convertLookupElementsWithMatcherToCompletionItems(
-            lookupElementsWithMatcherRef.get(), document, position, currentResultIndexRef.get()));
+            lookupElementsWithMatcherRef.get(), document, position, completionDataVersionRef.get()));
       });
     } finally {
       WriteCommandAction.runWriteCommandAction(project, () -> Disposer.dispose(process));
@@ -317,7 +331,7 @@ final public class CompletionService implements Disposable {
       @NotNull List<LookupElementWithMatcher> lookupElementsWithMatchers,
       @NotNull Document document,
       @NotNull Position position,
-      int currentResultIndex
+      int completionDataVersion
   ) {
     var result = new ArrayList<CompletionItem>();
     var currentCaretOffset = MiscUtil.positionToOffset(document, position);
@@ -335,28 +349,14 @@ final public class CompletionService implements Disposable {
                     );
                     range.setEnd(position);
                   }));
-      item.setData(new CompletionResolveData(currentResultIndex, i));
+      item.setData(new CompletionItemData(completionDataVersion, i));
       result.add(item);
     }
     return result;
   }
 
-  @NotNull
-  public CompletionItem resolveCompletion(
-      @NotNull CompletionItem unresolved, @NotNull CancelChecker cancelChecker) {
-    LOG.info("start completion resolve");
-    JsonObject jsonObject = (JsonObject) unresolved.getData();
-    var resultIndex = jsonObject.get("resultIndex").getAsInt();
-    var lookupElementIndex = jsonObject.get("lookupElementIndex").getAsInt();
-    try {
-      return doResolve(resultIndex, lookupElementIndex, unresolved, cancelChecker);
-    } finally {
-      cancelChecker.checkCanceled();
-    }
-  }
-
   private void prepareCompletionAndHandleInsert(
-      @NotNull CachedCompletionResolveData cachedData,
+      @NotNull CompletionService.CompletionData cachedData,
       int lookupElementIndex,
       @NotNull CancelChecker cancelChecker,
       @NotNull Ref<Document> copyThatCalledCompletionDocRef,
@@ -396,15 +396,19 @@ final public class CompletionService implements Disposable {
     });
   }
 
-
-  private record CachedCompletionResolveData(
+  private record CompletionData(
       @NotNull List<LookupElementWithMatcher> lookupElementsWithMatcher,
-      int resultIndex,
-      @NotNull Position position, @NotNull String fileText, @NotNull Language language) {
+      int version,
+      @NotNull Position position,
+      @NotNull String fileText, // file text at the moment of the completion invocation
+      @NotNull Language language
+  ) {
+    public static final CompletionData EMPTY_DATA = new CompletionData(
+        List.of(), 0, new Position(), "", Language.ANY);
   }
 
   @SuppressWarnings("UnstableApiUsage")
-  private void handleInsert(@NotNull CachedCompletionResolveData cachedData,
+  private void handleInsert(@NotNull CompletionService.CompletionData cachedData,
                             @NotNull LookupElementWithMatcher cachedLookupElementWithMatcher,
                             @NotNull Editor editor,
                             @NotNull PsiFile copyToInsert,
@@ -448,9 +452,4 @@ final public class CompletionService implements Disposable {
         lookupElementWithMatcher.lookupElement(),
         new LookupElementPresentation());
   }
-
-
-  private record CompletionResolveData(int resultIndex, int lookupElementIndex) {
-  }
-
 }
