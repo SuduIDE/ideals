@@ -259,14 +259,15 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   @NotNull
   private List<@NotNull CompletionItem> getCompletionListAtPosition(@NotNull PsiFile file,
                                                                      @NotNull Position position) {
-    return TestUtil.getNonBlockingEdt(getProject().getService(CompletionService.class).startCompletionCalculation(
-        LspPath.fromVirtualFile(file.getVirtualFile()), position), 3000).getLeft();
+    return getProject().getService(CompletionService.class).computeCompletions(
+        LspPath.fromVirtualFile(file.getVirtualFile()), position, new TestUtil.DumbCancelChecker());
   }
 
   @NotNull
   private CompletionItem getResolvedCompletionItem(@NotNull CompletionItem unresolved) {
-    return TestUtil.getNonBlockingEdt(getProject().getService(CompletionService.class)
-        .startCompletionResolveCalculation(unresolved), 3000);
+    return getProject()
+        .getService(CompletionService.class)
+        .resolveCompletion(unresolved, new TestUtil.DumbCancelChecker());
   }
 
   static private void runWithTemplateFlags(@NotNull Runnable action) {

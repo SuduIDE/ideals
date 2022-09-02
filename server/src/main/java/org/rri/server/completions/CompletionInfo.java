@@ -1,7 +1,12 @@
 package org.rri.server.completions;
 
 import com.intellij.codeInsight.completion.*;
+import com.intellij.codeInsight.lookup.Lookup;
+import com.intellij.codeInsight.lookup.LookupArranger;
+import com.intellij.codeInsight.lookup.LookupElement;
+import com.intellij.codeInsight.lookup.LookupElementPresentation;
 import com.intellij.codeInsight.lookup.impl.LookupImpl;
+import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
@@ -17,6 +22,9 @@ import com.intellij.reference.SoftReference;
 import org.jetbrains.annotations.NonNls;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+
+import java.util.ArrayList;
+import java.util.List;
 
 public class CompletionInfo {
   private static final Logger LOG = Logger.getInstance(CompletionInfo.class);
@@ -69,6 +77,48 @@ public class CompletionInfo {
   public LookupArrangerImpl getArranger() {
     return arranger;
   }
+
+  static class LookupArrangerImpl extends LookupArranger {
+    @NotNull
+    private final CompletionParameters parameters;
+
+    @NotNull
+    private final ArrayList<LookupElementWithMatcher> itemsWithPrefix = new ArrayList<>();
+
+    LookupArrangerImpl(@NotNull CompletionParameters parameters) {
+      this.parameters = parameters;
+    }
+
+    /* todo
+    Add completion results sorting
+   */
+    void addElement(@NotNull CompletionResult completionItem) {
+      var presentation = new LookupElementPresentation();
+      ReadAction.run(() -> completionItem.getLookupElement().renderElement(presentation));
+      registerMatcher(completionItem.getLookupElement(), completionItem.getPrefixMatcher());
+      itemsWithPrefix.add(new LookupElementWithMatcher(completionItem.getLookupElement(),
+          completionItem.getPrefixMatcher()));
+      super.addElement(completionItem.getLookupElement(), presentation);
+    }
+
+    @Override
+    @NotNull
+    public Pair<List<LookupElement>, Integer> arrangeItems(@NotNull Lookup lookup, boolean onExplicitAction) {
+      var toSelect = 0;
+      return new Pair<>(itemsWithPrefix.stream().map(LookupElementWithMatcher::lookupElement).toList(), toSelect);
+    }
+
+    @NotNull ArrayList<LookupElementWithMatcher> getElementsWithMatcher() {
+      return itemsWithPrefix;
+    }
+
+    @Override
+    @NotNull
+    public LookupArranger createEmptyCopy() {
+      return new LookupArrangerImpl(parameters);
+    }
+  }
+
   @NotNull
   public LookupImpl getLookup() {
     return lookup;
