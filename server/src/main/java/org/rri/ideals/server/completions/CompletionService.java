@@ -14,6 +14,8 @@ import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.progress.EmptyProgressIndicator;
+import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.Ref;
@@ -22,6 +24,7 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiFileFactory;
 import com.intellij.ui.CoreIconManager;
 import com.intellij.ui.IconManager;
+import com.intellij.util.concurrency.AppExecutorUtil;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -274,45 +277,56 @@ final public class CompletionService implements Disposable {
     try {
       var lookupElementsWithMatcherRef = new Ref<List<LookupElementWithMatcher>>();
       var completionDataVersionRef = new Ref<Integer>();
-
+      var progressIndicator = new EmptyProgressIndicator();
+      AppExecutorUtil.getAppScheduledExecutorService().execute(() -> {
+        while (resultRef.isNull()) {
+          if (cancelChecker.isCanceled()) {
+            progressIndicator.cancel();
+            break;
+          }
+        }
+      });
       // invokeAndWait is necessary for editor creation. We can create editor only inside EDT
-      ApplicationManager.getApplication().invokeAndWait(
-          () -> EditorUtil.withEditor(process, psiFile,
-              position,
-              (editor) -> {
-                var compInfo = new CompletionInfo(editor, project);
-                var ideaCompService = com.intellij.codeInsight.completion.CompletionService.getCompletionService();
-                assert ideaCompService != null;
+      ProgressManager.getInstance().runProcess(() -> {
+        ApplicationManager.getApplication().invokeAndWait(
+            () -> EditorUtil.withEditor(process, psiFile,
+                position,
+                (editor) -> {
+                  var compInfo = new CompletionInfo(editor, project);
+                  var ideaCompService = com.intellij.codeInsight.completion.CompletionService.getCompletionService();
+                  assert ideaCompService != null;
 
-                cancelChecker.checkCanceled();
-                ideaCompService.performCompletion(compInfo.getParameters(),
-                    (result) -> {
-                      compInfo.getLookup().addItem(result.getLookupElement(), result.getPrefixMatcher());
-                      compInfo.getArranger().addElement(result);
-                    });
-                cancelChecker.checkCanceled();
+//                  cancelChecker.checkCanceled();
+                  ideaCompService.performCompletion(compInfo.getParameters(),
+                      (result) -> {
+                        compInfo.getLookup().addItem(result.getLookupElement(), result.getPrefixMatcher());
+                        compInfo.getArranger().addElement(result);
+                      });
+//                  cancelChecker.checkCanceled();
 
-                var elementsWithMatcher = compInfo.getArranger().getElementsWithMatcher();
-                lookupElementsWithMatcherRef.set(elementsWithMatcher);
+                  var elementsWithMatcher = compInfo.getArranger().getElementsWithMatcher();
+                  lookupElementsWithMatcherRef.set(elementsWithMatcher);
 
-                var document = MiscUtil.getDocument(psiFile);
-                assert document != null;
+                  var document = MiscUtil.getDocument(psiFile);
+                  assert document != null;
 
-                // version and data manipulations here are thread safe because they are done inside invokeAndWait
-                int newVersion = 1 + cachedDataRef.get().version;
-                completionDataVersionRef.set(newVersion);
+                  // version and data manipulations here are thread safe because they are done inside invokeAndWait
+                  int newVersion = 1 + cachedDataRef.get().version;
+                  completionDataVersionRef.set(newVersion);
 
-                cachedDataRef.set(
-                    new CompletionData(
-                        elementsWithMatcher,
-                        newVersion,
-                        position,
-                        document.getText(),
-                        psiFile.getLanguage()
-                    ));
-              }
-          )
-      );
+                  cachedDataRef.set(
+                      new CompletionData(
+                          elementsWithMatcher,
+                          newVersion,
+                          position,
+                          document.getText(),
+                          psiFile.getLanguage()
+                      ));
+                }
+            )
+        );
+      }, progressIndicator);
+
       ReadAction.run(() -> {
         var document = MiscUtil.getDocument(psiFile);
         assert document != null;
