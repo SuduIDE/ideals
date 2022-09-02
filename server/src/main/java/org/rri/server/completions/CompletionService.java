@@ -55,7 +55,7 @@ final public class CompletionService implements Disposable {
 
   @SuppressWarnings("UnstableApiUsage")
   @NotNull
-  private static CompletionItem createLSPCompletionItem(@NotNull LookupElement lookupElement,
+  private static CompletionItem createLspCompletionItem(@NotNull LookupElement lookupElement,
                                                         @NotNull Range textEditRange) {
     var resItem = new CompletionItem();
     Registry.get("psi.deferIconLoading").setValue(false); // todo set this flag in server setup
@@ -131,7 +131,7 @@ final public class CompletionService implements Disposable {
       } else if (compareIcons(icon, AllIcons.Nodes.Constant)) {
         kind = CompletionItemKind.Constant;
       } else if (
-              compareIcons(icon, AllIcons.Nodes.Class) ||  // todo find another way for classes in java
+          compareIcons(icon, AllIcons.Nodes.Class) ||  // todo find another way for classes in java
               compareIcons(icon, AllIcons.Nodes.AbstractClass)) {
         kind = CompletionItemKind.Class;
       } else if (compareIcons(icon, AllIcons.Nodes.Field)) {
@@ -150,93 +150,42 @@ final public class CompletionService implements Disposable {
     }
   }
 
+  @NotNull
+  private static List<TextEditWithOffsets> toListOfEditsWithOffsets(
+      @NotNull ArrayList<@NotNull TextEdit> list,
+      @NotNull Document document) {
+    return list.stream().map(textEdit -> new TextEditWithOffsets(textEdit, document)).toList();
+  }
+
+  @NotNull
+  private static List<@NotNull TextEdit> toListOfTextEdits(
+      @NotNull List<TextEditWithOffsets> additionalEdits,
+      @NotNull Document document) {
+    return additionalEdits.stream().map(editWithOffsets -> editWithOffsets.toTextEdit(document)).toList();
+  }
+
   @Override
   public void dispose() {
   }
 
-  private @NotNull List<CompletionItem> createCompletionResults(@NotNull PsiFile psiFile,
-                                                               @NotNull Position position,
-                                                               @NotNull CancelChecker cancelChecker) {
-    VoidCompletionProcess process = new VoidCompletionProcess();
-    Ref<List<CompletionItem>> resultRef = new Ref<>();
-    try {
-      var lookupElementsWithMatcherRef = new Ref<List<LookupElementWithMatcher>>();
-      var currentResultIndexRef = new Ref<Integer>();
-      ApplicationManager.getApplication().invokeAndWait(
-          () -> EditorUtil.withEditor(process, psiFile,
-              position,
-              (editor) -> {
-                var compInfo = new CompletionInfo(editor, project);
-                var ideaCompService = com.intellij.codeInsight.completion.CompletionService.getCompletionService();
-                assert ideaCompService != null;
-
-                cancelChecker.checkCanceled();
-                ideaCompService.performCompletion(compInfo.getParameters(),
-                    (result) -> {
-                      compInfo.getLookup().addItem(result.getLookupElement(), result.getPrefixMatcher());
-                      compInfo.getArranger().addElement(result);
-                    });
-                cancelChecker.checkCanceled();
-
-                var elementsWithMatcher = compInfo.getArranger().getElementsWithMatcher();
-                lookupElementsWithMatcherRef.set(elementsWithMatcher);
-
-                var document = MiscUtil.getDocument(psiFile);
-                assert document != null;
-
-                int currentResultIndex = 1 + cachedDataRef.get().resultIndex;
-                currentResultIndexRef.set(currentResultIndex);
-
-                var cachedData = new CachedCompletionResolveData(
-                    elementsWithMatcher,
-                    currentResultIndex,
-                    position,
-                    document.getText(),
-                    psiFile.getLanguage()
-                );
-                cachedDataRef.set(cachedData);
-              }
-          )
-      );
-      ReadAction.run(() -> {
-        var document = MiscUtil.getDocument(psiFile);
-        assert document != null;
-        resultRef.set(convertLookupElementsWithMatcherToCompletionItems(
-            lookupElementsWithMatcherRef.get(), document, position, currentResultIndexRef.get()));
-      });
-    } finally {
-      WriteCommandAction.runWriteCommandAction(project, () -> Disposer.dispose(process));
-    }
-    return resultRef.get();
-  }
-
   @NotNull
-  private List<CompletionItem> convertLookupElementsWithMatcherToCompletionItems(
-      @NotNull List<LookupElementWithMatcher> lookupElementsWithMatchers,
-      @NotNull Document document,
+  public List<CompletionItem> computeCompletions(
+      @NotNull LspPath path,
       @NotNull Position position,
-      int currentResultIndex
-  ) {
-    var result = new ArrayList<CompletionItem>();
-    var currentCaretOffset = MiscUtil.positionToOffset(document, position);
-    for (int i = 0; i < lookupElementsWithMatchers.size(); i++) {
-      var lookupElementWithMatcher = lookupElementsWithMatchers.get(i);
-      var item =
-          createLSPCompletionItem(
-              lookupElementWithMatcher.lookupElement(),
-              MiscUtil.with(new Range(),
-                  range -> {
-                    range.setStart(
-                        MiscUtil.offsetToPosition(
-                            document,
-                            currentCaretOffset - lookupElementWithMatcher.prefixMatcher().getPrefix().length())
-                    );
-                    range.setEnd(position);
-                  }));
-      item.setData(new CompletionResolveData(currentResultIndex, i));
-      result.add(item);
+      @NotNull CancelChecker cancelChecker) {
+    LOG.info("start completion");
+    try {
+      var virtualFile = path.findVirtualFile();
+      if (virtualFile == null) {
+        LOG.warn("file not found: " + path);
+        return List.of();
+      }
+      final var psiFile = MiscUtil.resolvePsiFile(project, path);
+      assert psiFile != null;
+      return doComputeCompletions(psiFile, position, cancelChecker);
+    } finally {
+      cancelChecker.checkCanceled();
     }
-    return result;
   }
 
   @NotNull
@@ -251,93 +200,6 @@ final public class CompletionService implements Disposable {
     } finally {
       cancelChecker.checkCanceled();
     }
-  }
-
-  private void prepareCompletionAndHandleInsert(
-      @NotNull CachedCompletionResolveData cachedData,
-      int lookupElementIndex,
-      @NotNull CancelChecker cancelChecker,
-      @NotNull Ref<Document> copyThatCalledCompletionDocRef,
-      @NotNull Ref<Document> copyToInsertDocRef,
-      @NotNull Ref<Integer> caretOffsetAfterInsertRef,
-      @NotNull Disposable disposable) {
-    var cachedLookupElementWithMatcher = cachedData.lookupElementsWithMatcher.get(lookupElementIndex);
-    var copyToInsertRef = new Ref<PsiFile>();
-    ApplicationManager.getApplication().runReadAction(() -> {
-
-      cancelChecker.checkCanceled();
-      copyToInsertRef.set(PsiFileFactory.getInstance(project).createFileFromText(
-          "copy",
-          cachedData.language,
-          cachedData.fileText,
-          true,
-          true,
-          true));
-      var copyThatCalledCompletion = (PsiFile) copyToInsertRef.get().copy();
-      cancelChecker.checkCanceled();
-
-      copyThatCalledCompletionDocRef.set(MiscUtil.getDocument(copyThatCalledCompletion));
-      copyToInsertDocRef.set(MiscUtil.getDocument(copyToInsertRef.get()));
-    });
-    var copyToInsert = copyToInsertRef.get();
-
-    ApplicationManager.getApplication().invokeAndWait(() -> {
-      var editor = EditorUtil.createEditor(disposable, copyToInsert,
-          cachedData.position);
-      CompletionInfo completionInfo = new CompletionInfo(editor, project);
-
-      cancelChecker.checkCanceled();
-      handleInsert(cachedData, cachedLookupElementWithMatcher, editor, copyToInsert, completionInfo);
-      cancelChecker.checkCanceled();
-
-      caretOffsetAfterInsertRef.set(editor.getCaretModel().getOffset());
-    });
-  }
-
-  @NotNull
-  static private List<TextEditWithOffsets> toListOfEditsWithOffsets(
-      @NotNull ArrayList<@NotNull TextEdit> list,
-      @NotNull Document document) {
-    return list.stream().map(textEdit -> new TextEditWithOffsets(textEdit, document)).toList();
-  }
-
-  static private @NotNull List<@NotNull TextEdit> toListOfTextEdits(
-      @NotNull List<TextEditWithOffsets> additionalEdits,
-      @NotNull Document document) {
-    return additionalEdits.stream().map(editWithOffsets -> editWithOffsets.toTextEdit(document)).toList();
-  }
-
-  @NotNull
-  public List<CompletionItem> performCompletion(
-      @NotNull LspPath path,
-      @NotNull Position position,
-      @NotNull CancelChecker cancelChecker) {
-    LOG.info("start completion");
-    try {
-      // invokeAndWait is necessary for editor creation. We can create editor only inside EDT
-      var virtualFile = path.findVirtualFile();
-      if (virtualFile == null) {
-        LOG.warn("file not found: " + path);
-        return List.of();
-      }
-      final var psiFile = MiscUtil.resolvePsiFile(project, path);
-      assert psiFile != null;
-     return createCompletionResults(psiFile, position, cancelChecker);
-    } finally {
-      cancelChecker.checkCanceled();
-    }
-  }
-
-  private void prepareCompletionInfoForInsert(@NotNull CompletionInfo completionInfo,
-                                              @NotNull LookupElementWithMatcher lookupElementWithMatcher) {
-    var prefixMatcher = lookupElementWithMatcher.prefixMatcher();
-
-    completionInfo.getLookup().addItem(lookupElementWithMatcher.lookupElement(), prefixMatcher);
-
-    completionInfo.getArranger().registerMatcher(lookupElementWithMatcher.lookupElement(), prefixMatcher);
-    completionInfo.getArranger().addElement(
-        lookupElementWithMatcher.lookupElement(),
-        new LookupElementPresentation());
   }
 
   @NotNull
@@ -405,6 +267,135 @@ final public class CompletionService implements Disposable {
     }
   }
 
+  private @NotNull List<CompletionItem> doComputeCompletions(@NotNull PsiFile psiFile,
+                                                             @NotNull Position position,
+                                                             @NotNull CancelChecker cancelChecker) {
+    VoidCompletionProcess process = new VoidCompletionProcess();
+    Ref<List<CompletionItem>> resultRef = new Ref<>();
+    try {
+      var lookupElementsWithMatcherRef = new Ref<List<LookupElementWithMatcher>>();
+      var currentResultIndexRef = new Ref<Integer>();
+
+      // invokeAndWait is necessary for editor creation. We can create editor only inside EDT
+      ApplicationManager.getApplication().invokeAndWait(
+          () -> EditorUtil.withEditor(process, psiFile,
+              position,
+              (editor) -> {
+                var compInfo = new CompletionInfo(editor, project);
+                var ideaCompService = com.intellij.codeInsight.completion.CompletionService.getCompletionService();
+                assert ideaCompService != null;
+
+                cancelChecker.checkCanceled();
+                ideaCompService.performCompletion(compInfo.getParameters(),
+                    (result) -> {
+                      compInfo.getLookup().addItem(result.getLookupElement(), result.getPrefixMatcher());
+                      compInfo.getArranger().addElement(result);
+                    });
+                cancelChecker.checkCanceled();
+
+                var elementsWithMatcher = compInfo.getArranger().getElementsWithMatcher();
+                lookupElementsWithMatcherRef.set(elementsWithMatcher);
+
+                var document = MiscUtil.getDocument(psiFile);
+                assert document != null;
+
+                int currentResultIndex = 1 + cachedDataRef.get().resultIndex;
+                currentResultIndexRef.set(currentResultIndex);
+
+                var cachedData = new CachedCompletionResolveData(
+                    elementsWithMatcher,
+                    currentResultIndex,
+                    position,
+                    document.getText(),
+                    psiFile.getLanguage()
+                );
+                cachedDataRef.set(cachedData);
+              }
+          )
+      );
+      ReadAction.run(() -> {
+        var document = MiscUtil.getDocument(psiFile);
+        assert document != null;
+        resultRef.set(convertLookupElementsWithMatcherToCompletionItems(
+            lookupElementsWithMatcherRef.get(), document, position, currentResultIndexRef.get()));
+      });
+    } finally {
+      WriteCommandAction.runWriteCommandAction(project, () -> Disposer.dispose(process));
+    }
+    return resultRef.get();
+  }
+
+  @NotNull
+  private List<CompletionItem> convertLookupElementsWithMatcherToCompletionItems(
+      @NotNull List<LookupElementWithMatcher> lookupElementsWithMatchers,
+      @NotNull Document document,
+      @NotNull Position position,
+      int currentResultIndex
+  ) {
+    var result = new ArrayList<CompletionItem>();
+    var currentCaretOffset = MiscUtil.positionToOffset(document, position);
+    for (int i = 0; i < lookupElementsWithMatchers.size(); i++) {
+      var lookupElementWithMatcher = lookupElementsWithMatchers.get(i);
+      var item =
+          createLspCompletionItem(
+              lookupElementWithMatcher.lookupElement(),
+              MiscUtil.with(new Range(),
+                  range -> {
+                    range.setStart(
+                        MiscUtil.offsetToPosition(
+                            document,
+                            currentCaretOffset - lookupElementWithMatcher.prefixMatcher().getPrefix().length())
+                    );
+                    range.setEnd(position);
+                  }));
+      item.setData(new CompletionResolveData(currentResultIndex, i));
+      result.add(item);
+    }
+    return result;
+  }
+
+  private void prepareCompletionAndHandleInsert(
+      @NotNull CachedCompletionResolveData cachedData,
+      int lookupElementIndex,
+      @NotNull CancelChecker cancelChecker,
+      @NotNull Ref<Document> copyThatCalledCompletionDocRef,
+      @NotNull Ref<Document> copyToInsertDocRef,
+      @NotNull Ref<Integer> caretOffsetAfterInsertRef,
+      @NotNull Disposable disposable) {
+    var cachedLookupElementWithMatcher = cachedData.lookupElementsWithMatcher.get(lookupElementIndex);
+    var copyToInsertRef = new Ref<PsiFile>();
+    ApplicationManager.getApplication().runReadAction(() -> {
+
+      cancelChecker.checkCanceled();
+      copyToInsertRef.set(PsiFileFactory.getInstance(project).createFileFromText(
+          "copy",
+          cachedData.language,
+          cachedData.fileText,
+          true,
+          true,
+          true));
+      var copyThatCalledCompletion = (PsiFile) copyToInsertRef.get().copy();
+      cancelChecker.checkCanceled();
+
+      copyThatCalledCompletionDocRef.set(MiscUtil.getDocument(copyThatCalledCompletion));
+      copyToInsertDocRef.set(MiscUtil.getDocument(copyToInsertRef.get()));
+    });
+    var copyToInsert = copyToInsertRef.get();
+
+    ApplicationManager.getApplication().invokeAndWait(() -> {
+      var editor = EditorUtil.createEditor(disposable, copyToInsert,
+          cachedData.position);
+      CompletionInfo completionInfo = new CompletionInfo(editor, project);
+
+      cancelChecker.checkCanceled();
+      handleInsert(cachedData, cachedLookupElementWithMatcher, editor, copyToInsert, completionInfo);
+      cancelChecker.checkCanceled();
+
+      caretOffsetAfterInsertRef.set(editor.getCaretModel().getOffset());
+    });
+  }
+
+
   private record CachedCompletionResolveData(
       @NotNull List<LookupElementWithMatcher> lookupElementsWithMatcher,
       int resultIndex,
@@ -444,6 +435,19 @@ final public class CompletionService implements Disposable {
         });
 
   }
+
+  private void prepareCompletionInfoForInsert(@NotNull CompletionInfo completionInfo,
+                                              @NotNull LookupElementWithMatcher lookupElementWithMatcher) {
+    var prefixMatcher = lookupElementWithMatcher.prefixMatcher();
+
+    completionInfo.getLookup().addItem(lookupElementWithMatcher.lookupElement(), prefixMatcher);
+
+    completionInfo.getArranger().registerMatcher(lookupElementWithMatcher.lookupElement(), prefixMatcher);
+    completionInfo.getArranger().addElement(
+        lookupElementWithMatcher.lookupElement(),
+        new LookupElementPresentation());
+  }
+
 
   private record CompletionResolveData(int resultIndex, int lookupElementIndex) {
   }

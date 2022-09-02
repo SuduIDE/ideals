@@ -171,7 +171,7 @@ public class MyTextDocumentService implements TextDocumentService {
     return CompletableFutures.computeAsync(
         AppExecutorUtil.getAppExecutorService(),
         (cancelChecker) ->
-            Either.forLeft(completions().performCompletion(path, params.getPosition(), cancelChecker))
+            Either.forLeft(completions().computeCompletions(path, params.getPosition(), cancelChecker))
     );
   }
 

@@ -259,7 +259,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   @NotNull
   private List<@NotNull CompletionItem> getCompletionListAtPosition(@NotNull PsiFile file,
                                                                      @NotNull Position position) {
-    return getProject().getService(CompletionService.class).performCompletion(
+    return getProject().getService(CompletionService.class).computeCompletions(
         LspPath.fromVirtualFile(file.getVirtualFile()), position, new TestUtil.DumbCancelChecker());
   }
 
