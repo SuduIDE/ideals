@@ -53,6 +53,109 @@ final public class CompletionService implements Disposable {
     this.project = project;
   }
 
+  @Override
+  public void dispose() {
+  }
+
+  @NotNull
+  public List<CompletionItem> computeCompletions(
+      @NotNull LspPath path,
+      @NotNull Position position,
+      @NotNull CancelChecker cancelChecker) {
+    LOG.info("start completion");
+    try {
+      var virtualFile = path.findVirtualFile();
+      if (virtualFile == null) {
+        LOG.warn("file not found: " + path);
+        return List.of();
+      }
+      final var psiFile = MiscUtil.resolvePsiFile(project, path);
+      assert psiFile != null;
+      return doComputeCompletions(psiFile, position, cancelChecker);
+    } finally {
+      cancelChecker.checkCanceled();
+    }
+  }
+
+  @NotNull
+  private static List<TextEditWithOffsets> toListOfEditsWithOffsets(
+      @NotNull ArrayList<@NotNull TextEdit> list,
+      @NotNull Document document) {
+    return list.stream().map(textEdit -> new TextEditWithOffsets(textEdit, document)).toList();
+  }
+
+  @NotNull
+  private CompletionItem doResolve(int resultIndex, int lookupElementIndex,
+                       @NotNull CompletionItem unresolved, @NotNull CancelChecker cancelChecker) {
+
+    Ref<Document> copyThatCalledCompletionDocRef = new Ref<>();
+    Ref<Document> copyToInsertDocRef = new Ref<>();
+    Ref<Integer> caretOffsetAfterInsertRef = new Ref<>();
+
+    ArrayList<TextEdit> diff;
+    int caretOffsetAfterInsert;
+    Document copyToInsertDoc;
+    Document copyThatCalledCompletionDoc;
+    var disposable = Disposer.newDisposable();
+    var cachedData = cachedDataRef.get();
+    try {
+        if (resultIndex != cachedData.resultIndex) {
+          return unresolved;
+        }
+        prepareCompletionAndHandleInsert(
+            cachedData,
+            lookupElementIndex,
+            cancelChecker,
+            copyThatCalledCompletionDocRef,
+            copyToInsertDocRef,
+            caretOffsetAfterInsertRef,
+            disposable);
+
+      copyToInsertDoc = copyToInsertDocRef.get();
+      copyThatCalledCompletionDoc = copyThatCalledCompletionDocRef.get();
+      assert copyToInsertDoc != null;
+      assert copyThatCalledCompletionDoc != null;
+
+      caretOffsetAfterInsert = caretOffsetAfterInsertRef.get();
+      diff = new ArrayList<>(TextUtil.textEditFromDocs(copyThatCalledCompletionDoc, copyToInsertDoc));
+
+      if (diff.isEmpty()) {
+        return unresolved;
+      }
+
+      var unresolvedTextEdit = unresolved.getTextEdit().getLeft();
+
+      var replaceElementStartOffset =
+          MiscUtil.positionToOffset(copyThatCalledCompletionDoc, unresolvedTextEdit.getRange().getStart());
+      var replaceElementEndOffset =
+          MiscUtil.positionToOffset(copyThatCalledCompletionDoc, unresolvedTextEdit.getRange().getEnd());
+
+      var newTextAndAdditionalEdits =
+          TextEditRearranger.findOverlappingTextEditsInRangeFromMainTextEditToCaretAndMergeThem(
+              toListOfEditsWithOffsets(diff, copyThatCalledCompletionDoc),
+              replaceElementStartOffset, replaceElementEndOffset,
+              copyThatCalledCompletionDoc.getText(), caretOffsetAfterInsert);
+
+      unresolved.setAdditionalTextEdits(
+          toListOfTextEdits(newTextAndAdditionalEdits.additionalEdits(), copyThatCalledCompletionDoc)
+      );
+
+      unresolvedTextEdit.setNewText(newTextAndAdditionalEdits.mainEdit().getNewText());
+      return unresolved;
+    } finally {
+      WriteCommandAction.runWriteCommandAction(
+              project,
+              () -> Disposer.dispose(disposable));
+    }
+  }
+
+  @NotNull
+  private static List<@NotNull TextEdit> toListOfTextEdits(
+      @NotNull List<TextEditWithOffsets> additionalEdits,
+      @NotNull Document document) {
+    return additionalEdits.stream().map(editWithOffsets -> editWithOffsets.toTextEdit(document)).toList();
+  }
+
   @SuppressWarnings("UnstableApiUsage")
   @NotNull
   private static CompletionItem createLspCompletionItem(@NotNull LookupElement lookupElement,
@@ -150,122 +253,6 @@ final public class CompletionService implements Disposable {
     }
   }
 
-  @NotNull
-  private static List<TextEditWithOffsets> toListOfEditsWithOffsets(
-      @NotNull ArrayList<@NotNull TextEdit> list,
-      @NotNull Document document) {
-    return list.stream().map(textEdit -> new TextEditWithOffsets(textEdit, document)).toList();
-  }
-
-  @NotNull
-  private static List<@NotNull TextEdit> toListOfTextEdits(
-      @NotNull List<TextEditWithOffsets> additionalEdits,
-      @NotNull Document document) {
-    return additionalEdits.stream().map(editWithOffsets -> editWithOffsets.toTextEdit(document)).toList();
-  }
-
-  @Override
-  public void dispose() {
-  }
-
-  @NotNull
-  public List<CompletionItem> computeCompletions(
-      @NotNull LspPath path,
-      @NotNull Position position,
-      @NotNull CancelChecker cancelChecker) {
-    LOG.info("start completion");
-    try {
-      var virtualFile = path.findVirtualFile();
-      if (virtualFile == null) {
-        LOG.warn("file not found: " + path);
-        return List.of();
-      }
-      final var psiFile = MiscUtil.resolvePsiFile(project, path);
-      assert psiFile != null;
-      return doComputeCompletions(psiFile, position, cancelChecker);
-    } finally {
-      cancelChecker.checkCanceled();
-    }
-  }
-
-  @NotNull
-  public CompletionItem applyCompletionResolve(
-      @NotNull CompletionItem unresolved, @NotNull CancelChecker cancelChecker) {
-    LOG.info("start completion resolve");
-    JsonObject jsonObject = (JsonObject) unresolved.getData();
-    var resultIndex = jsonObject.get("resultIndex").getAsInt();
-    var lookupElementIndex = jsonObject.get("lookupElementIndex").getAsInt();
-    try {
-      return doResolve(resultIndex, lookupElementIndex, unresolved, cancelChecker);
-    } finally {
-      cancelChecker.checkCanceled();
-    }
-  }
-
-  @NotNull
-  private CompletionItem doResolve(int resultIndex, int lookupElementIndex,
-                       @NotNull CompletionItem unresolved, @NotNull CancelChecker cancelChecker) {
-
-    Ref<Document> copyThatCalledCompletionDocRef = new Ref<>();
-    Ref<Document> copyToInsertDocRef = new Ref<>();
-    Ref<Integer> caretOffsetAfterInsertRef = new Ref<>();
-
-    ArrayList<TextEdit> diff;
-    int caretOffsetAfterInsert;
-    Document copyToInsertDoc;
-    Document copyThatCalledCompletionDoc;
-    var disposable = Disposer.newDisposable();
-    var cachedData = cachedDataRef.get();
-    try {
-        if (resultIndex != cachedData.resultIndex) {
-          return unresolved;
-        }
-        prepareCompletionAndHandleInsert(
-            cachedData,
-            lookupElementIndex,
-            cancelChecker,
-            copyThatCalledCompletionDocRef,
-            copyToInsertDocRef,
-            caretOffsetAfterInsertRef,
-            disposable);
-
-      copyToInsertDoc = copyToInsertDocRef.get();
-      copyThatCalledCompletionDoc = copyThatCalledCompletionDocRef.get();
-      assert copyToInsertDoc != null;
-      assert copyThatCalledCompletionDoc != null;
-
-      caretOffsetAfterInsert = caretOffsetAfterInsertRef.get();
-      diff = new ArrayList<>(TextUtil.textEditFromDocs(copyThatCalledCompletionDoc, copyToInsertDoc));
-
-      if (diff.isEmpty()) {
-        return unresolved;
-      }
-
-      var unresolvedTextEdit = unresolved.getTextEdit().getLeft();
-
-      var replaceElementStartOffset =
-          MiscUtil.positionToOffset(copyThatCalledCompletionDoc, unresolvedTextEdit.getRange().getStart());
-      var replaceElementEndOffset =
-          MiscUtil.positionToOffset(copyThatCalledCompletionDoc, unresolvedTextEdit.getRange().getEnd());
-
-      var newTextAndAdditionalEdits =
-          TextEditRearranger.findOverlappingTextEditsInRangeFromMainTextEditToCaretAndMergeThem(
-              toListOfEditsWithOffsets(diff, copyThatCalledCompletionDoc),
-              replaceElementStartOffset, replaceElementEndOffset,
-              copyThatCalledCompletionDoc.getText(), caretOffsetAfterInsert);
-
-      unresolved.setAdditionalTextEdits(
-          toListOfTextEdits(newTextAndAdditionalEdits.additionalEdits(), copyThatCalledCompletionDoc)
-      );
-
-      unresolvedTextEdit.setNewText(newTextAndAdditionalEdits.mainEdit().getNewText());
-      return unresolved;
-    } finally {
-      WriteCommandAction.runWriteCommandAction(
-              project,
-              () -> Disposer.dispose(disposable));
-    }
-  }
 
   private @NotNull List<CompletionItem> doComputeCompletions(@NotNull PsiFile psiFile,
                                                              @NotNull Position position,
@@ -352,6 +339,20 @@ final public class CompletionService implements Disposable {
       result.add(item);
     }
     return result;
+  }
+
+  @NotNull
+  public CompletionItem resolveCompletion(
+      @NotNull CompletionItem unresolved, @NotNull CancelChecker cancelChecker) {
+    LOG.info("start completion resolve");
+    JsonObject jsonObject = (JsonObject) unresolved.getData();
+    var resultIndex = jsonObject.get("resultIndex").getAsInt();
+    var lookupElementIndex = jsonObject.get("lookupElementIndex").getAsInt();
+    try {
+      return doResolve(resultIndex, lookupElementIndex, unresolved, cancelChecker);
+    } finally {
+      cancelChecker.checkCanceled();
+    }
   }
 
   private void prepareCompletionAndHandleInsert(

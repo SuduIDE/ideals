@@ -267,7 +267,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   private CompletionItem getResolvedCompletionItem(@NotNull CompletionItem unresolved) {
     return getProject()
         .getService(CompletionService.class)
-        .applyCompletionResolve(unresolved, new TestUtil.DumbCancelChecker());
+        .resolveCompletion(unresolved, new TestUtil.DumbCancelChecker());
   }
 
   static private void runWithTemplateFlags(@NotNull Runnable action) {

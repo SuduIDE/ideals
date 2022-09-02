@@ -160,7 +160,7 @@ public class MyTextDocumentService implements TextDocumentService {
     return CompletableFutures.computeAsync(
         AppExecutorUtil.getAppExecutorService(),
         (cancelChecker) ->
-            completions().applyCompletionResolve(unresolved, cancelChecker)
+            completions().resolveCompletion(unresolved, cancelChecker)
     );
   }
 
