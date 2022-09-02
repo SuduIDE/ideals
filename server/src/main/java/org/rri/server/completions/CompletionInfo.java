@@ -95,6 +95,7 @@ public class CompletionInfo {
     void addElement(@NotNull CompletionResult completionItem) {
       var presentation = new LookupElementPresentation();
       ReadAction.run(() -> completionItem.getLookupElement().renderElement(presentation));
+      registerMatcher(completionItem.getLookupElement(), completionItem.getPrefixMatcher());
       itemsWithPrefix.add(new LookupElementWithPrefix(completionItem.getLookupElement(),
           completionItem.getPrefixMatcher().getPrefix()));
       super.addElement(completionItem.getLookupElement(), presentation);

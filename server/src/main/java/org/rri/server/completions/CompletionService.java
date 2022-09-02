@@ -19,7 +19,6 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.Ref;
 import com.intellij.openapi.util.registry.Registry;
-import com.intellij.psi.PsiClass;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiFileFactory;
 import com.intellij.ui.CoreIconManager;
@@ -133,8 +132,7 @@ final public class CompletionService implements Disposable {
       } else if (compareIcons(icon, AllIcons.Nodes.Constant)) {
         kind = CompletionItemKind.Constant;
       } else if (
-          lookupElement.getPsiElement() instanceof PsiClass || // todo find another way for classes in java
-              compareIcons(icon, AllIcons.Nodes.Class) ||
+              compareIcons(icon, AllIcons.Nodes.Class) ||  // todo find another way for classes in java
               compareIcons(icon, AllIcons.Nodes.AbstractClass)) {
         kind = CompletionItemKind.Class;
       } else if (compareIcons(icon, AllIcons.Nodes.Field)) {
@@ -334,11 +332,12 @@ final public class CompletionService implements Disposable {
   private void prepareCompletionInfoForInsert(@NotNull CompletionInfo completionInfo,
                                               @NotNull LookupElementWithPrefix lookupElementWithPrefix) {
     var prefix = lookupElementWithPrefix.prefix();
+    var prefixMatcher = new CamelHumpMatcher(prefix);
+    completionInfo.getLookup().addItem(lookupElementWithPrefix.lookupElement(), prefixMatcher);
 
-    completionInfo.getLookup().addItem(lookupElementWithPrefix.lookupElement(),
-        new CamelHumpMatcher(prefix));
-
-    completionInfo.getArranger().addElement(lookupElementWithPrefix.lookupElement(),
+    completionInfo.getArranger().registerMatcher(lookupElementWithPrefix.lookupElement(), prefixMatcher);
+    completionInfo.getArranger().addElement(
+        lookupElementWithPrefix.lookupElement(),
         new LookupElementPresentation());
   }
 
