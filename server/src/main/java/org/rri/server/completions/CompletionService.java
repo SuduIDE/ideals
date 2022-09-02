@@ -2,7 +2,6 @@ package org.rri.server.completions;
 
 import com.google.gson.JsonObject;
 import com.intellij.codeInsight.completion.CompletionUtil;
-import com.intellij.codeInsight.completion.impl.CamelHumpMatcher;
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementPresentation;
 import com.intellij.icons.AllIcons;
@@ -161,7 +160,7 @@ final public class CompletionService implements Disposable {
     VoidCompletionProcess process = new VoidCompletionProcess();
     Ref<List<CompletionItem>> resultRef = new Ref<>();
     try {
-      var lookupElementWithPrefixRef = new Ref<List<LookupElementWithPrefix>>();
+      var lookupElementsWithMatcherRef = new Ref<List<LookupElementWithMatcher>>();
       var currentResultIndexRef = new Ref<Integer>();
       ApplicationManager.getApplication().invokeAndWait(
           () -> EditorUtil.withEditor(process, psiFile,
@@ -179,8 +178,8 @@ final public class CompletionService implements Disposable {
                     });
                 cancelChecker.checkCanceled();
 
-                var elementsWithPrefix = compInfo.getArranger().getElementsWithPrefix();
-                lookupElementWithPrefixRef.set(elementsWithPrefix);
+                var elementsWithMatcher = compInfo.getArranger().getElementsWithMatcher();
+                lookupElementsWithMatcherRef.set(elementsWithMatcher);
 
                 var document = MiscUtil.getDocument(psiFile);
                 assert document != null;
@@ -189,7 +188,7 @@ final public class CompletionService implements Disposable {
                 currentResultIndexRef.set(currentResultIndex);
 
                 var cachedData = new CachedCompletionResolveData(
-                    elementsWithPrefix,
+                    elementsWithMatcher,
                     currentResultIndex,
                     position,
                     document.getText(),
@@ -202,8 +201,8 @@ final public class CompletionService implements Disposable {
       ReadAction.run(() -> {
         var document = MiscUtil.getDocument(psiFile);
         assert document != null;
-        resultRef.set(convertLookupElementsWithPrefixToCompletionItems(
-            lookupElementWithPrefixRef.get(), document, position, currentResultIndexRef.get()));
+        resultRef.set(convertLookupElementsWithMatcherToCompletionItems(
+            lookupElementsWithMatcherRef.get(), document, position, currentResultIndexRef.get()));
       });
     } finally {
       WriteCommandAction.runWriteCommandAction(project, () -> Disposer.dispose(process));
@@ -212,25 +211,25 @@ final public class CompletionService implements Disposable {
   }
 
   @NotNull
-  private List<CompletionItem> convertLookupElementsWithPrefixToCompletionItems(
-      @NotNull List<LookupElementWithPrefix> lookupElementWithPrefixes,
+  private List<CompletionItem> convertLookupElementsWithMatcherToCompletionItems(
+      @NotNull List<LookupElementWithMatcher> lookupElementsWithMatchers,
       @NotNull Document document,
       @NotNull Position position,
       int currentResultIndex
   ) {
     var result = new ArrayList<CompletionItem>();
     var currentCaretOffset = MiscUtil.positionToOffset(document, position);
-    for (int i = 0; i < lookupElementWithPrefixes.size(); i++) {
-      var lookupElementWithPrefix = lookupElementWithPrefixes.get(i);
+    for (int i = 0; i < lookupElementsWithMatchers.size(); i++) {
+      var lookupElementWithMatcher = lookupElementsWithMatchers.get(i);
       var item =
           createLSPCompletionItem(
-              lookupElementWithPrefix.lookupElement(),
+              lookupElementWithMatcher.lookupElement(),
               MiscUtil.with(new Range(),
                   range -> {
                     range.setStart(
                         MiscUtil.offsetToPosition(
                             document,
-                            currentCaretOffset - lookupElementWithPrefix.prefix().length())
+                            currentCaretOffset - lookupElementWithMatcher.prefixMatcher().getPrefix().length())
                     );
                     range.setEnd(position);
                   }));
@@ -262,7 +261,7 @@ final public class CompletionService implements Disposable {
       @NotNull Ref<Document> copyToInsertDocRef,
       @NotNull Ref<Integer> caretOffsetAfterInsertRef,
       @NotNull Disposable disposable) {
-    var cachedLookupElementWithPrefix = cachedData.lookupElementsWithPrefix.get(lookupElementIndex);
+    var cachedLookupElementWithMatcher = cachedData.lookupElementsWithMatcher.get(lookupElementIndex);
     var copyToInsertRef = new Ref<PsiFile>();
     ApplicationManager.getApplication().runReadAction(() -> {
 
@@ -288,7 +287,7 @@ final public class CompletionService implements Disposable {
       CompletionInfo completionInfo = new CompletionInfo(editor, project);
 
       cancelChecker.checkCanceled();
-      handleInsert(cachedData, cachedLookupElementWithPrefix, editor, copyToInsert, completionInfo);
+      handleInsert(cachedData, cachedLookupElementWithMatcher, editor, copyToInsert, completionInfo);
       cancelChecker.checkCanceled();
 
       caretOffsetAfterInsertRef.set(editor.getCaretModel().getOffset());
@@ -330,14 +329,14 @@ final public class CompletionService implements Disposable {
   }
 
   private void prepareCompletionInfoForInsert(@NotNull CompletionInfo completionInfo,
-                                              @NotNull LookupElementWithPrefix lookupElementWithPrefix) {
-    var prefix = lookupElementWithPrefix.prefix();
-    var prefixMatcher = new CamelHumpMatcher(prefix);
-    completionInfo.getLookup().addItem(lookupElementWithPrefix.lookupElement(), prefixMatcher);
+                                              @NotNull LookupElementWithMatcher lookupElementWithMatcher) {
+    var prefixMatcher = lookupElementWithMatcher.prefixMatcher();
 
-    completionInfo.getArranger().registerMatcher(lookupElementWithPrefix.lookupElement(), prefixMatcher);
+    completionInfo.getLookup().addItem(lookupElementWithMatcher.lookupElement(), prefixMatcher);
+
+    completionInfo.getArranger().registerMatcher(lookupElementWithMatcher.lookupElement(), prefixMatcher);
     completionInfo.getArranger().addElement(
-        lookupElementWithPrefix.lookupElement(),
+        lookupElementWithMatcher.lookupElement(),
         new LookupElementPresentation());
   }
 
@@ -407,20 +406,20 @@ final public class CompletionService implements Disposable {
   }
 
   private record CachedCompletionResolveData(
-      @NotNull List<LookupElementWithPrefix> lookupElementsWithPrefix,
+      @NotNull List<LookupElementWithMatcher> lookupElementsWithMatcher,
       int resultIndex,
       @NotNull Position position, @NotNull String fileText, @NotNull Language language) {
   }
 
   @SuppressWarnings("UnstableApiUsage")
   private void handleInsert(@NotNull CachedCompletionResolveData cachedData,
-                            @NotNull LookupElementWithPrefix cachedLookupElementWithPrefix,
+                            @NotNull LookupElementWithMatcher cachedLookupElementWithMatcher,
                             @NotNull Editor editor,
                             @NotNull PsiFile copyToInsert,
                             @NotNull CompletionInfo completionInfo) {
-    prepareCompletionInfoForInsert(completionInfo, cachedLookupElementWithPrefix);
+    prepareCompletionInfoForInsert(completionInfo, cachedLookupElementWithMatcher);
 
-    completionInfo.getLookup().finishLookup('\n', cachedLookupElementWithPrefix.lookupElement());
+    completionInfo.getLookup().finishLookup('\n', cachedLookupElementWithMatcher.lookupElement());
 
     var currentOffset = editor.getCaretModel().getOffset();
 
@@ -428,8 +427,8 @@ final public class CompletionService implements Disposable {
         () -> {
           var context =
               CompletionUtil.createInsertionContext(
-                  cachedData.lookupElementsWithPrefix.stream().map(LookupElementWithPrefix::lookupElement).toList(),
-                  cachedLookupElementWithPrefix.lookupElement(),
+                  cachedData.lookupElementsWithMatcher.stream().map(LookupElementWithMatcher::lookupElement).toList(),
+                  cachedLookupElementWithMatcher.lookupElement(),
                   '\n',
                   editor,
                   copyToInsert,
@@ -440,7 +439,7 @@ final public class CompletionService implements Disposable {
                       currentOffset),
                   completionInfo.getInitContext().getOffsetMap());
 
-          cachedLookupElementWithPrefix.lookupElement().handleInsert(context);
+          cachedLookupElementWithMatcher.lookupElement().handleInsert(context);
 
         });
 

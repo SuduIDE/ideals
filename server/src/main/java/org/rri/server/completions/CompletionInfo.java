@@ -83,7 +83,7 @@ public class CompletionInfo {
     private final CompletionParameters parameters;
 
     @NotNull
-    private final ArrayList<LookupElementWithPrefix> itemsWithPrefix = new ArrayList<>();
+    private final ArrayList<LookupElementWithMatcher> itemsWithPrefix = new ArrayList<>();
 
     LookupArrangerImpl(@NotNull CompletionParameters parameters) {
       this.parameters = parameters;
@@ -96,8 +96,8 @@ public class CompletionInfo {
       var presentation = new LookupElementPresentation();
       ReadAction.run(() -> completionItem.getLookupElement().renderElement(presentation));
       registerMatcher(completionItem.getLookupElement(), completionItem.getPrefixMatcher());
-      itemsWithPrefix.add(new LookupElementWithPrefix(completionItem.getLookupElement(),
-          completionItem.getPrefixMatcher().getPrefix()));
+      itemsWithPrefix.add(new LookupElementWithMatcher(completionItem.getLookupElement(),
+          completionItem.getPrefixMatcher()));
       super.addElement(completionItem.getLookupElement(), presentation);
     }
 
@@ -105,10 +105,10 @@ public class CompletionInfo {
     @NotNull
     public Pair<List<LookupElement>, Integer> arrangeItems(@NotNull Lookup lookup, boolean onExplicitAction) {
       var toSelect = 0;
-      return new Pair<>(itemsWithPrefix.stream().map(LookupElementWithPrefix::lookupElement).toList(), toSelect);
+      return new Pair<>(itemsWithPrefix.stream().map(LookupElementWithMatcher::lookupElement).toList(), toSelect);
     }
 
-    @NotNull ArrayList<LookupElementWithPrefix> getElementsWithPrefix() {
+    @NotNull ArrayList<LookupElementWithMatcher> getElementsWithMatcher() {
       return itemsWithPrefix;
     }
 
