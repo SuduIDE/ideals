@@ -9,6 +9,7 @@ import com.intellij.psi.PsiElement;
 import com.intellij.refactoring.rename.RenameProcessor;
 import com.intellij.refactoring.rename.RenamePsiElementProcessor;
 import com.intellij.refactoring.rename.RenameViewDescriptor;
+import com.intellij.refactoring.util.NonCodeUsageInfo;
 import com.intellij.usageView.UsageInfo;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -77,6 +78,7 @@ public class RenameCommand extends LspCommand<WorkspaceEdit> {
 
     final var usages = renamer.findUsages();
     final var usagesLocationsStream = Arrays.stream(usages)
+        .filter(usage -> !(usage instanceof NonCodeUsageInfo))
         .map(RenameCommand::usageInfoToLocation);
 
     final var descriptor = new RenameViewDescriptor(map);
