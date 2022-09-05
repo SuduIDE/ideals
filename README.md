@@ -121,6 +121,6 @@ If you want to contribute with us, write [@serganch](https://t.me/serganch) in T
 
 Sergey Anchipolevsky - [@serganch](https://t.me/serganch)
 
-Project Link: [https://github.com/serganch/intellij-lsp](https://github.com/serganch/intellij-lsp)
+Project Link: [https://github.com/serganch/ideals](https://github.com/serganch/ideals)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
