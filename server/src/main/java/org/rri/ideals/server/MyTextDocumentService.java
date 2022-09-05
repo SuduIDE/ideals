@@ -1,15 +1,10 @@
 package org.rri.ideals.server;
 
-import com.intellij.navigation.NavigationItem;
-import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
-import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.project.DumbService;
 import com.intellij.util.concurrency.AppExecutorUtil;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
-import com.intellij.openapi.util.Ref;
-import com.intellij.psi.PsiElement;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.TextDocumentService;
 import org.jetbrains.annotations.NotNull;
@@ -22,6 +17,7 @@ import org.rri.ideals.server.references.DocumentHighlightCommand;
 import org.rri.ideals.server.references.FindDefinitionCommand;
 import org.rri.ideals.server.references.FindTypeDefinitionCommand;
 import org.rri.ideals.server.references.FindUsagesCommand;
+import org.rri.ideals.server.rename.RenameCommand;
 import org.rri.ideals.server.symbol.DocumentSymbolCommand;
 import org.rri.ideals.server.util.Metrics;
 

@@ -1,4 +1,4 @@
-package org.rri.server.rename;
+package org.rri.ideals.server.rename;
 
 import com.intellij.codeInsight.TargetElementUtil;
 import com.intellij.openapi.editor.Document;
@@ -15,11 +15,11 @@ import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.rri.server.LspPath;
-import org.rri.server.commands.ExecutorContext;
-import org.rri.server.commands.LspCommand;
-import org.rri.server.util.EditorUtil;
-import org.rri.server.util.MiscUtil;
+import org.rri.ideals.server.LspPath;
+import org.rri.ideals.server.commands.ExecutorContext;
+import org.rri.ideals.server.commands.LspCommand;
+import org.rri.ideals.server.util.EditorUtil;
+import org.rri.ideals.server.util.MiscUtil;
 
 import java.util.*;
 import java.util.function.Supplier;
