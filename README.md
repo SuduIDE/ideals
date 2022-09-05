@@ -47,7 +47,6 @@ NOTE: the project code name (Universal LSP Server) is a subject to change in the
 
 ## Caveats
 - The project is in a very early stage and really unstable.
-- Java, Kotlin and Python IDEA plugins are required to be installed.
 - The server is tested with Visual Studio Code only.
 - There are conflicts with the Android plugin on startup, so you have to disable it in the IDEA.
 - There is A LOT of work yet to be done, please be indulgent.
