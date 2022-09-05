@@ -289,7 +289,7 @@ final public class CompletionService implements Disposable {
               cancelChecker.checkCanceled();
             }
           }, 0, COMPLETION_CALL_CANCELLATION_CHECK_DELAY, TimeUnit.MILLISECONDS);
-      // invokeAndWait is necessary for editor creation. We can create editor only inside EDT
+      // invokeAndWait is necessary for editor creation and completion call
       ProgressManager.getInstance().runProcess(() ->
           ApplicationManager.getApplication().invokeAndWait(
               () -> EditorUtil.withEditor(process, psiFile,
