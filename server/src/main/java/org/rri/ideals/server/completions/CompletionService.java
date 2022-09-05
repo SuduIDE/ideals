@@ -283,7 +283,7 @@ final public class CompletionService implements Disposable {
       var performCompletionProgressIndicator = new EmptyProgressIndicator();
       var cancellationCheck = AppExecutorUtil.getAppScheduledExecutorService()
           .scheduleWithFixedDelay(() -> {
-            if (resultRef.get() == null && cancelChecker.isCanceled()) {
+            if (cancelChecker.isCanceled()) {
               LOG.info("completion cancel");
               performCompletionProgressIndicator.cancel();
               cancelChecker.checkCanceled();
@@ -397,7 +397,7 @@ final public class CompletionService implements Disposable {
     var insertProgressIndicator = new EmptyProgressIndicator();
     var cancellationCheck = AppExecutorUtil.getAppScheduledExecutorService()
         .scheduleWithFixedDelay(() -> {
-          if (caretOffsetAfterInsertRef.get() == null && cancelChecker.isCanceled()) {
+          if (cancelChecker.isCanceled()) {
             LOG.info("resolve cancel");
             insertProgressIndicator.cancel();
             cancelChecker.checkCanceled();
