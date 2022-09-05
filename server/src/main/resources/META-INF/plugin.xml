@@ -1,11 +1,11 @@
 <!-- Plugin Configuration File. Read more: https://plugins.jetbrains.com/docs/intellij/plugin-configuration-file.html -->
 <idea-plugin>
   <!-- Unique identifier of the plugin. It should be FQN. It cannot be changed between the plugin versions. -->
-  <id>org.rri.server</id>
+  <id>org.rri.ideals</id>
 
   <!-- Public plugin name should be written in Title Case.
        Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-name -->
-  <name>Universal LSP Server</name>
+  <name>IdeaLS</name>
 
   <!-- A displayed Vendor name or Organization ID displayed on the Plugins Page. -->
   <vendor email="serganch@gmail.com" url="https://github.com/serganch/intellij-lsp">RRI</vendor>
@@ -15,7 +15,7 @@
        Guidelines: https://plugins.jetbrains.com/docs/marketplace/plugin-overview-page.html#plugin-description -->
   <description>
     <![CDATA[
-    Turns IntelliJ IDEA into an LSP server and delivers the IDEA's language processing power to your favorite editor supporting LSP.
+    IdeaLS (IDEA Language Server) Turns IntelliJ IDEA into an LSP server and delivers the IDEA's language processing power to your favorite editor supporting LSP.
     ]]>
   </description>
 
@@ -23,27 +23,27 @@
        Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
   <depends>com.intellij.modules.platform</depends>
 
-  <depends optional="true" config-file="org.rri.server-java.xml">com.intellij.java</depends>
-  <depends optional="true" config-file="org.rri.server-kotlin.xml">org.jetbrains.kotlin</depends>
-  <depends optional="true" config-file="org.rri.server-python.xml">com.intellij.modules.python</depends>
+  <depends optional="true" config-file="org.rri.ideals-java.xml">com.intellij.java</depends>
+  <depends optional="true" config-file="org.rri.ideals-kotlin.xml">org.jetbrains.kotlin</depends>
+  <depends optional="true" config-file="org.rri.ideals-python.xml">com.intellij.modules.python</depends>
 
   <!-- Extension points defined by the plugin.
        Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
   <extensions defaultExtensionNs="com.intellij">
-    <appStarter implementation="org.rri.server.bootstrap.LspServerApplicationStarter"/>
-    <applicationService serviceImplementation="org.rri.server.ProjectService"/>
+    <appStarter implementation="org.rri.ideals.server.bootstrap.LspServerApplicationStarter"/>
+    <applicationService serviceImplementation="org.rri.ideals.server.ProjectService"/>
 
     <applicationService overrides="true"
                         serviceInterface="com.intellij.openapi.fileEditor.FileDocumentManager"
                         serviceImplementation="com.intellij.openapi.fileEditor.impl.FileDocumentManagerImpl"
-                        testServiceImplementation="org.rri.server.components.TestFileDocumentManager"/>
+                        testServiceImplementation="org.rri.ideals.server.components.TestFileDocumentManager"/>
 
 
   </extensions>
 
   <extensionPoints>
     <extensionPoint qualifiedName="org.rri.lsp.server.documentSymbolInfoProvider"
-                    interface="org.rri.server.symbol.DocumentSymbolInfoProvider"
+                    interface="org.rri.ideals.server.symbol.DocumentSymbolInfoProvider"
                     dynamic="true" />
   </extensionPoints>
 </idea-plugin>

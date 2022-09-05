@@ -1,24 +1,14 @@
-import path = require("path");
 import * as vscode from "vscode";
 
 
 import * as net from 'net';
 
-import {
-    Disposable,
-  LanguageClientOptions,
-  RevealOutputChannelOn,
-} from "vscode-languageclient";
+import {LanguageClientOptions, RevealOutputChannelOn,} from "vscode-languageclient";
 
-import {
-  LanguageClient,
-  ServerOptions,
-  State,
-  StreamInfo,
-} from "vscode-languageclient/node";
+import {LanguageClient, ServerOptions, State, StreamInfo,} from "vscode-languageclient/node";
 
-const outputChannel = vscode.window.createOutputChannel("RRI IntelliJ LSP client");
-const LS_LAUNCHER_MAIN: string = "RriIntellijLanguageServerLauncher";
+const outputChannel = vscode.window.createOutputChannel("RRI IdeaLS Client");
+const LS_LAUNCHER_MAIN: string = "RriIdeaLanguageServerLauncher";
 
 export class RriIntellijClient {
   private languageClient?: LanguageClient;
@@ -34,8 +24,8 @@ export class RriIntellijClient {
       let serverOptions: ServerOptions = getServerOptions();
 
       //creating the language client.
-      let clientId = "rri-intellij-client";
-      let clientName = "RRI IntelliJ LSP Client";
+      let clientId = "rri-ideals-client";
+      let clientName = "RRI IdeaLS Client";
       let clientOptions: LanguageClientOptions = {
         documentSelector: [{ pattern: "**/*" /* scheme: "file", language: "java" */}],
         outputChannel: outputChannel,

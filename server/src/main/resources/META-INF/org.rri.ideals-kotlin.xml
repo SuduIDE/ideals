@@ -1,0 +1,11 @@
+<idea-plugin>
+  <id>org.rri.ideals.kotlin</id>
+  <depends>org.rri.ideals</depends>
+  <depends>org.rri.ideals.java</depends>
+  <depends>com.intellij.java</depends>
+  <depends>org.jetbrains.kotlin</depends>
+
+  <extensions defaultExtensionNs="org.rri.lsp.server">
+    <documentSymbolInfoProvider implementation="org.rri.ideals.server.kotlin.symbol.KtDocumentSymbolInfoProvider"/>
+  </extensions>
+</idea-plugin>

@@ -15,7 +15,7 @@
 </details>
 
 
-# Universal LSP Server
+# IdeaLS (IDEA Language Server)
 
 An Intellij IDEA plugin that is intended to turn [IntelliJ IDEA](https://github.com/JetBrains/intellij-community) into an LSP server and deliver the power of IDEA's language support to LSP clients.
 
@@ -31,12 +31,10 @@ So it does what your IDEA does, with the languages your IDEA supports, but with 
 If you are working on a multi-language project you don't need many language-specific LSP servers anymore.
 Just install IntelliJ IDEA with appropriate set of plugins and turn it into one LSP server for all the languages you need. 
 
-Universal LSP Server is designed to be as much language agnostic as possible.
+IdeaLS is designed to be as much language agnostic as possible.
 However, for a better user experience some parts are still dependent on language-specific API. 
 
 The project was heavily inspired by [intellij-lsp](https://github.com/Ruin0x11/intellij-lsp-server)
-
-NOTE: the project code name (Universal LSP Server) is a subject to change in the nearest future.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
@@ -114,7 +112,7 @@ Note, that you need to enable extension before, not after the server has started
 
 ## Contribute with us.
 
-Universal LSP Server is an opensource product. We welcome everyone who wants to make it better.
+IdeaLS is an opensource product. We welcome everyone who wants to make it better.
 If you want to contribute with us, write [@serganch](https://t.me/serganch) in Telegram.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>

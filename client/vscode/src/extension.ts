@@ -2,7 +2,7 @@
 // Import the module and reference it with the alias vscode in your code below
 import * as vscode from 'vscode';
 
-import { lspClient } from './core/rriIntellijClient';
+import {lspClient} from './core/rriIntellijClient';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
@@ -13,13 +13,13 @@ export function activate(context: vscode.ExtensionContext) {
 	lspClient.setContext(context);
 	//Initialize the LS Client extension instance.
 	lspClient.init().catch((error)=> {
-		console.log("Failed to activate RRI IntelliJ extension. " + (error));
+		console.log("Failed to activate RRI IdeaLS extension. " + (error));
 	});
 
 
 	// Use the console to output diagnostic information (console.log) and errors (console.error)
 	// This line of code will only be executed once when your extension is activated
-	console.log('Congratulations, your extension "rri.intellij" is now active!');
+	console.log('Congratulations, your extension "rri.ideals" is now active!');
 
 	/*
 	// The command has been defined in the package.json file

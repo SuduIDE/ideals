@@ -6,7 +6,7 @@ plugins {
   id("org.jetbrains.intellij") version "1.7.0"
 }
 
-group = "org.rri"
+group = "org.rri.ideals.server"
 version = "1.0-SNAPSHOT"
 
 repositories {

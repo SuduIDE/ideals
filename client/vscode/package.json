@@ -1,6 +1,6 @@
 {
-  "name": "rri.intellij",
-  "displayName": "RRI IntelliJ LSP Client",
+  "name": "rri.ideals",
+  "displayName": "RRI IdeaLS Client",
   "description": "test extension",
   "version": "0.0.1",
   "engines": {
