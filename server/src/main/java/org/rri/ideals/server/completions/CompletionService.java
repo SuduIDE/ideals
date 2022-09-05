@@ -39,14 +39,15 @@ import org.rri.ideals.server.util.TextUtil;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.Future;
 import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Service(Service.Level.PROJECT)
 final public class CompletionService implements Disposable {
   private static final Logger LOG = Logger.getInstance(CompletionService.class);
-  private static final long COMPLETION_CALL_CANCELLATION_CHECK_DELAY = 100;
-  private static final long RESOLVE_CALL_CANCELLATION_CHECK_DELAY = 100;
+  private static final long COMPLETION_CALL_CANCEL_CHECK_DELAY = 100;
+  private static final long RESOLVE_CALL_CANCEL_CHECK_DELAY = 100;
   @NotNull
   private final Project project;
 
@@ -277,18 +278,12 @@ final public class CompletionService implements Disposable {
                                                              @NotNull CancelChecker cancelChecker) {
     VoidCompletionProcess process = new VoidCompletionProcess();
     Ref<List<CompletionItem>> resultRef = new Ref<>();
+    var performCompletionProgressIndicator = new EmptyProgressIndicator();
+    var cancellationCheck = startCancellationChecking(cancelChecker,
+        performCompletionProgressIndicator, COMPLETION_CALL_CANCEL_CHECK_DELAY);
     try {
       var lookupElementsWithMatcherRef = new Ref<List<LookupElementWithMatcher>>();
       var completionDataVersionRef = new Ref<Integer>();
-      var performCompletionProgressIndicator = new EmptyProgressIndicator();
-      var cancellationCheck = AppExecutorUtil.getAppScheduledExecutorService()
-          .scheduleWithFixedDelay(() -> {
-            if (cancelChecker.isCanceled()) {
-              LOG.info("completion cancel");
-              performCompletionProgressIndicator.cancel();
-              cancelChecker.checkCanceled();
-            }
-          }, 0, COMPLETION_CALL_CANCELLATION_CHECK_DELAY, TimeUnit.MILLISECONDS);
       // invokeAndWait is necessary for editor creation and completion call
       ProgressManager.getInstance().runProcess(() ->
           ApplicationManager.getApplication().invokeAndWait(
@@ -326,7 +321,6 @@ final public class CompletionService implements Disposable {
                   }
               )
           ), performCompletionProgressIndicator);
-      cancellationCheck.cancel(false);
       cancelChecker.checkCanceled();
       ReadAction.run(() -> {
         var document = MiscUtil.getDocument(psiFile);
@@ -335,6 +329,7 @@ final public class CompletionService implements Disposable {
             lookupElementsWithMatcherRef.get(), document, position, completionDataVersionRef.get()));
       });
     } finally {
+      cancellationCheck.cancel(false);
       WriteCommandAction.runWriteCommandAction(project, () -> Disposer.dispose(process));
     }
     return resultRef.get();
@@ -395,27 +390,38 @@ final public class CompletionService implements Disposable {
     });
     var copyToInsert = copyToInsertRef.get();
     var insertProgressIndicator = new EmptyProgressIndicator();
-    var cancellationCheck = AppExecutorUtil.getAppScheduledExecutorService()
-        .scheduleWithFixedDelay(() -> {
-          if (cancelChecker.isCanceled()) {
-            LOG.info("resolve cancel");
-            insertProgressIndicator.cancel();
-            cancelChecker.checkCanceled();
-          }
-        }, 0, RESOLVE_CALL_CANCELLATION_CHECK_DELAY, TimeUnit.MILLISECONDS);
-    ProgressManager.getInstance().runProcess(() -> {
-      ApplicationManager.getApplication().invokeAndWait(() -> {
-        var editor = EditorUtil.createEditor(disposable, copyToInsert,
-            cachedData.position);
-        CompletionInfo completionInfo = new CompletionInfo(editor, project);
 
-        handleInsert(cachedData, cachedLookupElementWithMatcher, editor, copyToInsert, completionInfo);
+    var cancellationCheck = startCancellationChecking(
+        cancelChecker, insertProgressIndicator, RESOLVE_CALL_CANCEL_CHECK_DELAY);
+    try {
+      ProgressManager.getInstance().runProcess(() ->
+          ApplicationManager.getApplication().invokeAndWait(() -> {
+            var editor = EditorUtil.createEditor(disposable, copyToInsert,
+                cachedData.position);
+            CompletionInfo completionInfo = new CompletionInfo(editor, project);
 
-        caretOffsetAfterInsertRef.set(editor.getCaretModel().getOffset());
-      });
+            handleInsert(cachedData, cachedLookupElementWithMatcher, editor, copyToInsert, completionInfo);
+
+            caretOffsetAfterInsertRef.set(editor.getCaretModel().getOffset());
+          }), insertProgressIndicator);
+    } finally {
       cancellationCheck.cancel(false);
       cancelChecker.checkCanceled();
-    }, insertProgressIndicator);
+    }
+  }
+
+  private Future<?> startCancellationChecking(CancelChecker cancelChecker,
+                                              EmptyProgressIndicator insertProgressIndicator,
+                                              long delay) {
+    return AppExecutorUtil.getAppScheduledExecutorService()
+        .scheduleWithFixedDelay(() -> {
+          if (cancelChecker.isCanceled()) {
+            LOG.info("cancelled");
+            insertProgressIndicator.cancel();
+            return;
+          }
+          LOG.warn("1");
+        }, 0, delay, TimeUnit.MILLISECONDS);
   }
 
   private record CompletionData(
