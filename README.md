@@ -93,10 +93,10 @@ After that you will need to run the client extension, that is described in *Runn
 
 ### Running server
 For running as language server IDEA must be configured to be executed in headless mode (no GUI).
-Add line `-Djava.awt.headless=true` into `idea.vmoptions` (can be found inside the `bin` directory in the IDEA installation root).
-(we're working on making this part less cumbersome)
 
-Run `idea lsp-server` on Windows or `idea.sh lsp-server` on Unix.
+Run `idea lsp-server -Djava.awt.headless=true` on Windows or `idea.sh lsp-server -Djava.awt.headless=true` on Unix.
+
+idea can be replaced by for example `pstorm` for phpstorm.
 
 Now server is working on 8989 port.
 
