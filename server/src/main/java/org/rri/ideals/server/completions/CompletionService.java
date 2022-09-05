@@ -276,7 +276,7 @@ final public class CompletionService implements Disposable {
                                                              @NotNull Position position,
                                                              @NotNull CancelChecker cancelChecker) {
     VoidCompletionProcess process = new VoidCompletionProcess();
-    AtomicReference<List<CompletionItem>> resultRef = new AtomicReference<>();
+    Ref<List<CompletionItem>> resultRef = new Ref<>();
     try {
       var lookupElementsWithMatcherRef = new Ref<List<LookupElementWithMatcher>>();
       var completionDataVersionRef = new Ref<Integer>();
