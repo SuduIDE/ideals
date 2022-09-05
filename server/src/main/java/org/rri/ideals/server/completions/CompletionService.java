@@ -39,6 +39,7 @@ import org.rri.ideals.server.util.TextUtil;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Service(Service.Level.PROJECT)
@@ -273,19 +274,18 @@ final public class CompletionService implements Disposable {
                                                              @NotNull Position position,
                                                              @NotNull CancelChecker cancelChecker) {
     VoidCompletionProcess process = new VoidCompletionProcess();
-    Ref<List<CompletionItem>> resultRef = new Ref<>();
+    AtomicReference<List<CompletionItem>> resultRef = new AtomicReference<>();
     try {
       var lookupElementsWithMatcherRef = new Ref<List<LookupElementWithMatcher>>();
       var completionDataVersionRef = new Ref<Integer>();
       var progressIndicator = new EmptyProgressIndicator();
-      AppExecutorUtil.getAppScheduledExecutorService().execute(() -> {
-        while (resultRef.isNull()) {
-          if (cancelChecker.isCanceled()) {
-            progressIndicator.cancel();
-            break;
-          }
+      var future = AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay(() -> {
+        if (resultRef.get() == null && cancelChecker.isCanceled()) {
+          LOG.warn("completion cancel");
+          progressIndicator.cancel();
+          cancelChecker.checkCanceled();
         }
-      });
+      }, 0, 100, TimeUnit.MILLISECONDS);
       // invokeAndWait is necessary for editor creation. We can create editor only inside EDT
       ProgressManager.getInstance().runProcess(() -> {
         ApplicationManager.getApplication().invokeAndWait(
@@ -326,7 +326,8 @@ final public class CompletionService implements Disposable {
             )
         );
       }, progressIndicator);
-
+      future.cancel(false);
+      cancelChecker.checkCanceled();
       ReadAction.run(() -> {
         var document = MiscUtil.getDocument(psiFile);
         assert document != null;
@@ -380,7 +381,7 @@ final public class CompletionService implements Disposable {
     var copyToInsertRef = new Ref<PsiFile>();
     ApplicationManager.getApplication().runReadAction(() -> {
 
-      cancelChecker.checkCanceled();
+//      cancelChecker.checkCanceled();
       copyToInsertRef.set(PsiFileFactory.getInstance(project).createFileFromText(
           "copy",
           cachedData.language,
@@ -389,24 +390,33 @@ final public class CompletionService implements Disposable {
           true,
           true));
       var copyThatCalledCompletion = (PsiFile) copyToInsertRef.get().copy();
-      cancelChecker.checkCanceled();
+//      cancelChecker.checkCanceled();
 
       copyThatCalledCompletionDocRef.set(MiscUtil.getDocument(copyThatCalledCompletion));
       copyToInsertDocRef.set(MiscUtil.getDocument(copyToInsertRef.get()));
     });
     var copyToInsert = copyToInsertRef.get();
+    var progressIndicator = new EmptyProgressIndicator();
+    var future = AppExecutorUtil.getAppScheduledExecutorService().scheduleWithFixedDelay(() -> {
+      if (caretOffsetAfterInsertRef.get() == null && cancelChecker.isCanceled()) {
+        LOG.warn("resolve cancel");
+        progressIndicator.cancel();
+        cancelChecker.checkCanceled();
+      }
+    }, 0, 100, TimeUnit.MILLISECONDS);
+    ProgressManager.getInstance().runProcess(() -> {
+      ApplicationManager.getApplication().invokeAndWait(() -> {
+        var editor = EditorUtil.createEditor(disposable, copyToInsert,
+            cachedData.position);
+        CompletionInfo completionInfo = new CompletionInfo(editor, project);
 
-    ApplicationManager.getApplication().invokeAndWait(() -> {
-      var editor = EditorUtil.createEditor(disposable, copyToInsert,
-          cachedData.position);
-      CompletionInfo completionInfo = new CompletionInfo(editor, project);
+        handleInsert(cachedData, cachedLookupElementWithMatcher, editor, copyToInsert, completionInfo);
 
+        caretOffsetAfterInsertRef.set(editor.getCaretModel().getOffset());
+      });
+      future.cancel(false);
       cancelChecker.checkCanceled();
-      handleInsert(cachedData, cachedLookupElementWithMatcher, editor, copyToInsert, completionInfo);
-      cancelChecker.checkCanceled();
-
-      caretOffsetAfterInsertRef.set(editor.getCaretModel().getOffset());
-    });
+    }, progressIndicator);
   }
 
   private record CompletionData(
