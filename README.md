@@ -34,7 +34,7 @@ Just install IntelliJ IDEA with appropriate set of plugins and turn it into one 
 IdeaLS is designed to be as much language agnostic as possible.
 However, for a better user experience some parts are still dependent on language-specific API. 
 
-The project was heavily inspired by [intellij-lsp](https://github.com/Ruin0x11/intellij-lsp-server)
+The project was heavily inspired by [intellij-lsp-server](https://github.com/Ruin0x11/intellij-lsp-server)
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
