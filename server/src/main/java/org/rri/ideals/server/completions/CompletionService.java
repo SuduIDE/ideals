@@ -410,7 +410,7 @@ final public class CompletionService implements Disposable {
     }
   }
 
-  private Future<?> startCancellationChecking(CancelChecker cancelChecker,
+  private static Future<?> startCancellationChecking(CancelChecker cancelChecker,
                                               EmptyProgressIndicator insertProgressIndicator,
                                               long delay) {
     return AppExecutorUtil.getAppScheduledExecutorService()
