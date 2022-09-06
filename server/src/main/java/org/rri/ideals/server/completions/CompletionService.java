@@ -14,7 +14,6 @@ import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
-import com.intellij.openapi.progress.EmptyProgressIndicator;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
@@ -24,7 +23,6 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiFileFactory;
 import com.intellij.ui.CoreIconManager;
 import com.intellij.ui.IconManager;
-import com.intellij.util.concurrency.AppExecutorUtil;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -34,20 +32,17 @@ import org.rri.ideals.server.completions.util.IconUtil;
 import org.rri.ideals.server.completions.util.TextEditRearranger;
 import org.rri.ideals.server.completions.util.TextEditWithOffsets;
 import org.rri.ideals.server.util.EditorUtil;
+import org.rri.ideals.server.util.LspProgressIndicator;
 import org.rri.ideals.server.util.MiscUtil;
 import org.rri.ideals.server.util.TextUtil;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.Future;
-import java.util.concurrent.TimeUnit;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Service(Service.Level.PROJECT)
 final public class CompletionService implements Disposable {
   private static final Logger LOG = Logger.getInstance(CompletionService.class);
-  private static final long COMPLETION_CALL_CANCEL_CHECK_DELAY = 100;
-  private static final long RESOLVE_CALL_CANCEL_CHECK_DELAY = 100;
   @NotNull
   private final Project project;
 
@@ -278,9 +273,6 @@ final public class CompletionService implements Disposable {
                                                              @NotNull CancelChecker cancelChecker) {
     VoidCompletionProcess process = new VoidCompletionProcess();
     Ref<List<CompletionItem>> resultRef = new Ref<>();
-    var performCompletionProgressIndicator = new EmptyProgressIndicator();
-    var cancellationCheck = startCancellationChecking(cancelChecker,
-        performCompletionProgressIndicator, COMPLETION_CALL_CANCEL_CHECK_DELAY);
     try {
       var lookupElementsWithMatcherRef = new Ref<List<LookupElementWithMatcher>>();
       var completionDataVersionRef = new Ref<Integer>();
@@ -320,7 +312,7 @@ final public class CompletionService implements Disposable {
                         ));
                   }
               )
-          ), performCompletionProgressIndicator);
+          ), new LspProgressIndicator(cancelChecker));
       ReadAction.run(() -> {
         var document = MiscUtil.getDocument(psiFile);
         assert document != null;
@@ -328,7 +320,6 @@ final public class CompletionService implements Disposable {
             lookupElementsWithMatcherRef.get(), document, position, completionDataVersionRef.get()));
       });
     } finally {
-      cancellationCheck.cancel(false);
       WriteCommandAction.runWriteCommandAction(project, () -> Disposer.dispose(process));
     }
     return resultRef.get();
@@ -388,38 +379,17 @@ final public class CompletionService implements Disposable {
       copyToInsertDocRef.set(MiscUtil.getDocument(copyToInsertRef.get()));
     });
     var copyToInsert = copyToInsertRef.get();
-    var insertProgressIndicator = new EmptyProgressIndicator();
 
-    var cancellationCheck = startCancellationChecking(
-        cancelChecker, insertProgressIndicator, RESOLVE_CALL_CANCEL_CHECK_DELAY);
-    try {
-      ProgressManager.getInstance().runProcess(() ->
-          ApplicationManager.getApplication().invokeAndWait(() -> {
-            var editor = EditorUtil.createEditor(disposable, copyToInsert,
-                cachedData.position);
-            CompletionInfo completionInfo = new CompletionInfo(editor, project);
+    ProgressManager.getInstance().runProcess(() ->
+        ApplicationManager.getApplication().invokeAndWait(() -> {
+          var editor = EditorUtil.createEditor(disposable, copyToInsert,
+              cachedData.position);
+          CompletionInfo completionInfo = new CompletionInfo(editor, project);
 
-            handleInsert(cachedData, cachedLookupElementWithMatcher, editor, copyToInsert, completionInfo);
+          handleInsert(cachedData, cachedLookupElementWithMatcher, editor, copyToInsert, completionInfo);
 
-            caretOffsetAfterInsertRef.set(editor.getCaretModel().getOffset());
-          }), insertProgressIndicator);
-    } finally {
-      cancellationCheck.cancel(false);
-      cancelChecker.checkCanceled();
-    }
-  }
-
-  private static Future<?> startCancellationChecking(CancelChecker cancelChecker,
-                                              EmptyProgressIndicator insertProgressIndicator,
-                                              long delay) {
-    return AppExecutorUtil.getAppScheduledExecutorService()
-        .scheduleWithFixedDelay(() -> {
-          if (cancelChecker.isCanceled()) {
-            LOG.info("cancelled");
-            insertProgressIndicator.cancel();
-            cancelChecker.checkCanceled();
-          }
-        }, 0, delay, TimeUnit.MILLISECONDS);
+          caretOffsetAfterInsertRef.set(editor.getCaretModel().getOffset());
+        }), new LspProgressIndicator(cancelChecker));
   }
 
   private record CompletionData(
