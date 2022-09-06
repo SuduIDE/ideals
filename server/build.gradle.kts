@@ -3,7 +3,7 @@ import org.jetbrains.intellij.tasks.RunIdeTask
 plugins {
   id("java")
   // id("org.jetbrains.kotlin.jvm") version "1.7.0"
-  id("org.jetbrains.intellij") version "1.7.0"
+  id("org.jetbrains.intellij") version "1.9.0"
 }
 
 group = "org.rri.ideals.server"
