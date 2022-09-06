@@ -418,9 +418,8 @@ final public class CompletionService implements Disposable {
           if (cancelChecker.isCanceled()) {
             LOG.info("cancelled");
             insertProgressIndicator.cancel();
-            return;
+            cancelChecker.checkCanceled();
           }
-          LOG.warn("1");
         }, 0, delay, TimeUnit.MILLISECONDS);
   }
 
