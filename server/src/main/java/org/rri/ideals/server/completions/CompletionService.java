@@ -321,7 +321,6 @@ final public class CompletionService implements Disposable {
                   }
               )
           ), performCompletionProgressIndicator);
-      cancelChecker.checkCanceled();
       ReadAction.run(() -> {
         var document = MiscUtil.getDocument(psiFile);
         assert document != null;
