@@ -92,11 +92,18 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
   @NotNull
   private ServerCapabilities defaultServerCapabilities() {
 
-    return MiscUtil.with(new ServerCapabilities(), (it) -> {
+    return MiscUtil.with(new ServerCapabilities(), it -> {
       it.setTextDocumentSync(MiscUtil.with(new TextDocumentSyncOptions(), (syncOptions) -> {
         syncOptions.setOpenClose(true);
         syncOptions.setChange(TextDocumentSyncKind.Incremental);
         syncOptions.setSave(new SaveOptions(true));
+      }));
+
+      it.setWorkspace(MiscUtil.with(new WorkspaceServerCapabilities(), wsc -> {
+        wsc.setFileOperations(MiscUtil.with(new FileOperationsServerCapabilities(), foc -> {
+          foc.setDidRename(new FileOperationOptions(
+              List.of(new FileOperationFilter(new FileOperationPattern("**/*"), "file"))));
+        }));
       }));
 
 //      it.setHoverProvider(true);
@@ -109,7 +116,6 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
       it.setDocumentHighlightProvider(true);
       it.setDocumentSymbolProvider(true);
       it.setWorkspaceSymbolProvider(true);
-//      it.setCodeActionProvider(false);
 //      it.setCodeLensProvider(new CodeLensOptions(false));
       it.setDocumentFormattingProvider(true);
       it.setDocumentRangeFormattingProvider(true);

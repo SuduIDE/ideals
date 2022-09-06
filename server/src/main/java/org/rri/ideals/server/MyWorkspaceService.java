@@ -1,5 +1,7 @@
 package org.rri.ideals.server;
 
+import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.vfs.VirtualFileManager;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.eclipse.lsp4j.services.WorkspaceService;
@@ -25,6 +27,12 @@ public class MyWorkspaceService implements WorkspaceService {
   @Override
   public void didChangeWatchedFiles(DidChangeWatchedFilesParams params) {
 
+  }
+
+  @Override
+  public void didRenameFiles(RenameFilesParams params) {
+    // Refresh file system to avoid false positives in diagnostics (see #38)
+    ApplicationManager.getApplication().invokeAndWait(() -> VirtualFileManager.getInstance().syncRefresh());
   }
 
   private @NotNull WorkspaceSymbolService workspaceSymbol() {

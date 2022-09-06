@@ -159,8 +159,8 @@ final public class ManagedDocuments {
           if (doc == null)
             return; // todo handle
 
-          FileDocumentManager.getInstance().reloadFromDisk(doc);
           VirtualFileManager.getInstance().syncRefresh();
+          FileDocumentManager.getInstance().reloadFromDisk(doc);
           PsiDocumentManager.getInstance(project).commitAllDocuments();
         })));
 
@@ -170,6 +170,11 @@ final public class ManagedDocuments {
 
   public void stopManaging(@NotNull TextDocumentIdentifier textDocument) {
     var path = LspPath.fromLspUri(textDocument.getUri());
+
+    final var virtualFile = path.findVirtualFile();
+    if(virtualFile != null) {
+      FileDocumentManager.getInstance().reloadFiles();
+    }
 
     if (docs.remove(path) == null) {
       LOG.warn("Attempted to close document without opening it at: " + path);
