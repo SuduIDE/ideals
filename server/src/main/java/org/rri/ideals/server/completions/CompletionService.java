@@ -14,6 +14,7 @@ import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
+import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.Ref;
@@ -31,6 +32,7 @@ import org.rri.ideals.server.completions.util.IconUtil;
 import org.rri.ideals.server.completions.util.TextEditRearranger;
 import org.rri.ideals.server.completions.util.TextEditWithOffsets;
 import org.rri.ideals.server.util.EditorUtil;
+import org.rri.ideals.server.util.LspProgressIndicator;
 import org.rri.ideals.server.util.MiscUtil;
 import org.rri.ideals.server.util.TextUtil;
 
@@ -274,45 +276,43 @@ final public class CompletionService implements Disposable {
     try {
       var lookupElementsWithMatcherRef = new Ref<List<LookupElementWithMatcher>>();
       var completionDataVersionRef = new Ref<Integer>();
+      // invokeAndWait is necessary for editor creation and completion call
+      ProgressManager.getInstance().runProcess(() ->
+          ApplicationManager.getApplication().invokeAndWait(
+              () -> EditorUtil.withEditor(process, psiFile,
+                  position,
+                  (editor) -> {
+                    var compInfo = new CompletionInfo(editor, project);
+                    var ideaCompService = com.intellij.codeInsight.completion.CompletionService.getCompletionService();
+                    assert ideaCompService != null;
 
-      // invokeAndWait is necessary for editor creation. We can create editor only inside EDT
-      ApplicationManager.getApplication().invokeAndWait(
-          () -> EditorUtil.withEditor(process, psiFile,
-              position,
-              (editor) -> {
-                var compInfo = new CompletionInfo(editor, project);
-                var ideaCompService = com.intellij.codeInsight.completion.CompletionService.getCompletionService();
-                assert ideaCompService != null;
+                    ideaCompService.performCompletion(compInfo.getParameters(),
+                        (result) -> {
+                          compInfo.getLookup().addItem(result.getLookupElement(), result.getPrefixMatcher());
+                          compInfo.getArranger().addElement(result);
+                        });
 
-                cancelChecker.checkCanceled();
-                ideaCompService.performCompletion(compInfo.getParameters(),
-                    (result) -> {
-                      compInfo.getLookup().addItem(result.getLookupElement(), result.getPrefixMatcher());
-                      compInfo.getArranger().addElement(result);
-                    });
-                cancelChecker.checkCanceled();
+                    var elementsWithMatcher = compInfo.getArranger().getElementsWithMatcher();
+                    lookupElementsWithMatcherRef.set(elementsWithMatcher);
 
-                var elementsWithMatcher = compInfo.getArranger().getElementsWithMatcher();
-                lookupElementsWithMatcherRef.set(elementsWithMatcher);
+                    var document = MiscUtil.getDocument(psiFile);
+                    assert document != null;
 
-                var document = MiscUtil.getDocument(psiFile);
-                assert document != null;
+                    // version and data manipulations here are thread safe because they are done inside invokeAndWait
+                    int newVersion = 1 + cachedDataRef.get().version;
+                    completionDataVersionRef.set(newVersion);
 
-                // version and data manipulations here are thread safe because they are done inside invokeAndWait
-                int newVersion = 1 + cachedDataRef.get().version;
-                completionDataVersionRef.set(newVersion);
-
-                cachedDataRef.set(
-                    new CompletionData(
-                        elementsWithMatcher,
-                        newVersion,
-                        position,
-                        document.getText(),
-                        psiFile.getLanguage()
-                    ));
-              }
-          )
-      );
+                    cachedDataRef.set(
+                        new CompletionData(
+                            elementsWithMatcher,
+                            newVersion,
+                            position,
+                            document.getText(),
+                            psiFile.getLanguage()
+                        ));
+                  }
+              )
+          ), new LspProgressIndicator(cancelChecker));
       ReadAction.run(() -> {
         var document = MiscUtil.getDocument(psiFile);
         assert document != null;
@@ -366,7 +366,6 @@ final public class CompletionService implements Disposable {
     var copyToInsertRef = new Ref<PsiFile>();
     ApplicationManager.getApplication().runReadAction(() -> {
 
-      cancelChecker.checkCanceled();
       copyToInsertRef.set(PsiFileFactory.getInstance(project).createFileFromText(
           "copy",
           cachedData.language,
@@ -375,24 +374,22 @@ final public class CompletionService implements Disposable {
           true,
           true));
       var copyThatCalledCompletion = (PsiFile) copyToInsertRef.get().copy();
-      cancelChecker.checkCanceled();
 
       copyThatCalledCompletionDocRef.set(MiscUtil.getDocument(copyThatCalledCompletion));
       copyToInsertDocRef.set(MiscUtil.getDocument(copyToInsertRef.get()));
     });
     var copyToInsert = copyToInsertRef.get();
 
-    ApplicationManager.getApplication().invokeAndWait(() -> {
-      var editor = EditorUtil.createEditor(disposable, copyToInsert,
-          cachedData.position);
-      CompletionInfo completionInfo = new CompletionInfo(editor, project);
+    ProgressManager.getInstance().runProcess(() ->
+        ApplicationManager.getApplication().invokeAndWait(() -> {
+          var editor = EditorUtil.createEditor(disposable, copyToInsert,
+              cachedData.position);
+          CompletionInfo completionInfo = new CompletionInfo(editor, project);
 
-      cancelChecker.checkCanceled();
-      handleInsert(cachedData, cachedLookupElementWithMatcher, editor, copyToInsert, completionInfo);
-      cancelChecker.checkCanceled();
+          handleInsert(cachedData, cachedLookupElementWithMatcher, editor, copyToInsert, completionInfo);
 
-      caretOffsetAfterInsertRef.set(editor.getCaretModel().getOffset());
-    });
+          caretOffsetAfterInsertRef.set(editor.getCaretModel().getOffset());
+        }), new LspProgressIndicator(cancelChecker));
   }
 
   private record CompletionData(

@@ -13,6 +13,7 @@ import com.jetbrains.python.PythonFileType;
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemKind;
 import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Test;
@@ -25,6 +26,7 @@ import org.rri.ideals.server.TestUtil;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
+import java.util.concurrent.CancellationException;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 
@@ -248,7 +250,53 @@ public class CompletionServiceTest extends BasePlatformTestCase {
     Assert.assertEquals(expectedText, TestUtil.applyEdits(originalText, allEdits));
   }
 
+  @Test
+  public void testCompletionCancellation() {
+    var cancelChecker = new AlwaysTrueCancelChecker();
 
+    var psiFile = myFixture.configureByText(
+        PythonFileType.INSTANCE,
+        "");
+    Assertions.assertThrows(
+        CancellationException.class,
+        () -> getCompletionListAtPosition(psiFile, new Position(0, 0), cancelChecker));
+  }
+
+  @Test
+  public void testResolveCancellation() {
+
+    var psiFile = myFixture.configureByText(
+        JavaFileType.INSTANCE,
+        """
+            class Test {
+            \s\s\s\s
+            }
+            """);
+
+    var completionList = Assertions.assertDoesNotThrow(
+        () -> getCompletionListAtPosition(psiFile, new Position(1, 3)));
+
+    var cancelChecker = new AlwaysTrueCancelChecker();
+
+    var targetCompletionItem =
+        completionList.stream()
+            .filter(completionItem -> completionItem.getLabel().equals("public"))
+            .findFirst()
+            .orElseThrow(() -> new AssertionError("completion item not found"));
+
+    targetCompletionItem.setData(gson.fromJson(
+        gson.toJson(targetCompletionItem.getData()),
+        JsonObject.class));
+    Assertions.assertThrows(CancellationException.class,
+        () -> getResolvedCompletionItem(targetCompletionItem, cancelChecker));
+  }
+
+  private static class AlwaysTrueCancelChecker implements CancelChecker {
+    @Override
+    public void checkCanceled() {
+      throw new CancellationException();
+    }
+  }
 
   @Override
   protected String getTestDataPath() {
@@ -258,16 +306,29 @@ public class CompletionServiceTest extends BasePlatformTestCase {
 
   @NotNull
   private List<@NotNull CompletionItem> getCompletionListAtPosition(@NotNull PsiFile file,
-                                                                     @NotNull Position position) {
+                                                                    @NotNull Position position) {
+    return getCompletionListAtPosition(file, position, new TestUtil.DumbCancelChecker());
+  }
+
+  @NotNull
+  private List<@NotNull CompletionItem> getCompletionListAtPosition(@NotNull PsiFile file,
+                                                                    @NotNull Position position,
+                                                                    @NotNull CancelChecker cancelChecker) {
     return getProject().getService(CompletionService.class).computeCompletions(
-        LspPath.fromVirtualFile(file.getVirtualFile()), position, new TestUtil.DumbCancelChecker());
+        LspPath.fromVirtualFile(file.getVirtualFile()), position, cancelChecker);
   }
 
   @NotNull
   private CompletionItem getResolvedCompletionItem(@NotNull CompletionItem unresolved) {
+    return getResolvedCompletionItem(unresolved, new TestUtil.DumbCancelChecker());
+  }
+
+  @NotNull
+  private CompletionItem getResolvedCompletionItem(@NotNull CompletionItem unresolved,
+                                                   @NotNull CancelChecker cancelChecker) {
     return getProject()
         .getService(CompletionService.class)
-        .resolveCompletion(unresolved, new TestUtil.DumbCancelChecker());
+        .resolveCompletion(unresolved, cancelChecker);
   }
 
   static private void runWithTemplateFlags(@NotNull Runnable action) {
