@@ -32,6 +32,12 @@ public class MyWorkspaceService implements WorkspaceService {
   @Override
   public void didRenameFiles(RenameFilesParams params) {
     // Refresh file system to avoid false positives in diagnostics (see #38)
+    //
+    // TODO
+    //  it would probably be better to move this into didOpen
+    //  because the order of and delays between calls didClose/didOpen/didRenameFiles
+    //  during file rename seems client-specific
+    //  so VFS refresh may happen too late and thus have no effect
     ApplicationManager.getApplication().invokeAndWait(() -> VirtualFileManager.getInstance().syncRefresh());
   }
 
