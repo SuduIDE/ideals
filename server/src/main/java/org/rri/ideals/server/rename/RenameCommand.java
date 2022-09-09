@@ -70,6 +70,10 @@ public class RenameCommand extends LspCommand<WorkspaceEdit> {
       Disposer.dispose(this);
     }
 
+    if (elementRef.get() == null) {
+      return null;
+    }
+
     final var map = new LinkedHashMap<PsiElement, String>();
     map.put(elementRef.get(), newName);
     final var renamer = new RenameProcessor(ctx.getProject(), elementRef.get(), newName, false, false);
