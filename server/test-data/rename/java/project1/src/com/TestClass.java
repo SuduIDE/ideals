@@ -6,6 +6,11 @@ package com;
 
 public class TestClass {
   public static class Inner1 {
+
+    public Inner1() {
+      int x = 0;
+    }
+    
     public static class Inner2 {
     }
   }

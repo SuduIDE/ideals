@@ -1,0 +1,3 @@
+inner1
+foo
+cur
