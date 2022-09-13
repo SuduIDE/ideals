@@ -1,6 +1,6 @@
 package org.rri.ideals.server.references;
 
-import com.intellij.codeInsight.navigation.actions.GotoDeclarationAction;
+import com.intellij.codeInsight.TargetElementUtil;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.util.Disposer;
@@ -18,6 +18,7 @@ import org.rri.ideals.server.util.EditorUtil;
 import org.rri.ideals.server.util.MiscUtil;
 
 import java.util.Arrays;
+import java.util.Collection;
 import java.util.List;
 import java.util.Objects;
 import java.util.concurrent.atomic.AtomicReference;
@@ -46,8 +47,15 @@ public class FindDefinitionCommand extends LspCommand<Either<List<? extends Loca
 
   @Override
   protected @NotNull Either<List<? extends Location>, @NotNull List<? extends LocationLink>> execute(@NotNull ExecutorContext ctx) {
-    return getLocationLinks(ctx, (editor, offset) ->
-            GotoDeclarationAction.findTargetElementsNoVS(ctx.getProject(), editor, offset, false));
+    return getLocationLinks(ctx, (editor, offset) -> {
+            final var reference = TargetElementUtil.findReference(editor, offset);
+            final var flags = TargetElementUtil.getInstance().getAllAccepted();
+            final var targetElement = TargetElementUtil.getInstance().findTargetElement(editor, flags, offset);
+            final Collection<PsiElement> targetElements = targetElement != null ? List.of(targetElement)
+                : reference != null ? TargetElementUtil.getInstance().getTargetCandidates(reference)
+                : List.of();
+            return targetElements.toArray(new PsiElement[0]);
+    });
   }
 
   protected @NotNull Either<List<? extends Location>, @NotNull List<? extends LocationLink>>
