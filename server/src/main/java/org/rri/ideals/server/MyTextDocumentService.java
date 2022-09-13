@@ -17,6 +17,7 @@ import org.rri.ideals.server.references.DocumentHighlightCommand;
 import org.rri.ideals.server.references.FindDefinitionCommand;
 import org.rri.ideals.server.references.FindTypeDefinitionCommand;
 import org.rri.ideals.server.references.FindUsagesCommand;
+import org.rri.ideals.server.rename.RenameCommand;
 import org.rri.ideals.server.symbol.DocumentSymbolCommand;
 import org.rri.ideals.server.util.Metrics;
 
@@ -195,5 +196,9 @@ public class MyTextDocumentService implements TextDocumentService {
     );
   }
 
-
+  @Override
+  public CompletableFuture<WorkspaceEdit> rename(RenameParams params) {
+    return new RenameCommand(params.getPosition(), params.getNewName())
+        .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
+  }
 }

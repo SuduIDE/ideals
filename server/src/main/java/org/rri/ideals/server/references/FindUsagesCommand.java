@@ -77,13 +77,14 @@ public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
       return List.of();
     }
     var ref = new AtomicReference<PsiElement>();
+    var disposable = Disposer.newDisposable();
     try {
-      EditorUtil.withEditor(this, file, pos, editor -> {
+      EditorUtil.withEditor(disposable, file, pos, editor -> {
         var targetElement = TargetElementUtil.findTargetElement(editor, TargetElementUtil.getInstance().getAllAccepted());
         ref.set(targetElement);
       });
     } finally {
-      Disposer.dispose(this);
+      Disposer.dispose(disposable);
     }
     var target = ref.get();
     if (target == null) {
@@ -126,10 +127,10 @@ public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
       result = new ArrayList<>(saver);
     } else {
       result = ReferencesSearch.search(target).findAll().stream()
-              .map(PsiReference::getElement)
-              .map(MiscUtil::psiElementToLocation)
-              .filter(Objects::nonNull)
-              .collect(Collectors.toList());
+          .map(PsiReference::getElement)
+          .map(MiscUtil::psiElementToLocation)
+          .filter(Objects::nonNull)
+          .collect(Collectors.toList());
     }
     return result;
   }

@@ -1,6 +1,5 @@
 package org.rri.ideals.server.commands;
 
-import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
@@ -17,7 +16,7 @@ import java.util.concurrent.Executor;
 import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 
-public abstract class LspCommand<R> implements Disposable {
+public abstract class LspCommand<R> {
   private static final Logger LOG = Logger.getInstance(LspCommand.class);
 
   @NotNull
@@ -26,11 +25,6 @@ public abstract class LspCommand<R> implements Disposable {
   protected abstract boolean isCancellable();
 
   protected abstract R execute(@NotNull ExecutorContext ctx);
-
-  @Override
-  public void dispose() {
-    // Do nothing
-  }
 
   public @NotNull CompletableFuture<@Nullable R> runAsync(@NotNull Project project, @NotNull LspPath path) {
     final var virtualFile = path.findVirtualFile();

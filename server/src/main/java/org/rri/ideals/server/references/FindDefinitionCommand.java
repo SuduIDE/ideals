@@ -63,13 +63,14 @@ public class FindDefinitionCommand extends LspCommand<Either<List<? extends Loca
     Range originalRange = MiscUtil.getPsiElementRange(doc, originalElem);
 
     var ref = new AtomicReference<PsiElement[]>();
+    var disposable = Disposer.newDisposable();
     try {
-      EditorUtil.withEditor(this, file, pos, editor -> {
+      EditorUtil.withEditor(disposable, file, pos, editor -> {
         var declarations = invokeAction.apply(editor, offset);
         ref.set(declarations);
       });
     } finally {
-      Disposer.dispose(this);
+      Disposer.dispose(disposable);
     }
     var result = ref.get();
     if (result == null || result.length == 0) {

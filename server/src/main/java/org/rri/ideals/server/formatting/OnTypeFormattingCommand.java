@@ -59,8 +59,9 @@ public class OnTypeFormattingCommand extends FormattingCommandBase {
   }
 
   void typeAndReformatIfNeededInFile(@NotNull PsiFile psiFile) {
+    var disposable = Disposer.newDisposable();
     try {
-      EditorUtil.withEditor(this, psiFile, position, editor -> {
+      EditorUtil.withEditor(disposable, psiFile, position, editor -> {
         var doc = MiscUtil.getDocument(psiFile);
         assert doc != null;
         ApplicationManager.getApplication().runWriteAction(() -> {
@@ -82,7 +83,7 @@ public class OnTypeFormattingCommand extends FormattingCommandBase {
         });
       });
     } finally {
-      Disposer.dispose(this);
+      Disposer.dispose(disposable);
     }
   }
 
