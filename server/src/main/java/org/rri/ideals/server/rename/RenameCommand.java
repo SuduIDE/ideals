@@ -27,7 +27,6 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 public class RenameCommand extends LspCommand<WorkspaceEdit> {
-
   private final Position pos;
   private final String newName;
 
@@ -97,12 +96,10 @@ public class RenameCommand extends LspCommand<WorkspaceEdit> {
           }
           return checkSet.add(loc);
         })
-        .collect(
-            Collectors.groupingBy(
+        .collect(Collectors.groupingBy(
                 pair -> pair.getFirst().getUri(),
                 Collectors.mapping(pair -> new Pair<>(pair.getFirst().getRange(), pair.getSecond()), Collectors.toList())
-            )
-        )
+        ))
         .entrySet().stream()
         .map(this::convertEntry)
         .toList();
