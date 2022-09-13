@@ -77,13 +77,14 @@ public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
       return List.of();
     }
     var ref = new AtomicReference<PsiElement>();
+    var disposable = Disposer.newDisposable();
     try {
-      EditorUtil.withEditor(this, file, pos, editor -> {
+      EditorUtil.withEditor(disposable, file, pos, editor -> {
         var targetElement = TargetElementUtil.findTargetElement(editor, TargetElementUtil.getInstance().getAllAccepted());
         ref.set(targetElement);
       });
     } finally {
-      Disposer.dispose(this);
+      Disposer.dispose(disposable);
     }
     var target = ref.get();
     if (target == null) {

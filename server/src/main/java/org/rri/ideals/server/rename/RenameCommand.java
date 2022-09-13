@@ -9,7 +9,6 @@ import com.intellij.openapi.util.Segment;
 import com.intellij.psi.PsiElement;
 import com.intellij.refactoring.rename.RenameProcessor;
 import com.intellij.refactoring.rename.RenamePsiElementProcessor;
-import com.intellij.refactoring.util.NonCodeUsageInfo;
 import com.intellij.usageView.UsageInfo;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -53,8 +52,9 @@ public class RenameCommand extends LspCommand<WorkspaceEdit> {
       return null;
     }
     var elementRef = new Ref<PsiElement>();
+    final var disposable = Disposer.newDisposable();
     try {
-      EditorUtil.withEditor(this, file, pos, editor -> {
+      EditorUtil.withEditor(disposable, file, pos, editor -> {
         var elementToRename = TargetElementUtil.findTargetElement(editor, TargetElementUtil.getInstance().getAllAccepted());
         if (elementToRename != null) {
           final var processor = RenamePsiElementProcessor.forElement(elementToRename);
@@ -66,7 +66,7 @@ public class RenameCommand extends LspCommand<WorkspaceEdit> {
         elementRef.set(elementToRename);
       });
     } finally {
-      Disposer.dispose(this);
+      Disposer.dispose(disposable);
     }
 
     if (elementRef.get() == null) {
@@ -79,22 +79,18 @@ public class RenameCommand extends LspCommand<WorkspaceEdit> {
     renamer.prepareRenaming(elementRef.get(), newName, elemToName);
     elemToName.forEach(renamer::addElement);
 
-    final var usages = renamer.findUsages();
-    final var usagesEdits = Arrays.stream(usages)
-        .filter(usage -> !(usage instanceof NonCodeUsageInfo))
+    final var usageEdits = Arrays.stream(renamer.findUsages())
+        .filter(usage -> !usage.isNonCodeUsage)
         .map(usageInfo -> new Pair<>(usageInfoToLocation(usageInfo), newName));
 
-    final var elementsEdits = Arrays.stream(elemToName.keySet().toArray(new PsiElement[0]))
+    final var targetEdits = Arrays.stream(elemToName.keySet().toArray(new PsiElement[0]))
         .map(elem -> new Pair<>(MiscUtil.psiElementToLocation(elem), elemToName.get(elem)));
 
     final var checkSet = new HashSet<Location>();
-    final var textDocumentEdits = Stream.concat(elementsEdits, usagesEdits)
+    final var textDocumentEdits = Stream.concat(targetEdits, usageEdits)
         .filter(pair -> {
           final var loc = pair.getFirst();
-          if (loc == null || checkSet.contains(loc)) {
-            return false;
-          }
-          return checkSet.add(loc);
+          return loc != null && checkSet.add(loc);
         })
         .collect(Collectors.groupingBy(
                 pair -> pair.getFirst().getUri(),
