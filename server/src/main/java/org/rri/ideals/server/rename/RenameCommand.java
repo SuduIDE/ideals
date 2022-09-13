@@ -3,12 +3,12 @@ package org.rri.ideals.server.rename;
 import com.intellij.codeInsight.TargetElementUtil;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.util.Disposer;
+import com.intellij.openapi.util.Pair;
 import com.intellij.openapi.util.Ref;
 import com.intellij.openapi.util.Segment;
 import com.intellij.psi.PsiElement;
 import com.intellij.refactoring.rename.RenameProcessor;
 import com.intellij.refactoring.rename.RenamePsiElementProcessor;
-import com.intellij.refactoring.rename.RenameViewDescriptor;
 import com.intellij.refactoring.util.NonCodeUsageInfo;
 import com.intellij.usageView.UsageInfo;
 import org.eclipse.lsp4j.*;
@@ -74,29 +74,39 @@ public class RenameCommand extends LspCommand<WorkspaceEdit> {
       return null;
     }
 
-    final var map = new LinkedHashMap<PsiElement, String>();
-    map.put(elementRef.get(), newName);
+    final var elemToName = new LinkedHashMap<PsiElement, String>();
+    elemToName.put(elementRef.get(), newName);
     final var renamer = new RenameProcessor(ctx.getProject(), elementRef.get(), newName, false, false);
-    renamer.prepareRenaming(elementRef.get(), newName, map);
-    map.forEach(renamer::addElement);
+    renamer.prepareRenaming(elementRef.get(), newName, elemToName);
+    elemToName.forEach(renamer::addElement);
 
     final var usages = renamer.findUsages();
-    final var usagesLocationsStream = Arrays.stream(usages)
+    final var usagesEdits = Arrays.stream(usages)
         .filter(usage -> !(usage instanceof NonCodeUsageInfo))
-        .map(RenameCommand::usageInfoToLocation);
+        .map(usageInfo -> new Pair<>(usageInfoToLocation(usageInfo), newName));
 
-    final var descriptor = new RenameViewDescriptor(map);
-    final var elementsLocationsStream = Arrays.stream(descriptor.getElements())
-        .map(MiscUtil::psiElementToLocation);
+    final var elementsEdits = Arrays.stream(elemToName.keySet().toArray(new PsiElement[0]))
+        .map(elem -> new Pair<>(MiscUtil.psiElementToLocation(elem), elemToName.get(elem)));
 
-
-    final var textDocumentEdits = Stream.concat(usagesLocationsStream, elementsLocationsStream)
-        .filter(Objects::nonNull)
-        .distinct()
-        .collect(Collectors.groupingBy(Location::getUri, Collectors.mapping(Location::getRange, Collectors.toList())))
+    final var checkSet = new HashSet<Location>();
+    final var textDocumentEdits = Stream.concat(elementsEdits, usagesEdits)
+        .filter(pair -> {
+          final var loc = pair.getFirst();
+          if (loc == null || checkSet.contains(loc)) {
+            return false;
+          }
+          return checkSet.add(loc);
+        })
+        .collect(
+            Collectors.groupingBy(
+                pair -> pair.getFirst().getUri(),
+                Collectors.mapping(pair -> new Pair<>(pair.getFirst().getRange(), pair.getSecond()), Collectors.toList())
+            )
+        )
         .entrySet().stream()
         .map(this::convertEntry)
         .toList();
+
     return new WorkspaceEdit(textDocumentEdits);
   }
 
@@ -119,11 +129,12 @@ public class RenameCommand extends LspCommand<WorkspaceEdit> {
         MiscUtil.offsetToPosition(doc, segment.getEndOffset()));
   }
 
-  private @NotNull Either<TextDocumentEdit, ResourceOperation> convertEntry(Map.Entry<String, List<Range>> entry) {
+  private @NotNull Either<@NotNull TextDocumentEdit, @NotNull ResourceOperation> convertEntry(
+      @NotNull Map.Entry<@NotNull String, @NotNull List<@NotNull Pair<@NotNull Range, @NotNull String>>> entry) {
     return Either.forLeft(
         new TextDocumentEdit(
             new VersionedTextDocumentIdentifier(entry.getKey(), 1),
-            entry.getValue().stream().map(range -> new TextEdit(range, newName)).toList()
+            entry.getValue().stream().map(pair -> new TextEdit(pair.getFirst(), pair.getSecond())).toList()
         ));
   }
 }

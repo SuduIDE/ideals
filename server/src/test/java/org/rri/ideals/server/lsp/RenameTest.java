@@ -22,8 +22,10 @@ public class RenameTest extends LspServerTestBase {
     final var future = server().getTextDocumentService().rename(renameParams);
     final var result = TestUtil.getNonBlockingEdt(future, 30000);
 
-    final var textEdits = Stream.of(new TextEdit(new Range(new Position(3, 14), new Position(3, 17)), newName),
-        new TextEdit(new Range(new Position(2, 8), new Position(2, 11)), newName)).toList();
+    final var textEdits = Stream.of(
+        new TextEdit(new Range(new Position(2, 8), new Position(2, 11)), newName),
+        new TextEdit(new Range(new Position(3, 14), new Position(3, 17)), newName))
+        .toList();
     final var identifier = new VersionedTextDocumentIdentifier(filePath.toLspUri(), 1);
     final var documentEdit = Stream.of(Either.<TextDocumentEdit, ResourceOperation>forLeft(new TextDocumentEdit(identifier, textEdits))).toList();
     final var answer = new WorkspaceEdit(documentEdit);
