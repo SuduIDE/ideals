@@ -30,7 +30,7 @@
   <!-- Extension points defined by the plugin.
        Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
   <extensions defaultExtensionNs="com.intellij">
-    <appStarter implementation="org.rri.ideals.server.bootstrap.LspServerApplicationStarter"/>
+    <appStarter implementation="org.rri.ideals.server.bootstrap.LspServerStarter"/>
     <applicationService serviceImplementation="org.rri.ideals.server.ProjectService"/>
 
     <applicationService overrides="true"

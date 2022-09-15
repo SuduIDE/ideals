@@ -36,6 +36,9 @@ final public class ManagedDocuments {
   public void startManaging(@NotNull TextDocumentItem textDocument) {
     final var path = LspPath.fromLspUri(textDocument.getUri());
 
+    if(!canAccept(path))
+      return;
+
     if (docs.containsKey(path)) {
       LOG.warn("URI was opened again without being closed, resetting: " + path);
       docs.remove(path);
@@ -80,11 +83,13 @@ final public class ManagedDocuments {
 
 
   public void updateDocument(@NotNull DidChangeTextDocumentParams params) {
-
     var textDocument = params.getTextDocument();
     var contentChanges = params.getContentChanges();
 
     final var path = LspPath.fromLspUri(textDocument.getUri());
+
+    if(!canAccept(path))
+      return;
 
     var managedTextDocId = docs.get(path);
     if (managedTextDocId == null)
@@ -145,8 +150,10 @@ final public class ManagedDocuments {
   }
 
   public void syncDocument(@NotNull TextDocumentIdentifier textDocument) {
-
     var path = LspPath.fromLspUri(textDocument.getUri());
+
+    if(!canAccept(path))
+      return;
 
     if (!docs.containsKey(path)) {
       LOG.warn("Tried handling didSave, but the document isn't being managed: " + path);
@@ -171,6 +178,9 @@ final public class ManagedDocuments {
   public void stopManaging(@NotNull TextDocumentIdentifier textDocument) {
     var path = LspPath.fromLspUri(textDocument.getUri());
 
+    if(!canAccept(path))
+      return;
+
     final var virtualFile = path.findVirtualFile();
     if(virtualFile != null) {
       FileDocumentManager.getInstance().reloadFiles();
@@ -183,6 +193,11 @@ final public class ManagedDocuments {
 
   public void forEach(@NotNull Consumer<LspPath> receiver) {
     docs.keySet().forEach(receiver);
+  }
+
+  @SuppressWarnings("BooleanMethodIsAlwaysInverted")
+  private static boolean canAccept(@NotNull LspPath path) {
+    return path.toString().startsWith("file:");
   }
 
   private void applyContentChangeEventChanges(@NotNull Document doc, @NotNull List<TextDocumentContentChangeEvent> contentChanges) {

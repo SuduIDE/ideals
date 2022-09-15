@@ -75,7 +75,7 @@ tasks {
   getByName("runIde") {
     this as RunIdeTask
     maxHeapSize = "4G"
-    args = listOf("lsp-server")
+    args = listOf("lsp-server", "tcp", "8989")
     systemProperty("java.awt.headless", true)
   }
 
@@ -84,11 +84,6 @@ tasks {
     sourceCompatibility = "17"
     targetCompatibility = "17"
   }
-/*
-    withType<org.jetbrains.kotlin.gradle.tasks.KotlinCompile> {
-        kotlinOptions.jvmTarget = "11"
-    }
-*/
 
   patchPluginXml {
     sinceBuild.set("221")

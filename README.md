@@ -113,9 +113,17 @@ For running as language server IDEA must be configured to be executed in headles
 Add line `-Djava.awt.headless=true` into `idea.vmoptions` (can be found inside the `bin` directory in the IDEA installation root).
 (we're working on making this part less cumbersome)
 
-Run `idea lsp-server` on Windows or `idea.sh lsp-server` on Unix.
+Server can be executed in two modes: STDIO and TCP.
 
-Now server is working on 8989 port.
+In STDIO mode the server must be run from the client as a child process,
+and they communicate with each other through the standard input/output channels.
+
+In TCP mode the server must be started before the client, which can communicate with the server through a TCP connection.
+Note, that even in TCP mode both the client and the server must run on the same machine as they share the same file system.
+
+For STDIO mode the command line should be `idea lsp-server` on Windows or `idea.sh lsp-server` on Unix.
+
+For TCP mode run `idea[.sh] lsp-server tcp [<port number>]` where `<port number>` is the port to listen, 8989 by default.
 
 ### Running client
 You need to build vscode extension, that is placed in `client/vscode` folder.
