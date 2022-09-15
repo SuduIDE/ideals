@@ -69,7 +69,7 @@ class DiagnosticsTask implements Runnable {
           info.quickFixActionRanges.stream().map(it -> it.first).collect(Collectors.toList()));
     }
 
-    return new Diagnostic(range, info.getDescription(), diagnosticSeverity(info.getSeverity()), "rriij");
+    return new Diagnostic(range, info.getDescription(), diagnosticSeverity(info.getSeverity()), "ideals");
   }
 
   @Override
