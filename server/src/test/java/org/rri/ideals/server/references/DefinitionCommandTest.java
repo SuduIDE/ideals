@@ -1,6 +1,7 @@
 package org.rri.ideals.server.references;
 
 import org.eclipse.lsp4j.LocationLink;
+import org.eclipse.lsp4j.Position;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -9,6 +10,7 @@ import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.util.MiscUtil;
 
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import static org.rri.ideals.server.TestUtil.newRange;
@@ -58,6 +60,26 @@ public class DefinitionCommandTest extends ReferencesCommandTestBase {
         assertEquals(ans, result.get(0));
       }
     }
+  }
+
+  @Test
+  public void polivariantDefinitionJava() {
+    var virtualFile = myFixture.copyDirectoryToProject("java/project1/src", "");
+    virtualFile = virtualFile.findChild("PolivariantDefinition.java");
+    assertNotNull(virtualFile);
+    final var path = LspPath.fromVirtualFile(virtualFile);
+    final var future = new FindDefinitionCommand(new Position(10, 5)).runAsync(getProject(), path);
+    final var lst = TestUtil.getNonBlockingEdt(future, 50000);
+    assertNotNull(lst);
+    final var result = lst.getRight();
+
+    final var foo1 = newRange(1, 14, 1, 17);
+    final var foo2 = newRange(5, 14, 5, 17);
+    final var fooOrigin = newRange(10, 4, 10, 7);
+    final var answers = List.of(locationLink(path.toLspUri(), foo1, fooOrigin),
+        locationLink(path.toLspUri(), foo2, fooOrigin));
+
+    assertEquals(answers, result);
   }
 
   private Map<Integer, LocationLink> answersJavaDefinition() {
