@@ -73,7 +73,7 @@ The project was heavily inspired by [intellij-lsp-server](https://github.com/Rui
 | Document Formatting           | `textDocument/formatting`            | :heavy_check_mark: | `Ctrl + Shift + P -> Format Document`                 |
 | Document Range Formatting     | `textDocument/rangeFormatting`       | :heavy_check_mark: | `Select text -> Ctrl + Shift + P -> Format Selection` |
 | Document on Type Formatting   | `textDocument/onTypeFormatting`      | :heavy_check_mark: | N/A                                                   |
-| Rename                        | `textDocument/rename`                | :x:                |                                                       |
+| Rename                        | `textDocument/rename`                | :heavy_check_mark: | N/A                                                   |
 | Prepare Call Hierarchy        | `textDocument/prepareCallHierarchy`  | :x:                |                                                       |
 | Call Hierarchy Incoming Calls | `callHierarchy/incomingCalls`        | :x:                |                                                       |
 | Call Hierarchy Outgoing Calls | `callHierarchy/outgoingCalls`        | :x:                |                                                       |
