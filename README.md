@@ -53,26 +53,43 @@ The project was heavily inspired by [intellij-lsp-server](https://github.com/Rui
 
 ## Feature list
 
-| Name                        | Method                            |                    | VSCode Action                                         |
-|-----------------------------|-----------------------------------|--------------------|-------------------------------------------------------|
-| Workspace Symbols           | `workspace/symbol`                | :heavy_check_mark: | `Ctrl + T`                                            |
-| Execute Command             | `workspace/executeCommand`        | :x:                |                                                       |
-| Diagnostics                 | `textDocument/publishDiagnostics` | :heavy_check_mark: | N/A                                                   |
-| Completion                  | `textDocument/completion`         | :heavy_check_mark: | `Ctrl + Space`                                        |
-| Hover                       | `textDocument/hover`              | :x:                |                                                       |
-| Signature Help              | `textDocument/signatureHelp`      | :x:                |                                                       |
-| Goto Definition             | `textDocument/definition`         | :heavy_check_mark: | `Ctrl + Left mouse click`                             |
-| Goto Type Definition        | `textDocument/typeDefinition`     | :heavy_check_mark: | `Right mouse click -> Go to -> Type defintion`        |
-| Goto Implementation         | `textDocument/implementation`     | :x:                |                                                       |
-| Find References             | `textDocument/references`         | :heavy_check_mark: | `Right mouse click -> Go To -> References`            |
-| Document Highlights         | `textDocument/documentHighlight`  | :heavy_check_mark: | `Left mouse click on symbol`                          |
-| Document Symbols            | `textDocument/documentSymbol`     | :heavy_check_mark: | `Ctrl + O`                                            |
-| Code Action                 | `textDocument/codeAction`         | :heavy_check_mark: | `Ctrl + .`                                            |
-| Code Lens                   | `textDocument/codeLens`           | :x:                |                                                       |
-| Document Formatting         | `textDocument/formatting`         | :heavy_check_mark: | `Ctrl + Shift + P -> Format Document`                 |
-| Document Range Formatting   | `textDocument/rangeFormatting`    | :heavy_check_mark: | `Select text -> Ctrl + Shift + P -> Format Selection` |
-| Document on Type Formatting | `textDocument/onTypeFormatting`   | :heavy_check_mark: | N/A                                                   |
-| Rename                      | `textDocument/rename`             | :x:                |                                                       |
+| Name                          | Method                               |                    | VSCode Action                                         |
+|-------------------------------|--------------------------------------|--------------------|-------------------------------------------------------|
+| Workspace Symbols             | `workspace/symbol`                   | :heavy_check_mark: | `Ctrl + T`                                            |
+| Execute Command               | `workspace/executeCommand`           | :x:                |                                                       |
+| Diagnostics                   | `textDocument/publishDiagnostics`    | :heavy_check_mark: | N/A                                                   |
+| Completion                    | `textDocument/completion`            | :heavy_check_mark: | `Ctrl + Space`                                        |
+| Hover                         | `textDocument/hover`                 | :x:                |                                                       |
+| Signature Help                | `textDocument/signatureHelp`         | :x:                |                                                       |
+| Goto Declaration              | `textDocument/declaration`           | :x:                |                                                       |
+| Goto Definition               | `textDocument/definition`            | :heavy_check_mark: | `Ctrl + Left mouse click`                             |
+| Goto Type Definition          | `textDocument/typeDefinition`        | :heavy_check_mark: | `Right mouse click -> Go to -> Type defintion`        |
+| Goto Implementation           | `textDocument/implementation`        | :x:                |                                                       |
+| Find References               | `textDocument/references`            | :heavy_check_mark: | `Right mouse click -> Go To -> References`            |
+| Document Highlights           | `textDocument/documentHighlight`     | :heavy_check_mark: | `Left mouse click on symbol`                          |
+| Document Symbols              | `textDocument/documentSymbol`        | :heavy_check_mark: | `Ctrl + O`                                            |
+| Code Action                   | `textDocument/codeAction`            | :heavy_check_mark: | `Ctrl + .`                                            |
+| Code Lens                     | `textDocument/codeLens`              | :x:                |                                                       |
+| Document Formatting           | `textDocument/formatting`            | :heavy_check_mark: | `Ctrl + Shift + P -> Format Document`                 |
+| Document Range Formatting     | `textDocument/rangeFormatting`       | :heavy_check_mark: | `Select text -> Ctrl + Shift + P -> Format Selection` |
+| Document on Type Formatting   | `textDocument/onTypeFormatting`      | :heavy_check_mark: | N/A                                                   |
+| Rename                        | `textDocument/rename`                | :x:                |                                                       |
+| Prepare Call Hierarchy        | `textDocument/prepareCallHierarchy`  | :x:                |                                                       |
+| Call Hierarchy Incoming Calls | `callHierarchy/incomingCalls`        | :x:                |                                                       |
+| Call Hierarchy Outgoing Calls | `callHierarchy/outgoingCalls`        | :x:                |                                                       |
+| Prepare Type Hierarchy        | `textDocument/prepareTypeHierarchy’` | :x:                |                                                       |
+| Type Hierarchy Supertypes     | `typeHierarchy/supertypes`           | :x:                |                                                       |
+| Type Hierarchy Subtypes       | `typeHierarchy/subtypes`             | :x:                |                                                       |
+| Document Link                 | `textDocument/documentLink`          | :x:                |                                                       |
+| Folding Range                 | `textDocument/foldingRange`          | :x:                |                                                       |
+| Selection Range               | `textDocument/selectionRange`        | :x:                |                                                       |
+| Semantic Tokens               | `textDocument/semanticTokens`        | :x:                |                                                       |
+| Inline Value                  | `textDocument/inlineValue`           | :x:                |                                                       |
+| Inlay Hint                    | `textDocument/inlayHint`             | :x:                |                                                       |
+| Monikers                      | `textDocument/moniker`               | :x:                |                                                       |
+| Signature Help                | `textDocument/signatureHelp`         | :x:                |                                                       |
+| Document Color                | `textDocument/documentColor`         | :x:                |                                                       |
+| Linked Editing Range          | `textDocument/linkedEditingRange`    | :x:                |                                                       |
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
