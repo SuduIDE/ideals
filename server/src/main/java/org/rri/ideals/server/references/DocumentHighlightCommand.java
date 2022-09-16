@@ -64,7 +64,7 @@ public class DocumentHighlightCommand extends LspCommand<List<? extends Document
   protected @NotNull List<? extends DocumentHighlight> execute(@NotNull ExecutorContext ctx) {
     var disposable = Disposer.newDisposable();
     try {
-      return EditorUtil.calculateWithEditor(disposable, ctx.getPsiFile(), pos, editor -> {
+      return EditorUtil.computeWithEditor(disposable, ctx.getPsiFile(), pos, editor -> {
         try {
           return findHighlights(ctx.getProject(), editor, ctx.getPsiFile());
         } catch (IndexNotReadyException e) {

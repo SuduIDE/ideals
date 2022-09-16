@@ -40,16 +40,16 @@ public class EditorUtil {
                                 @NotNull PsiFile file,
                                 @NotNull Position position,
                                 @NotNull Consumer<Editor> callback) {
-    calculateWithEditor(context, file, position, editor -> {
+    computeWithEditor(context, file, position, editor -> {
       callback.accept(editor);
       return null;
     });
   }
 
-  public static <T> T calculateWithEditor(@NotNull Disposable context,
-                                @NotNull PsiFile file,
-                                @NotNull Position position,
-                                @NotNull Function<Editor, T> callback) {
+  public static <T> T computeWithEditor(@NotNull Disposable context,
+                                        @NotNull PsiFile file,
+                                        @NotNull Position position,
+                                        @NotNull Function<Editor, T> callback) {
     Editor editor = createEditor(context, file, position);
 
     try {

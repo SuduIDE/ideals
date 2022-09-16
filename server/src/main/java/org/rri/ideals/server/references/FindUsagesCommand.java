@@ -77,7 +77,7 @@ public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
     }
     var disposable = Disposer.newDisposable();
     try {
-      var target = EditorUtil.calculateWithEditor(disposable, file, pos,
+      var target = EditorUtil.computeWithEditor(disposable, file, pos,
           editor -> TargetElementUtil.findTargetElement(editor, TargetElementUtil.getInstance().getAllAccepted()));
 
       if (target == null) {

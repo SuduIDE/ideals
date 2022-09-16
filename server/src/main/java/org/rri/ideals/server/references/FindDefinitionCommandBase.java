@@ -48,7 +48,7 @@ abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extend
 
     var disposable = Disposer.newDisposable();
     try {
-      var definitions = EditorUtil.calculateWithEditor(disposable, file, pos,
+      var definitions = EditorUtil.computeWithEditor(disposable, file, pos,
           editor -> findDefinitions(editor, offset))
           .filter(Objects::nonNull)
           .map(targetElem -> {
