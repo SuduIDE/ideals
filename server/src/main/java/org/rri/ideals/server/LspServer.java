@@ -99,19 +99,21 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
         syncOptions.setSave(new SaveOptions(true));
       }));
 
-      it.setWorkspace(MiscUtil.with(new WorkspaceServerCapabilities(), wsc -> {
-        wsc.setFileOperations(MiscUtil.with(new FileOperationsServerCapabilities(), foc -> {
-          foc.setDidRename(new FileOperationOptions(
-              List.of(new FileOperationFilter(new FileOperationPattern("**/*"), "file"))));
-        }));
-      }));
+      it.setWorkspace(MiscUtil.with(new WorkspaceServerCapabilities(), wsc ->
+          wsc.setFileOperations(MiscUtil.with(
+              new FileOperationsServerCapabilities(),
+              foc -> foc.setDidRename(new FileOperationOptions(
+                  List.of(new FileOperationFilter(new FileOperationPattern("**/*"), "file"))
+              ))
+          ))
+      ));
 
 //      it.setHoverProvider(true);
       it.setCompletionProvider(defaultCompletionOptions());
 //      it.setSignatureHelpProvider(null);
       it.setDefinitionProvider(true);
       it.setTypeDefinitionProvider(true);
-//      it.setImplementationProvider(true);
+      it.setImplementationProvider(true);
       it.setReferencesProvider(true);
       it.setDocumentHighlightProvider(true);
       it.setDocumentSymbolProvider(true);

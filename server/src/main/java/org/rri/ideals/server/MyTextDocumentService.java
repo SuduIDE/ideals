@@ -13,10 +13,7 @@ import org.rri.ideals.server.completions.CompletionService;
 import org.rri.ideals.server.diagnostics.DiagnosticsService;
 import org.rri.ideals.server.formatting.FormattingCommand;
 import org.rri.ideals.server.formatting.OnTypeFormattingCommand;
-import org.rri.ideals.server.references.DocumentHighlightCommand;
-import org.rri.ideals.server.references.FindDefinitionCommand;
-import org.rri.ideals.server.references.FindTypeDefinitionCommand;
-import org.rri.ideals.server.references.FindUsagesCommand;
+import org.rri.ideals.server.references.*;
 import org.rri.ideals.server.rename.RenameCommand;
 import org.rri.ideals.server.symbol.DocumentSymbolCommand;
 import org.rri.ideals.server.util.Metrics;
@@ -90,6 +87,12 @@ public class MyTextDocumentService implements TextDocumentService {
   public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> typeDefinition(TypeDefinitionParams params) {
     return new FindTypeDefinitionCommand(params.getPosition())
             .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
+  }
+
+  @Override
+  public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> implementation(ImplementationParams params) {
+    return new FindImplementationCommand(params.getPosition())
+        .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
   }
 
   @Override
