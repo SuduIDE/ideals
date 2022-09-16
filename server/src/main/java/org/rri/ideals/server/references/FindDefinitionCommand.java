@@ -49,7 +49,7 @@ public class FindDefinitionCommand extends LspCommand<Either<List<? extends Loca
   protected @NotNull Either<List<? extends Location>, @NotNull List<? extends LocationLink>> execute(@NotNull ExecutorContext ctx) {
     return getLocationLinks(ctx, (editor, offset) -> {
             final var reference = TargetElementUtil.findReference(editor, offset);
-            final var flags = TargetElementUtil.getInstance().getAllAccepted();
+            final var flags = TargetElementUtil.getInstance().getDefinitionSearchFlags();
             final var targetElement = TargetElementUtil.getInstance().findTargetElement(editor, flags, offset);
             final Collection<PsiElement> targetElements = targetElement != null ? List.of(targetElement)
                 : reference != null ? TargetElementUtil.getInstance().getTargetCandidates(reference)
