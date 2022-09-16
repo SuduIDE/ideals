@@ -62,21 +62,18 @@ public class DocumentHighlightCommand extends LspCommand<List<? extends Document
 
   @Override
   protected @NotNull List<? extends DocumentHighlight> execute(@NotNull ExecutorContext ctx) {
-    final var ref = new Ref<List<DocumentHighlight>>();
     var disposable = Disposer.newDisposable();
     try {
-      EditorUtil.withEditor(disposable, ctx.getPsiFile(), pos, editor -> {
+      return EditorUtil.computeWithEditor(disposable, ctx.getPsiFile(), pos, editor -> {
         try {
-          ref.set(findHighlights(ctx.getProject(), editor, ctx.getPsiFile()));
+          return findHighlights(ctx.getProject(), editor, ctx.getPsiFile());
         } catch (IndexNotReadyException e) {
-          ref.set(List.of());
+          return List.of();
         }
       });
     } finally {
       Disposer.dispose(disposable);
     }
-
-    return ref.get();
   }
 
   private @NotNull List<@NotNull DocumentHighlight> findHighlights(@NotNull Project project,

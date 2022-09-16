@@ -1,17 +1,16 @@
 package org.rri.ideals.server.references;
 
 import com.intellij.codeInsight.navigation.actions.GotoTypeDeclarationAction;
-import org.eclipse.lsp4j.Location;
-import org.eclipse.lsp4j.LocationLink;
+import com.intellij.openapi.editor.Editor;
+import com.intellij.psi.PsiElement;
 import org.eclipse.lsp4j.Position;
-import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
-import org.rri.ideals.server.commands.ExecutorContext;
+import org.rri.ideals.server.util.MiscUtil;
 
-import java.util.List;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
-public class FindTypeDefinitionCommand extends FindDefinitionCommand {
+public class FindTypeDefinitionCommand extends FindDefinitionCommandBase {
   public FindTypeDefinitionCommand(@NotNull Position pos) {
     super(pos);
   }
@@ -22,7 +21,7 @@ public class FindTypeDefinitionCommand extends FindDefinitionCommand {
   }
 
   @Override
-  protected @NotNull Either<@NotNull List<? extends Location>, @NotNull List<? extends LocationLink>> execute(@NotNull ExecutorContext ctx) {
-    return getLocationLinks(ctx, GotoTypeDeclarationAction::findSymbolTypes);
+  protected @NotNull Stream<PsiElement> findDefinitions(@NotNull Editor editor, int offset) {
+    return MiscUtil.streamOf(GotoTypeDeclarationAction.findSymbolTypes(editor, offset));
   }
 }

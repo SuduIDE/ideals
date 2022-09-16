@@ -2,7 +2,6 @@ package org.rri.ideals.server.util;
 
 import com.intellij.codeInsight.TargetElementUtil;
 import com.intellij.openapi.Disposable;
-import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
 import com.intellij.openapi.editor.EditorFactory;
@@ -10,16 +9,14 @@ import com.intellij.openapi.editor.LogicalPosition;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
-import org.codehaus.plexus.util.ExceptionUtils;
 import org.eclipse.lsp4j.Position;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 public class EditorUtil {
-  private static final Logger LOG = Logger.getInstance(EditorUtil.class);
-
   private EditorUtil() { }
 
   @NotNull
@@ -43,13 +40,22 @@ public class EditorUtil {
                                 @NotNull PsiFile file,
                                 @NotNull Position position,
                                 @NotNull Consumer<Editor> callback) {
+    computeWithEditor(context, file, position, editor -> {
+      callback.accept(editor);
+      return null;
+    });
+  }
+
+  public static <T> T computeWithEditor(@NotNull Disposable context,
+                                        @NotNull PsiFile file,
+                                        @NotNull Position position,
+                                        @NotNull Function<Editor, T> callback) {
     Editor editor = createEditor(context, file, position);
 
     try {
-      callback.accept(editor);
+      return callback.apply(editor);
     } catch (Exception e) {
-      LOG.error("Exception during editor callback: " + e
-              + ExceptionUtils.getStackTrace(e));
+      throw MiscUtil.wrap(e);
     }
   }
 
