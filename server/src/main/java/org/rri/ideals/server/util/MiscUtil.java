@@ -23,9 +23,11 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.ideals.server.LspPath;
 
+import java.util.Arrays;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Stream;
 
 public class MiscUtil {
   private static final Logger LOG = Logger.getInstance(MiscUtil.class);
@@ -196,5 +198,10 @@ public class MiscUtil {
 
   public static int positionToOffset(@NotNull Document doc, @NotNull Position pos) {
     return doc.getLineStartOffset(pos.getLine()) + pos.getCharacter();
+  }
+
+  @NotNull
+  public static <T> Stream<T> streamOf(T @Nullable [] array) {
+    return array != null ? Arrays.stream(array) : Stream.empty();
   }
 }

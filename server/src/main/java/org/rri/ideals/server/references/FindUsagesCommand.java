@@ -46,7 +46,6 @@ import java.util.List;
 import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
-import java.util.concurrent.atomic.AtomicReference;
 import java.util.function.Supplier;
 import java.util.stream.Collectors;
 
@@ -76,21 +75,18 @@ public class FindUsagesCommand extends LspCommand<List<? extends Location>> {
     if (doc == null) {
       return List.of();
     }
-    var ref = new AtomicReference<PsiElement>();
     var disposable = Disposer.newDisposable();
     try {
-      EditorUtil.withEditor(disposable, file, pos, editor -> {
-        var targetElement = TargetElementUtil.findTargetElement(editor, TargetElementUtil.getInstance().getAllAccepted());
-        ref.set(targetElement);
-      });
+      var target = EditorUtil.calculateWithEditor(disposable, file, pos,
+          editor -> TargetElementUtil.findTargetElement(editor, TargetElementUtil.getInstance().getAllAccepted()));
+
+      if (target == null) {
+        return List.of();
+      }
+      return findUsages(ctx.getProject(), target, ctx.getCancelToken());
     } finally {
       Disposer.dispose(disposable);
     }
-    var target = ref.get();
-    if (target == null) {
-      return List.of();
-    }
-    return findUsages(ctx.getProject(), target, ctx.getCancelToken());
   }
 
   private static @NotNull List<@NotNull Location> findUsages(@NotNull Project project,

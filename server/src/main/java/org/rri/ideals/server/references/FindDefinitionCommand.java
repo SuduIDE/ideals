@@ -5,11 +5,9 @@ import com.intellij.openapi.editor.Editor;
 import com.intellij.psi.PsiElement;
 import org.eclipse.lsp4j.Position;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
-import java.util.Collection;
-import java.util.List;
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 
 public class FindDefinitionCommand extends FindDefinitionCommandBase {
@@ -23,13 +21,12 @@ public class FindDefinitionCommand extends FindDefinitionCommandBase {
   }
 
   @Override
-  protected PsiElement @Nullable [] getDeclarations(Editor editor, int offset) {
+  protected @NotNull Stream<PsiElement> findDefinitions(@NotNull Editor editor, int offset) {
     final var reference = TargetElementUtil.findReference(editor, offset);
     final var flags = TargetElementUtil.getInstance().getDefinitionSearchFlags();
     final var targetElement = TargetElementUtil.getInstance().findTargetElement(editor, flags, offset);
-    final Collection<PsiElement> targetElements = targetElement != null ? List.of(targetElement)
-        : reference != null ? TargetElementUtil.getInstance().getTargetCandidates(reference)
-        : List.of();
-    return targetElements.toArray(new PsiElement[0]);
+    return targetElement != null ? Stream.of(targetElement)
+        : reference != null ? TargetElementUtil.getInstance().getTargetCandidates(reference).stream()
+        : Stream.empty();
   }
 }

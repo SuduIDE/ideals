@@ -7,9 +7,10 @@ import com.intellij.openapi.editor.Editor;
 import com.intellij.psi.PsiElement;
 import org.eclipse.lsp4j.Position;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
+import org.rri.ideals.server.util.MiscUtil;
 
 import java.util.function.Supplier;
+import java.util.stream.Stream;
 
 public class FindImplementationCommand extends FindDefinitionCommandBase {
   public FindImplementationCommand(@NotNull Position pos) {
@@ -22,7 +23,7 @@ public class FindImplementationCommand extends FindDefinitionCommandBase {
   }
 
   @Override
-  protected PsiElement @Nullable [] getDeclarations(Editor editor, int offset) {
+  protected @NotNull Stream<PsiElement> findDefinitions(@NotNull Editor editor, int offset) {
     final var element = TargetElementUtil.findTargetElement(editor, TargetElementUtil.getInstance().getAllAccepted());
     final var onRef = ReadAction.<Boolean, RuntimeException>compute(() ->
       TargetElementUtil.getInstance().findTargetElement(editor,
@@ -33,6 +34,6 @@ public class FindImplementationCommand extends FindDefinitionCommandBase {
         element == null || TargetElementUtil.getInstance().includeSelfInGotoImplementation(element)
     );
     final var includeSelf = onRef && shouldIncludeSelf;
-    return new ImplementationSearcher().searchImplementations(element, editor, includeSelf, onRef);
+    return MiscUtil.streamOf(new ImplementationSearcher().searchImplementations(element, editor, includeSelf, onRef));
   }
 }
