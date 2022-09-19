@@ -1,5 +1,6 @@
 {
-  "name": "rri.ideals",
+  "name": "ideals-vscode",
+  "publisher": "rri",
   "displayName": "RRI IdeaLS Client",
   "description": "test extension",
   "version": "0.0.1",
