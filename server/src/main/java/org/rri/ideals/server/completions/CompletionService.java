@@ -6,6 +6,8 @@ import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementPresentation;
 import com.intellij.icons.AllIcons;
 import com.intellij.lang.Language;
+import com.intellij.lang.documentation.DocumentationResultData;
+import com.intellij.lang.documentation.ide.IdeDocumentationTargetProvider;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ReadAction;
@@ -123,7 +125,7 @@ final public class CompletionService implements Disposable {
           copyThatCalledCompletionDocRef,
           copyToInsertDocRef,
           caretOffsetAfterInsertRef,
-          disposable);
+          disposable, unresolved);
 
       copyToInsertDoc = copyToInsertDocRef.get();
       copyThatCalledCompletionDoc = copyThatCalledCompletionDocRef.get();
@@ -361,7 +363,8 @@ final public class CompletionService implements Disposable {
       @NotNull Ref<Document> copyThatCalledCompletionDocRef,
       @NotNull Ref<Document> copyToInsertDocRef,
       @NotNull Ref<Integer> caretOffsetAfterInsertRef,
-      @NotNull Disposable disposable) {
+      @NotNull Disposable disposable,
+      @NotNull CompletionItem unresolved) {
     var cachedLookupElementWithMatcher = cachedData.lookupElementsWithMatcher.get(lookupElementIndex);
     var copyToInsertRef = new Ref<PsiFile>();
     ApplicationManager.getApplication().runReadAction(() -> {
@@ -378,18 +381,76 @@ final public class CompletionService implements Disposable {
       copyThatCalledCompletionDocRef.set(MiscUtil.getDocument(copyThatCalledCompletion));
       copyToInsertDocRef.set(MiscUtil.getDocument(copyToInsertRef.get()));
     });
+
     var copyToInsert = copyToInsertRef.get();
+
+    ReadAction.run(() -> {
+      var t = CompletionUtil.getTargetElement(
+          cachedLookupElementWithMatcher.lookupElement());
+
+//      var x = DocumentationManager.getProviderFromElement(copyToInsert, null);
+//      var x = CompositeDocumentationProvider.wrapProviders(List.of());
+//      var res = x.generateDoc(t, null);
+//      assert res != null;
+//      res = DocumentationManager.decorate(res, null, null);
+//      var elementDocumentationTarget = new PsiElementDocumentationTarget(project,
+//          Objects.requireNonNull(
+//              CompletionUtil.getTargetElement(
+//                  cachedLookupElementWithMatcher.lookupElement())));
+//      assert res != null;
+//      var html = new IntentionPreviewInfo.Html(res);
+//      MarkdownToHtmlConverter
+//      unresolved.setDocumentation(MiscUtil.with(new MarkupContent(), markupContent -> {
+//        markupContent.setKind(MarkupKind.MARKDOWN);
+//        markupContent.setValue(html.content().toString());
+//        LOG.warn(markupContent.getValue());
+//      }));
+//      LOG.warn(res);
+//      unresolved.setDocumentation(res);
+//      LOG.warn(elementDocumentationTarget);
+//      var res = ImplKt.computeDocumentationBlocking(elementDocumentationTarget.createPointer());
+
+//      x.generateHoverDoc()
+//      var x = elementDocumentationTarget.computeDocumentation();
+
+//      LOG.warn(Objects.requireNonNull(res).toString());
+//      assert elementDocumentationTarget.computeDocumentation() != null;
+//      LOG.warn(Objects.requireNonNull(elementDocumentationTarget.computeDocumentation()).toString());
+    });
+
 
     ProgressManager.getInstance().runProcess(() ->
         ApplicationManager.getApplication().invokeAndWait(() -> {
           var editor = EditorUtil.createEditor(disposable, copyToInsert,
               cachedData.position);
           CompletionInfo completionInfo = new CompletionInfo(editor, project);
+          var target = IdeDocumentationTargetProvider.getInstance(project).documentationTarget(editor,
+              copyToInsert, cachedLookupElementWithMatcher.lookupElement());
+          assert target != null;
+          var res = target.computeDocumentation();
+
+          assert res != null;
+//          LOG.warn(res.computeDocumentation().toString());
+//          when (documentationResult) {
+//            is DocumentationResultData -> documentationResult
+//            is AsyncDocumentation -> documentationResult.supplier.invoke() as DocumentationResultData?
+//            null -> null
+//      else -> error("Unexpected result: $documentationResult") // this fixes Kotlin incremental compilation
+//          }
+//          res instanceof DocumentationResult.Data ? ((DocumentationResult.Data) res) : null;
+          if (res instanceof DocumentationResultData) {
+            LOG.warn(((DocumentationResultData) res).getHtml());
+          } else {
+            LOG.warn("oops");
+          }
 
           handleInsert(cachedData, cachedLookupElementWithMatcher, editor, copyToInsert, completionInfo);
 
           caretOffsetAfterInsertRef.set(editor.getCaretModel().getOffset());
         }), new LspProgressIndicator(cancelChecker));
+
+//    DocumentationManager.getProviderFromElement(copyToInsert)
+//        .getQuickNavigateInfo(CompletionUtil.getTargetElement(cachedLookupElementWithMatcher.lookupElement()), );
   }
 
   private record CompletionData(
