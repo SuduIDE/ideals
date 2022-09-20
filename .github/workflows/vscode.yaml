@@ -20,23 +20,21 @@ jobs:
         with:
           node-version: 16.x
       - run: npm install
-        working-directory: client/vscode
-      - name: Run headless tests
-        uses: GabrielBB/xvfb-action@v1.0
-        with:
-          run: npm test
-          working-directory: client/vscode
+      - run: xvfb-run -a npm test
+        if: runner.os == 'Linux'
+      - run: npm test
+        if: runner.os != 'Linux'
 
-  package-vscode-extension:
-    name: Package VSCode IdeaLS client extension
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
-      - name: Install Node.js
-        uses: actions/setup-node@v3
-        with:
-          node-version: 16.x
-      - run: npm install vsce
-      - run: npm install
-      - run: vsce package
+#  package-vscode-extension:
+#    name: Package VSCode IdeaLS client extension
+#    runs-on: ubuntu-latest
+#    steps:
+#      - name: Checkout
+#        uses: actions/checkout@v3
+#      - name: Install Node.js
+#        uses: actions/setup-node@v3
+#        with:
+#          node-version: 16.x
+#      - run: npm install vsce
+#      - run: npm install
+#      - run: vsce package
