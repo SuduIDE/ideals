@@ -1,3 +1,4 @@
+name: VSCode client
 on:
   push:
     branches:
