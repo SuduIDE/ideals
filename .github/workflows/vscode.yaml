@@ -25,16 +25,17 @@ jobs:
       - run: npm test
         if: runner.os != 'Linux'
 
-#  package-vscode-extension:
-#    name: Package VSCode IdeaLS client extension
-#    runs-on: ubuntu-latest
-#    steps:
-#      - name: Checkout
-#        uses: actions/checkout@v3
-#      - name: Install Node.js
-#        uses: actions/setup-node@v3
-#        with:
-#          node-version: 16.x
-#      - run: npm install vsce
-#      - run: npm install
-#      - run: vsce package
+  package-vscode-extension:
+    name: Package VSCode IdeaLS client extension
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+      - run: npm install
+      - uses: lannonbr/vsce-action@3.0.0
+        with:
+          args: package
