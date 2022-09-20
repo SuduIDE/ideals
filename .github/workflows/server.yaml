@@ -19,11 +19,11 @@ jobs:
         with:
           distribution: 'corretto'
           java-version: '17'
-      - name: Setup Gradle
+      - name: Run tests
         uses: gradle/gradle-build-action@v2
-      - run: chmod +x ./gradlew
-      - name: Execute tests
-        run: ./gradlew test
+        with:
+          arguments: test
+          build-root-directory: server
   build-idea-plugin:
     name: Build IdeaLS plugin
     needs:
@@ -35,11 +35,11 @@ jobs:
         with:
           distribution: 'corretto'
           java-version: '17'
-      - name: Setup Gradle
+      - name: Build plugins
         uses: gradle/gradle-build-action@v2
-      - run: chmod +x ./gradlew
-      - name: Execute tests
-        run: ./gradlew :buildPlugin
+        with:
+          arguments: :buildPlugin
+          build-root-directory: server
       - uses: actions/upload-artifact@v3
         with:
           name: IdeaLS plugin
