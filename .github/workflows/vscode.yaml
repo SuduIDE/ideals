@@ -1,0 +1,39 @@
+on:
+  push:
+    branches:
+      - actions-ci
+defaults:
+  run:
+    working-directory: client/vscode
+jobs:
+  test-vscode-extension:
+    name: Test VSCode IdeaLS client extension
+    strategy:
+      matrix:
+        os: [macos-latest, ubuntu-latest, windows-latest]
+    runs-on: ${{ matrix.os }}
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+      - run: npm install
+        uses: GabrielBB/xvfb-action@v1.0
+        with:
+          run: npm test
+
+  package-vscode-extension:
+    name: Package VSCode IdeaLS client extension
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+      - run: npm install vsce
+      - run: npm install
+      - run: vsce package
