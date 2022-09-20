@@ -26,7 +26,7 @@ jobs:
           build-root-directory: server
       - uses: actions/upload-artifact@v3
         with:
-          name: Test report
+          name: test-report-${{ matrix.os }}
           path: "server/build/reports/tests/test/**/*.*"
   build-idea-plugin:
     name: Build IdeaLS plugin
