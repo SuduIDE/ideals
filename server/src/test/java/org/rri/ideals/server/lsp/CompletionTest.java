@@ -103,6 +103,7 @@ public class CompletionTest extends LspServerTestBase {
             completionVariant()$0;
           }
         }""";
+    Assertions.assertEquals(expectedText.replace("\r", ""), insertedText.replace("\r", ""));
     Assertions.assertEquals(expectedText, insertedText);
     Assertions.assertEquals(
         """
