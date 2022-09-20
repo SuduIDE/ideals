@@ -36,6 +36,8 @@ jobs:
         with:
           node-version: 16.x
       - run: npm install
-      - uses: lannonbr/vsce-action@3.0.0
-        with:
-          args: package
+      - run: npm install -g vsce
+      - run: vsce package
+#      - uses: lannonbr/vsce-action@3.0.0
+#        with:
+#          args: package
