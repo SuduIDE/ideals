@@ -28,6 +28,7 @@ jobs:
         with:
           name: test-report-${{ matrix.os }}
           path: "server/build/reports/tests/test/**/*.*"
+        continue-on-error: true
   build-idea-plugin:
     name: Build IdeaLS plugin
     needs:
