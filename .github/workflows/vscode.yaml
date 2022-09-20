@@ -20,10 +20,12 @@ jobs:
         with:
           node-version: 16.x
       - run: npm install
+        working-directory: client/vscode
       - name: Run headless tests
         uses: GabrielBB/xvfb-action@v1.0
         with:
           run: npm test
+          working-directory: client/vscode
 
   package-vscode-extension:
     name: Package VSCode IdeaLS client extension
