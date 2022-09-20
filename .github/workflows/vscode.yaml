@@ -27,6 +27,8 @@ jobs:
 
   package-vscode-extension:
     name: Package VSCode IdeaLS client extension
+    needs:
+      - test-vscode-extension
     runs-on: ubuntu-latest
     steps:
       - name: Checkout
@@ -38,6 +40,7 @@ jobs:
       - run: npm install
       - run: npm install -g vsce
       - run: vsce package
-#      - uses: lannonbr/vsce-action@3.0.0
-#        with:
-#          args: package
+        uses: actions/upload-artifact@v3
+        with:
+          name: Upload VSCode extension package
+          path: ideals-vscode*.vsix
