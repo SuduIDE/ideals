@@ -6,8 +6,8 @@ import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementPresentation;
 import com.intellij.icons.AllIcons;
 import com.intellij.lang.Language;
-import com.intellij.lang.documentation.DocumentationResultData;
 import com.intellij.lang.documentation.ide.IdeDocumentationTargetProvider;
+import com.intellij.lang.documentation.impl.ImplKt;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ReadAction;
@@ -30,6 +30,7 @@ import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.completions.util.IconUtil;
 import org.rri.ideals.server.completions.util.TextEditRearranger;
@@ -385,87 +386,39 @@ final public class CompletionService implements Disposable {
 
     var copyToInsert = copyToInsertRef.get();
 
-    ReadAction.run(() -> {
-      var t = CompletionUtil.getTargetElement(
-          cachedLookupElementWithMatcher.lookupElement());
-
-//      var x = DocumentationManager.getProviderFromElement(copyToInsert, null);
-//      var x = CompositeDocumentationProvider.wrapProviders(List.of());
-//      var res = x.generateDoc(t, null);
-//      assert res != null;
-//      res = DocumentationManager.decorate(res, null, null);
-//      var elementDocumentationTarget = new PsiElementDocumentationTarget(project,
-//          Objects.requireNonNull(
-//              CompletionUtil.getTargetElement(
-//                  cachedLookupElementWithMatcher.lookupElement())));
-//      assert res != null;
-//      var html = new IntentionPreviewInfo.Html(res);
-//      MarkdownToHtmlConverter
-//      unresolved.setDocumentation(MiscUtil.with(new MarkupContent(), markupContent -> {
-//        markupContent.setKind(MarkupKind.MARKDOWN);
-//        markupContent.setValue(html.content().toString());
-//        LOG.warn(markupContent.getValue());
-//      }));
-//      LOG.warn(res);
-//      unresolved.setDocumentation(res);
-//      LOG.warn(elementDocumentationTarget);
-//      var res = ImplKt.computeDocumentationBlocking(elementDocumentationTarget.createPointer());
-
-//      x.generateHoverDoc()
-//      var x = elementDocumentationTarget.computeDocumentation();
-
-//      LOG.warn(Objects.requireNonNull(res).toString());
-//      assert elementDocumentationTarget.computeDocumentation() != null;
-//      LOG.warn(Objects.requireNonNull(elementDocumentationTarget.computeDocumentation()).toString());
-    });
-
-
     ProgressManager.getInstance().runProcess(() ->
         ApplicationManager.getApplication().invokeAndWait(() -> {
           var editor = EditorUtil.createEditor(disposable, copyToInsert,
               cachedData.position);
           CompletionInfo completionInfo = new CompletionInfo(editor, project);
-          var target = IdeDocumentationTargetProvider.getInstance(project).documentationTarget(editor,
-              copyToInsert, cachedLookupElementWithMatcher.lookupElement());
-          assert target != null;
-          var res = target.computeDocumentation();
-
-          assert res != null;
-//          LOG.warn(res.computeDocumentation().toString());
-//          when (documentationResult) {
-//            is DocumentationResultData -> documentationResult
-//            is AsyncDocumentation -> documentationResult.supplier.invoke() as DocumentationResultData?
-//            null -> null
-//      else -> error("Unexpected result: $documentationResult") // this fixes Kotlin incremental compilation
-//          }
-//          res instanceof DocumentationResult.Data ? ((DocumentationResult.Data) res) : null;
-          if (res instanceof DocumentationResultData) {
-//            LOG.warn(((DocumentationResultData) res).getHtml());
-//            var html = DocumentationManager.decorate(((DocumentationResultData) res).getHtml(),
-//                null, null);
-            var html = ((DocumentationResultData) res).getHtml();
-            var htmlToMarkdownConverter = new CopyDown();;
-            LOG.warn("==========================================================" + html);
-//            var file = PsiFileFactory.getInstance(project).createFileFromText(
-//                "javadoc.html", HtmlFileType.INSTANCE, html);
-//            file.accept(htmlToMarkdownConverter);
-//            var ans = htmlToMarkdownConverter.getResult();
-            var ans = htmlToMarkdownConverter.convert(html);
-            LOG.warn("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" + ans);
-            unresolved.setDocumentation(
-                new MarkupContent(MarkupKind.MARKDOWN, ans)
-            );
-          } else {
-            LOG.warn("oops");
-          }
-
+          unresolved.setDocumentation(
+              resolveDocumentation(editor, copyToInsert, cachedLookupElementWithMatcher.lookupElement())
+          );
           handleInsert(cachedData, cachedLookupElementWithMatcher, editor, copyToInsert, completionInfo);
 
           caretOffsetAfterInsertRef.set(editor.getCaretModel().getOffset());
         }), new LspProgressIndicator(cancelChecker));
+  }
 
-//    DocumentationManager.getProviderFromElement(copyToInsert)
-//        .getQuickNavigateInfo(CompletionUtil.getTargetElement(cachedLookupElementWithMatcher.lookupElement()), );
+  @SuppressWarnings({"UnstableApiUsage", "OverrideOnly"})
+  @Nullable
+  private Either<String, MarkupContent> resolveDocumentation(@NotNull Editor editor,
+                                                             @NotNull PsiFile copyToInsert,
+                                                             @NotNull LookupElement lookupElement) {
+    var target =
+        IdeDocumentationTargetProvider.getInstance(project).documentationTarget(editor, copyToInsert, lookupElement);
+    if (target == null) {
+      return null;
+    }
+    var res = ImplKt.computeDocumentationBlocking(target.createPointer());
+
+    if (res == null) {
+      return null;
+    }
+    var x = res.getHtml();
+    var htmlToMarkdownConverter = new CopyDown();
+    var ans = htmlToMarkdownConverter.convert(x);
+    return Either.forRight(new MarkupContent(MarkupKind.MARKDOWN, ans));
   }
 
   private record CompletionData(
