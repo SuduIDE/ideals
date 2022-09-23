@@ -15,6 +15,7 @@ repositories {
 
 dependencies {
   implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:0.14.0")
+  implementation("io.github.furstenheim:copy_down:1.1")
 }
 
 // Configure Gradle IntelliJ Plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin

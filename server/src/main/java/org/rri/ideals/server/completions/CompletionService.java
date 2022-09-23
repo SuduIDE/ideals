@@ -25,6 +25,7 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiFileFactory;
 import com.intellij.ui.CoreIconManager;
 import com.intellij.ui.IconManager;
+import io.github.furstenheim.CopyDown;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -439,7 +440,21 @@ final public class CompletionService implements Disposable {
 //          }
 //          res instanceof DocumentationResult.Data ? ((DocumentationResult.Data) res) : null;
           if (res instanceof DocumentationResultData) {
-            LOG.warn(((DocumentationResultData) res).getHtml());
+//            LOG.warn(((DocumentationResultData) res).getHtml());
+//            var html = DocumentationManager.decorate(((DocumentationResultData) res).getHtml(),
+//                null, null);
+            var html = ((DocumentationResultData) res).getHtml();
+            var htmlToMarkdownConverter = new CopyDown();;
+            LOG.warn("==========================================================" + html);
+//            var file = PsiFileFactory.getInstance(project).createFileFromText(
+//                "javadoc.html", HtmlFileType.INSTANCE, html);
+//            file.accept(htmlToMarkdownConverter);
+//            var ans = htmlToMarkdownConverter.getResult();
+            var ans = htmlToMarkdownConverter.convert(html);
+            LOG.warn("++++++++++++++++++++++++++++++++++++++++++++++++++++++++++" + ans);
+            unresolved.setDocumentation(
+                new MarkupContent(MarkupKind.MARKDOWN, ans)
+            );
           } else {
             LOG.warn("oops");
           }
