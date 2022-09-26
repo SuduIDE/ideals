@@ -12,6 +12,7 @@ public class CompletionServiceTestUtil {
     completionItem.setTextEdit(null);
     completionItem.setAdditionalTextEdits(null);
     completionItem.setData(null);
+    completionItem.setDocumentation((String) null);
     return completionItem;
   }
 

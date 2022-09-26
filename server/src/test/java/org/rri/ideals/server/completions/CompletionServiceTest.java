@@ -15,6 +15,7 @@ import org.eclipse.lsp4j.CompletionItemKind;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
@@ -117,18 +118,39 @@ public class CompletionServiceTest extends BasePlatformTestCase {
     testResolve(
         """
             def foo(x):
+                ""\"
+                :param x: real human bean
+                :return: actual real hero
+                ""\"
                 foo(x)
                     
             foo
             """,
         """
             def foo(x):
+                ""\"
+                :param x: real human bean
+                :return: actual real hero
+                ""\"
                 foo(x)
                  
             foo($0)
             """,
-        new Position(3, 3),
-        completionItem -> completionItem.getLabel().equals("foo"), PythonFileType.INSTANCE
+        new Position(7, 3),
+        completionItem -> completionItem.getLabel().equals("foo"), PythonFileType.INSTANCE,
+        """
+            [aaa](psi_element://#module#aaa)\s\s
+            def **foo**(x: Any) -> None
+                        
+            Unittest placeholder
+                        
+            Params:
+                        
+            `x` – real human bean
+                        
+            Returns:
+                        
+            actual real hero"""
     );
   }
 
@@ -148,7 +170,10 @@ public class CompletionServiceTest extends BasePlatformTestCase {
             foo()$0
             """,
         new Position(3, 3),
-        completionItem -> completionItem.getLabel().equals("foo"), PythonFileType.INSTANCE
+        completionItem -> completionItem.getLabel().equals("foo"), PythonFileType.INSTANCE,
+        """
+            [aaa](psi_element://#module#aaa)\s\s
+            def **foo**() -> None"""
     );
   }
 
@@ -163,7 +188,11 @@ public class CompletionServiceTest extends BasePlatformTestCase {
                 for  in $0:
                 \s\s\s\s
                 """, new Position(0, 4),
-            completionItem -> completionItem.getLabel().equals("iter"), PythonFileType.INSTANCE
+            completionItem -> completionItem.getLabel().equals("iter"), PythonFileType.INSTANCE,
+            """
+                for $VAR$ in $ITERABLE$: $END$
+                                
+                Iterate (for ... in ...)"""
         )
     );
   }
@@ -178,7 +207,8 @@ public class CompletionServiceTest extends BasePlatformTestCase {
                 if x:
                 \s\s\s\s$0
                 """, new Position(0, 4),
-            completionItem -> completionItem.getLabel().equals("if"), PythonFileType.INSTANCE)
+            completionItem -> completionItem.getLabel().equals("if"), PythonFileType.INSTANCE,
+            null)
     );
   }
 
@@ -201,7 +231,11 @@ public class CompletionServiceTest extends BasePlatformTestCase {
                     }
                 }""",
             new Position(2, 12),
-            completionItem -> completionItem.getLabel().equals("fori"), JavaFileType.INSTANCE
+            completionItem -> completionItem.getLabel().equals("fori"), JavaFileType.INSTANCE,
+            """
+                for(int $INDEX$ = 0; $INDEX$ < $LIMIT$; $INDEX$++) { $END$ }
+                                
+                Create iteration loop"""
         ));
   }
 
@@ -209,26 +243,76 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   public void testJavaPostfixTemplate() {
     CompletionServiceTest.runWithTemplateFlags(() -> testResolve(
             """
-            class Templates {
-                void test() {
-                    x.l
-                }
-            }""",
+                class Templates {
+                    void test() {
+                        x.l
+                    }
+                }""",
             """
-            class Templates {
-                void test() {
-                    () -> x$0
-                }
-            }""",
-        new Position(2, 12),
-        completionItem -> completionItem.getLabel().equals("lambda"), JavaFileType.INSTANCE
+                class Templates {
+                    void test() {
+                        () -> x$0
+                    }
+                }""",
+            new Position(2, 11),
+            completionItem -> completionItem.getLabel().equals("lambda"), JavaFileType.INSTANCE, null
         )
     );
   }
 
+  @Test
+  public void testOwnJavadoc() {
+    CompletionServiceTest.runWithTemplateFlags(() -> testResolve(
+        """
+            class Javadoc {
+                /**
+                 * this is a test function
+                 * @param b a test parameter
+                 * @return 1\s
+                 */
+                int test(boolean b) {
+                    test
+                    return 1;
+                }
+            }""",
+        """
+            class Javadoc {
+                /**
+                 * this is a test function
+                 * @param b a test parameter
+                 * @return 1\s
+                 */
+                int test(boolean b) {
+                    test($0)
+                    return 1;
+                }
+            }""",
+        new Position(7, 12),
+        completionItem -> completionItem.getLabel().equals("test"),
+        JavaFileType.INSTANCE,
+        """
+            \s[`Javadoc`](psi_element://Javadoc)
+                        
+            int test(\s\s
+             boolean b\s\s
+            )
+                        
+            this is a test function
+                        
+            Params:
+                        
+            `b` – a test parameter
+                        
+            Returns:
+                        
+            1"""
+        )
+    );
+  }
 
-  private void testResolve(String originalText, String expectedText, Position position,
-                           Function<CompletionItem, Boolean> searchFunction, FileType fileType) {
+  private void testResolve(@NotNull String originalText, @NotNull String expectedText,
+                           @NotNull Position position, @NotNull Function<CompletionItem, Boolean> searchFunction,
+                           @NotNull FileType fileType, @Nullable String expectedDoc) {
     var psiFile = myFixture.configureByText(
         fileType,
         originalText);
@@ -247,6 +331,11 @@ public class CompletionServiceTest extends BasePlatformTestCase {
     var resolvedCompletionItem = getResolvedCompletionItem(targetCompletionItem);
     var allEdits = new ArrayList<>(resolvedCompletionItem.getAdditionalTextEdits());
     allEdits.add(resolvedCompletionItem.getTextEdit().getLeft());
+    if (resolvedCompletionItem.getDocumentation() != null) {
+      Assert.assertEquals(expectedDoc, resolvedCompletionItem.getDocumentation().getRight().getValue());
+    } else {
+      Assert.assertNull(expectedDoc);
+    }
     Assert.assertEquals(expectedText, TestUtil.applyEdits(originalText, allEdits));
   }
 
