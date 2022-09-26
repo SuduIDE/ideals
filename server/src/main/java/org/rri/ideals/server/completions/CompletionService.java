@@ -6,6 +6,7 @@ import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementPresentation;
 import com.intellij.icons.AllIcons;
 import com.intellij.lang.Language;
+import com.intellij.lang.documentation.DocumentationResultData;
 import com.intellij.lang.documentation.ide.IdeDocumentationTargetProvider;
 import com.intellij.lang.documentation.impl.ImplKt;
 import com.intellij.openapi.Disposable;
@@ -26,6 +27,9 @@ import com.intellij.psi.PsiFileFactory;
 import com.intellij.ui.CoreIconManager;
 import com.intellij.ui.IconManager;
 import io.github.furstenheim.CopyDown;
+import kotlin.coroutines.EmptyCoroutineContext;
+import kotlinx.coroutines.CoroutineScopeKt;
+import kotlinx.coroutines.future.FutureKt;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -42,6 +46,7 @@ import org.rri.ideals.server.util.TextUtil;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Service(Service.Level.PROJECT)
@@ -392,7 +397,7 @@ final public class CompletionService implements Disposable {
               cachedData.position);
           CompletionInfo completionInfo = new CompletionInfo(editor, project);
           unresolved.setDocumentation(
-              resolveDocumentation(editor, copyToInsert, cachedLookupElementWithMatcher.lookupElement())
+              resolveDocumentation(editor, copyToInsert, cachedLookupElementWithMatcher)
           );
           handleInsert(cachedData, cachedLookupElementWithMatcher, editor, copyToInsert, completionInfo);
 
@@ -404,20 +409,27 @@ final public class CompletionService implements Disposable {
   @Nullable
   private Either<String, MarkupContent> resolveDocumentation(@NotNull Editor editor,
                                                              @NotNull PsiFile copyToInsert,
-                                                             @NotNull LookupElement lookupElement) {
+                                                             @NotNull LookupElementWithMatcher lookupElementWithMatcher) {
     var target =
-        IdeDocumentationTargetProvider.getInstance(project).documentationTarget(editor, copyToInsert, lookupElement);
+        IdeDocumentationTargetProvider.getInstance(project).documentationTarget(editor,
+            copyToInsert, lookupElementWithMatcher.lookupElement());
     if (target == null) {
       return null;
     }
-    var res = ImplKt.computeDocumentationBlocking(target.createPointer());
-
+    var cs = CoroutineScopeKt.CoroutineScope(EmptyCoroutineContext.INSTANCE);
+    DocumentationResultData res;
+    try {
+      res = FutureKt.asCompletableFuture(ImplKt.computeDocumentationAsync(cs,
+          target.createPointer())).get();
+    } catch (InterruptedException | ExecutionException e) {
+      throw new IllegalStateException(e);
+    }
     if (res == null) {
       return null;
     }
-    var x = res.getHtml();
+    var html = res.getHtml();
     var htmlToMarkdownConverter = new CopyDown();
-    var ans = htmlToMarkdownConverter.convert(x);
+    var ans = htmlToMarkdownConverter.convert(html);
     return Either.forRight(new MarkupContent(MarkupKind.MARKDOWN, ans));
   }
 
