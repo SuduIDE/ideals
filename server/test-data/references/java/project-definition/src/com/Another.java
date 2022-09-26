@@ -1,10 +1,10 @@
 package com;
 
-public class </target id='comAnother'/>Another</target end/> {
+public class </target id='comAnother'>Another</> {
     private int x;
     private int y;
 
-    public </target id='comAnotherCntr'/>Another</target end/>(int x, int y) {
+    public </target id='comAnotherCntr'>Another</>(int x, int y) {
         this.x = x;
         this.y = y;
     }

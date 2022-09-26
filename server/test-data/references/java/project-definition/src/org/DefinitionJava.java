@@ -1,17 +1,17 @@
 package org;
 
 class DefinitionJava {
-    private static int </target id='x'/>x</target end/>;
+    private static int </target id='x'>x</>;
 
-    public static void </target id='foo'>foo<target end/>() {}
+    public static void </target id='foo'>foo</>() {}
 
     public static void main() {
-        int </target id='z'/>z</target end/> = 1;
-        int c = </origin id='z'/>z</origin end/> + <target id='x'>x<target end>;
+        int </target id='z'>z</> = 1;
+        int c = </origin id='z'>z</> + </target id='x'>x</>;
 
-        </origin id='foo'/>foo</origin id='foo' end/>();
+        </origin id='foo'>foo</>();
 
-        org.</origin id='orgAnother'/>Another</origin end/> m = new org.</origin id='orgAnotherCntr'/>Another</origin end/>(10, 32);
-        com.</origin id='comAnother'/>Another</origin end/> mm = new com.</origin id='comAnotherCntr'/>Another</origin end/>(11, 42);
+        org.</origin id='orgAnother'>Another</> m = new org.</origin id='orgAnotherCntr'>Another</>(10, 32);
+        com.</origin id='comAnother'>Another</> mm = new com.</origin id='comAnotherCntr'>Another</>(11, 42);
     }
 }

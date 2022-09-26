@@ -6,9 +6,11 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.rri.ideals.server.LspPath;
+import org.rri.ideals.server.TestEngine;
 import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.util.MiscUtil;
 
+import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
@@ -180,5 +182,31 @@ public class DefinitionCommandTest extends ReferencesCommandTestBase {
     answers.put(124, locationLink(class2Url, class2B, newRange(13, 12, 13, 13)));
     answers.put(125, locationLink(class2Url, class2B, newRange(13, 13, 13, 14)));
     return answers;
+  }
+
+  @Test
+  public void newDefinitionJavaTest() {
+    final var PREFIX = "./test-data/references/java/project-definition/src/";
+    final var dirPath = Paths.get(PREFIX);
+    final var files = List.of(Paths.get(PREFIX + "com/Another.java"),
+        Paths.get(PREFIX + "org/Another.java"),
+        Paths.get(PREFIX + "org/DefinitionJava.java"));
+    final TestEngine engine = new DefinitionTestEngine(dirPath, files);
+    engine.processLspTests();
+    final var file = engine.copyFilesToFixture(myFixture);
+    final var definitionTests = engine.getTests();
+    for (final var test : definitionTests) {
+      assertTrue(test instanceof DefinitionTestEngine.DefinitionTest);
+      final var params = ((DefinitionTestEngine.DefinitionTest) test).getParams();
+      final var answer = ((DefinitionTestEngine.DefinitionTest) test).getAnswer().getRight();
+
+      final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
+      final var future = new FindDefinitionCommand(params.getPosition()).runAsync(getProject(), path);
+      final var lst = TestUtil.getNonBlockingEdt(future, 50000);
+      assertNotNull(lst);
+      final var result = lst.getRight();
+
+      assertEquals(answer, result);
+    }
   }
 }
