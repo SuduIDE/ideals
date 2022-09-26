@@ -4,6 +4,7 @@ import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture;
 
 import java.nio.file.Path;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Stack;
 
@@ -18,12 +19,13 @@ abstract public class TestEngine {
 
   private final Path rootDirectory;
   private final List<Path> pathsToFiles;
-  private List<StringBuilder> processedTexts;
+  private final List<StringBuilder> processedTexts;
   private List<? extends LspTest> tests;
 
   protected TestEngine(Path rootDirectory, List<Path> pathsToFiles) {
     this.rootDirectory = rootDirectory;
     this.pathsToFiles = pathsToFiles;
+    processedTexts = new ArrayList<>();
   }
 
   public void processLspTests() {
@@ -46,5 +48,5 @@ abstract public class TestEngine {
 
   abstract protected List<? extends LspTest> processTokens(Stack<? extends Token> tokens);
 
-  abstract protected Token parseSingeToken(int offset, StringBuilder text);
+  abstract protected Token parseSingeToken(String text);
 }

@@ -65,12 +65,12 @@ public class DefinitionTestEngine extends TestEngine {
   }
 
   @Override
-  protected List<LspTest> processTokens(Stack<? extends Token> tokens) {
+  protected List<? extends LspTest> processTokens(Stack<? extends Token> tokens) {
     return null;
   }
 
   @Override
-  protected Token parseSingeToken(int offset, StringBuilder text) {
+  protected Token parseSingeToken(String text) {
     return null;
   }
 }

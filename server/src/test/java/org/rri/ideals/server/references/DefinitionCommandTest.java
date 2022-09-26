@@ -193,7 +193,7 @@ public class DefinitionCommandTest extends ReferencesCommandTestBase {
         Paths.get(PREFIX + "org/DefinitionJava.java"));
     final TestEngine engine = new DefinitionTestEngine(dirPath, files);
     engine.processLspTests();
-    final var file = engine.copyFilesToFixture(myFixture);
+    engine.copyFilesToFixture(myFixture);
     final var definitionTests = engine.getTests();
     for (final var test : definitionTests) {
       assertTrue(test instanceof DefinitionTestEngine.DefinitionTest);

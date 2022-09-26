@@ -7,7 +7,7 @@ class DefinitionJava {
 
     public static void main() {
         int </target id='z'>z</> = 1;
-        int c = </origin id='z'>z</> + </target id='x'>x</>;
+        int c = </origin id='z'>z</> + </origin id='x'>x</>;
 
         </origin id='foo'>foo</>();
 
