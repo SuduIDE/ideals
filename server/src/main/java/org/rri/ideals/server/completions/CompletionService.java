@@ -7,6 +7,7 @@ import com.intellij.codeInsight.lookup.LookupElementPresentation;
 import com.intellij.icons.AllIcons;
 import com.intellij.lang.Language;
 import com.intellij.lang.documentation.DocumentationResultData;
+import com.intellij.lang.documentation.DocumentationTarget;
 import com.intellij.lang.documentation.ide.IdeDocumentationTargetProvider;
 import com.intellij.lang.documentation.impl.ImplKt;
 import com.intellij.openapi.Disposable;
@@ -34,7 +35,6 @@ import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.completions.util.IconUtil;
 import org.rri.ideals.server.completions.util.TextEditRearranger;
@@ -46,7 +46,6 @@ import org.rri.ideals.server.util.TextUtil;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.concurrent.ExecutionException;
 import java.util.concurrent.atomic.AtomicReference;
 
 @Service(Service.Level.PROJECT)
@@ -396,41 +395,36 @@ final public class CompletionService implements Disposable {
           var editor = EditorUtil.createEditor(disposable, copyToInsert,
               cachedData.position);
           CompletionInfo completionInfo = new CompletionInfo(editor, project);
-          unresolved.setDocumentation(
-              resolveDocumentation(editor, copyToInsert, cachedLookupElementWithMatcher)
-          );
+
+          //noinspection UnstableApiUsage
+          var target =
+              IdeDocumentationTargetProvider.getInstance(project).documentationTarget(editor,
+                  copyToInsert, cachedLookupElementWithMatcher.lookupElement());
+          if (target != null) {
+            unresolved.setDocumentation(toLspDocumentation(target));
+          }
+
           handleInsert(cachedData, cachedLookupElementWithMatcher, editor, copyToInsert, completionInfo);
 
           caretOffsetAfterInsertRef.set(editor.getCaretModel().getOffset());
         }), new LspProgressIndicator(cancelChecker));
   }
 
-  @SuppressWarnings({"UnstableApiUsage", "OverrideOnly"})
-  @Nullable
-  private Either<String, MarkupContent> resolveDocumentation(@NotNull Editor editor,
-                                                             @NotNull PsiFile copyToInsert,
-                                                             @NotNull LookupElementWithMatcher lookupElementWithMatcher) {
-    var target =
-        IdeDocumentationTargetProvider.getInstance(project).documentationTarget(editor,
-            copyToInsert, lookupElementWithMatcher.lookupElement());
-    if (target == null) {
-      return null;
-    }
-    var cs = CoroutineScopeKt.CoroutineScope(EmptyCoroutineContext.INSTANCE);
-    DocumentationResultData res;
+  @SuppressWarnings("UnstableApiUsage")
+  @NotNull
+  private static Either<String, MarkupContent> toLspDocumentation(@NotNull DocumentationTarget target) {
     try {
-      res = FutureKt.asCompletableFuture(ImplKt.computeDocumentationAsync(cs,
+      var cs = CoroutineScopeKt.CoroutineScope(EmptyCoroutineContext.INSTANCE);
+      //noinspection OverrideOnly
+      DocumentationResultData res = FutureKt.asCompletableFuture(ImplKt.computeDocumentationAsync(cs,
           target.createPointer())).get();
-    } catch (InterruptedException | ExecutionException e) {
-      throw new IllegalStateException(e);
+      var html = res.getHtml();
+      var htmlToMarkdownConverter = new CopyDown();
+      var ans = htmlToMarkdownConverter.convert(html);
+      return Either.forRight(new MarkupContent(MarkupKind.MARKDOWN, ans));
+    } catch (Exception e) {
+      throw MiscUtil.wrap(e);
     }
-    if (res == null) {
-      return null;
-    }
-    var html = res.getHtml();
-    var htmlToMarkdownConverter = new CopyDown();
-    var ans = htmlToMarkdownConverter.convert(html);
-    return Either.forRight(new MarkupContent(MarkupKind.MARKDOWN, ans));
   }
 
   private record CompletionData(
