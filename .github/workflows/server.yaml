@@ -24,15 +24,13 @@ jobs:
         with:
           arguments: test
           build-root-directory: server
-        continue-on-error: true
       - uses: actions/upload-artifact@v3
+        if: always()
         with:
           name: test-report-${{ matrix.os }}
           path: "server/build/reports/tests/test/**/*.*"
   build-idea-plugin:
     name: Build IdeaLS plugin
-    needs:
-      - test-server
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v3
