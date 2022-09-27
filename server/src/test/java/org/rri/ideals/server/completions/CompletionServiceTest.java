@@ -146,7 +146,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
                         
             Params:
                         
-            `x` – real human bean
+            `x` \u2013 real human bean
                         
             Returns:
                         
@@ -301,7 +301,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
                         
             Params:
                         
-            `b` – a test parameter
+            `b` \u2013 a test parameter
                         
             Returns:
                         
