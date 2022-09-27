@@ -6,6 +6,10 @@ import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementPresentation;
 import com.intellij.icons.AllIcons;
 import com.intellij.lang.Language;
+import com.intellij.lang.documentation.DocumentationResultData;
+import com.intellij.lang.documentation.DocumentationTarget;
+import com.intellij.lang.documentation.ide.IdeDocumentationTargetProvider;
+import com.intellij.lang.documentation.impl.ImplKt;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ReadAction;
@@ -23,6 +27,10 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiFileFactory;
 import com.intellij.ui.CoreIconManager;
 import com.intellij.ui.IconManager;
+import io.github.furstenheim.CopyDown;
+import kotlin.coroutines.EmptyCoroutineContext;
+import kotlinx.coroutines.CoroutineScopeKt;
+import kotlinx.coroutines.future.FutureKt;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -123,7 +131,7 @@ final public class CompletionService implements Disposable {
           copyThatCalledCompletionDocRef,
           copyToInsertDocRef,
           caretOffsetAfterInsertRef,
-          disposable);
+          disposable, unresolved);
 
       copyToInsertDoc = copyToInsertDocRef.get();
       copyThatCalledCompletionDoc = copyThatCalledCompletionDocRef.get();
@@ -361,7 +369,8 @@ final public class CompletionService implements Disposable {
       @NotNull Ref<Document> copyThatCalledCompletionDocRef,
       @NotNull Ref<Document> copyToInsertDocRef,
       @NotNull Ref<Integer> caretOffsetAfterInsertRef,
-      @NotNull Disposable disposable) {
+      @NotNull Disposable disposable,
+      @NotNull CompletionItem unresolved) {
     var cachedLookupElementWithMatcher = cachedData.lookupElementsWithMatcher.get(lookupElementIndex);
     var copyToInsertRef = new Ref<PsiFile>();
     ApplicationManager.getApplication().runReadAction(() -> {
@@ -378,6 +387,7 @@ final public class CompletionService implements Disposable {
       copyThatCalledCompletionDocRef.set(MiscUtil.getDocument(copyThatCalledCompletion));
       copyToInsertDocRef.set(MiscUtil.getDocument(copyToInsertRef.get()));
     });
+
     var copyToInsert = copyToInsertRef.get();
 
     ProgressManager.getInstance().runProcess(() ->
@@ -386,10 +396,35 @@ final public class CompletionService implements Disposable {
               cachedData.position);
           CompletionInfo completionInfo = new CompletionInfo(editor, project);
 
+          //noinspection UnstableApiUsage
+          var target =
+              IdeDocumentationTargetProvider.getInstance(project).documentationTarget(editor,
+                  copyToInsert, cachedLookupElementWithMatcher.lookupElement());
+          if (target != null) {
+            unresolved.setDocumentation(toLspDocumentation(target));
+          }
+
           handleInsert(cachedData, cachedLookupElementWithMatcher, editor, copyToInsert, completionInfo);
 
           caretOffsetAfterInsertRef.set(editor.getCaretModel().getOffset());
         }), new LspProgressIndicator(cancelChecker));
+  }
+
+  @SuppressWarnings("UnstableApiUsage")
+  @NotNull
+  private static Either<String, MarkupContent> toLspDocumentation(@NotNull DocumentationTarget target) {
+    try {
+      var cs = CoroutineScopeKt.CoroutineScope(EmptyCoroutineContext.INSTANCE);
+      //noinspection OverrideOnly
+      DocumentationResultData res = FutureKt.asCompletableFuture(ImplKt.computeDocumentationAsync(cs,
+          target.createPointer())).get();
+      var html = res.getHtml();
+      var htmlToMarkdownConverter = new CopyDown();
+      var ans = htmlToMarkdownConverter.convert(html);
+      return Either.forRight(new MarkupContent(MarkupKind.MARKDOWN, ans));
+    } catch (Exception e) {
+      throw MiscUtil.wrap(e);
+    }
   }
 
   private record CompletionData(

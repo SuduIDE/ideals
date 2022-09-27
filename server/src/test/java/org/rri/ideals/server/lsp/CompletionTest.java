@@ -104,6 +104,12 @@ public class CompletionTest extends LspServerTestBase {
           }
         }""";
     Assertions.assertEquals(expectedText, insertedText);
+    Assertions.assertEquals(
+        """
+        \s[`CompletionExampleTest`](psi_element://CompletionExampleTest)
+        
+        int completionVariant()""",
+        resolvedItem.getDocumentation().getRight().getValue());
     completionItemList.forEach(CompletionServiceTestUtil::removeResolveInfo);
     Assert.assertEquals(expectedCompletionList, new HashSet<>(completionItemList));
   }
