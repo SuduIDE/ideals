@@ -11,8 +11,9 @@ public class </docsym name='DocumentSymbol' kind='Class'>DocumentSymbol</> exten
   }
 
   @Override
-  public int </docsym name='foo(int, String)' kind='Method' father='DocumentSymbol'>foo</>(int </docsym name='xx' kind='Variable' father='foo(int, String)'>xx</
-        >, String <docsym name='str' kind='Variable' father='foo(int, String)'>str</>) {
+  public int </docsym name='foo(int, String)' kind='Method' father='DocumentSymbol'>foo</>(</n
+        >int </docsym name='xx' kind='Variable' father='foo(int, String)'>xx</>, </n
+        >String <docsym name='str' kind='Variable' father='foo(int, String)'>str</>) {
     int </docsym name='a' kind='Variable' father='foo(int, String)'>a</> = 1;
     String </docsym name='project' kind='Variable' father='foo(int, String)'>project</> = "lsp";
     Class </docsym name='cls' kind='Variable' father='foo(int, String)'>cls</> = null;
