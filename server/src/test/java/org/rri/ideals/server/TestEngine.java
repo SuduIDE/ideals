@@ -158,5 +158,5 @@ abstract public class TestEngine {
 
   abstract protected List<? extends Test> processMarkers();
 
-  abstract protected Marker parseSingeMarker(String text);
+  abstract protected Marker parseSingeMarker(String markerText);
 }
