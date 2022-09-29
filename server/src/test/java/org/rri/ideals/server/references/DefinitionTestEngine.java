@@ -9,10 +9,10 @@ import org.rri.ideals.server.TestEngine;
 
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Stack;
+import java.util.Map;
 
 public class DefinitionTestEngine extends TestEngine {
-  public static class DefinitionTest implements LspTest {
+  public static class DefinitionTest implements Test {
     private final DefinitionParams params;
     private final Either<List<? extends Location>, List<? extends LocationLink>> answer;
 
@@ -30,16 +30,14 @@ public class DefinitionTestEngine extends TestEngine {
     }
   }
 
-  private static class DefinitionToken implements Token {
+  private static class DefinitionMarker extends Marker {
     private final boolean isTarget;
     private final String id;
-    private final Position pos;
     private final boolean isStart;
 
-    private DefinitionToken(boolean isTarget, String id, Position pos, boolean isStart) {
+    private DefinitionMarker(boolean isTarget, String id, Position pos, boolean isStart) {
       this.isTarget = isTarget;
       this.id = id;
-      this.pos = pos;
       this.isStart = isStart;
     }
 
@@ -51,26 +49,22 @@ public class DefinitionTestEngine extends TestEngine {
       return id;
     }
 
-    public Position getPos() {
-      return pos;
-    }
-
     public boolean isStart() {
       return isStart;
     }
   }
 
-  public DefinitionTestEngine(Path directoryPath, List<Path> pathsToFiles) {
-    super(directoryPath, pathsToFiles);
+  public DefinitionTestEngine(Path directoryPath) {
+    super(directoryPath);
   }
 
   @Override
-  protected List<? extends LspTest> processTokens(Stack<? extends Token> tokens) {
+  protected List<? extends Test> processTokens(Map<String, List<? extends Marker>> markersByDocument) {
     return null;
   }
 
   @Override
-  protected Token parseSingeToken(String text) {
+  protected Marker parseSingeMarker(String text) {
     return null;
   }
 }

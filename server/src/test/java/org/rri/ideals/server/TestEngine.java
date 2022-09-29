@@ -1,34 +1,41 @@
 package org.rri.ideals.server;
 
-import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture;
+import org.eclipse.lsp4j.Position;
 
 import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Stack;
+import java.util.Map;
 
 abstract public class TestEngine {
-  public interface LspTest {
+  public interface Test {
     Object getParams();
     Object getAnswer();
   }
 
-  protected interface Token {
+  protected static abstract class Marker {
+    private Position position;
+
+    public void setPosition(Position position) {
+      this.position = position;
+    }
+
+    public Position getPosition() {
+      return position;
+    }
   }
 
-  private final Path rootDirectory;
-  private final List<Path> pathsToFiles;
-  private final List<StringBuilder> processedTexts;
-  private List<? extends LspTest> tests;
+  private final Path targetDirectory;
+  private final List<String> texts;
+  private Map<String, List<? extends Marker>> markersByDocument;
 
-  protected TestEngine(Path rootDirectory, List<Path> pathsToFiles) {
-    this.rootDirectory = rootDirectory;
-    this.pathsToFiles = pathsToFiles;
-    processedTexts = new ArrayList<>();
+  protected TestEngine(Path targetDirectory) {
+    this.targetDirectory = targetDirectory;
+    texts = new ArrayList<>();
   }
 
-  public void processLspTests() {
+  private void preprocessFiles() {
     // Pass the text and find tokens
   }
 
@@ -37,16 +44,15 @@ abstract public class TestEngine {
   }
 
   // RETURN virtualFile to fixture directory
-  public VirtualFile copyFilesToFixture(CodeInsightTestFixture fixture) {
+  public void copyFilesToFixture(CodeInsightTestFixture fixture) {
     // Write files in fixture
+  }
+
+  public List<? extends Test> generateTests() {
     return null;
   }
 
-  public List<? extends LspTest> getTests() {
-    return tests;
-  }
+  abstract protected List<? extends Test> processTokens(Map<String, List<? extends Marker>> markersByDocument); // <Document Uri, List<Marker>>
 
-  abstract protected List<? extends LspTest> processTokens(Stack<? extends Token> tokens);
-
-  abstract protected Token parseSingeToken(String text);
+  abstract protected Marker parseSingeMarker(String text);
 }
