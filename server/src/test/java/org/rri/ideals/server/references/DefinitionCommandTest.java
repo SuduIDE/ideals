@@ -10,6 +10,7 @@ import org.rri.ideals.server.TestEngine;
 import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.util.MiscUtil;
 
+import java.io.IOException;
 import java.nio.file.Paths;
 import java.util.HashMap;
 import java.util.List;
@@ -186,22 +187,31 @@ public class DefinitionCommandTest extends ReferencesCommandTestBase {
 
   @Test
   public void newDefinitionJavaTest() {
-    final var dirPath = Paths.get("./test-data/references/java/project-definition/src/");
-    final TestEngine engine = new DefinitionTestEngine(dirPath);
-    engine.copyFilesToFixture(myFixture);
-    final var definitionTests = engine.generateTests();
-    for (final var test : definitionTests) {
-      assertTrue(test instanceof DefinitionTestEngine.DefinitionTest);
-      final var params = ((DefinitionTestEngine.DefinitionTest) test).getParams();
-      final var answer = ((DefinitionTestEngine.DefinitionTest) test).getAnswer().getRight();
+    try {
+      final var dirPath = Paths.get("./test-data/references/java/project-definition/src/");
+      final TestEngine engine = new DefinitionTestEngine(dirPath);
+      final var definitionTests = engine.generateTests(myFixture);
+      for (final var test : definitionTests) {
+        assertTrue(test instanceof DefinitionTestEngine.DefinitionTest);
+        final var params = ((DefinitionTestEngine.DefinitionTest) test).getParams();
+        final var answer = ((DefinitionTestEngine.DefinitionTest) test).getAnswer().getRight();
 
-      final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
-      final var future = new FindDefinitionCommand(params.getPosition()).runAsync(getProject(), path);
-      final var lst = TestUtil.getNonBlockingEdt(future, 50000);
-      assertNotNull(lst);
-      final var result = lst.getRight();
+        final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
+        final var future = new FindDefinitionCommand(params.getPosition()).runAsync(getProject(), path);
+        final var lst = TestUtil.getNonBlockingEdt(future, 50000);
+        assertNotNull(lst);
+        final var result = lst.getRight();
 
-      assertEquals(answer, result);
+        assertEquals(answer, result);
+      }
+    } catch (IOException e) {
+      fail();
     }
+  }
+
+  @Test
+  public void testHelp() {;
+    final var file = myFixture.addFileToProject("org/Another.java", "");
+    System.out.println(file.getVirtualFile().getPresentableUrl());
   }
 }

@@ -7,9 +7,9 @@ import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.rri.ideals.server.TestEngine;
 
+import java.io.IOException;
 import java.nio.file.Path;
 import java.util.List;
-import java.util.Map;
 
 public class DefinitionTestEngine extends TestEngine {
   public static class DefinitionTest implements Test {
@@ -54,12 +54,12 @@ public class DefinitionTestEngine extends TestEngine {
     }
   }
 
-  public DefinitionTestEngine(Path directoryPath) {
+  public DefinitionTestEngine(Path directoryPath) throws IOException {
     super(directoryPath);
   }
 
   @Override
-  protected List<? extends Test> processTokens(Map<String, List<? extends Marker>> markersByDocument) {
+  protected List<? extends Test> processMarkers() {
     return null;
   }
 
