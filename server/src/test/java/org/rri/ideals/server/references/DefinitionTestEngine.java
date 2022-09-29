@@ -1,10 +1,9 @@
 package org.rri.ideals.server.references;
 
+import com.intellij.openapi.project.Project;
 import org.eclipse.lsp4j.DefinitionParams;
-import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.LocationLink;
 import org.eclipse.lsp4j.Position;
-import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.rri.ideals.server.TestEngine;
 
 import java.io.IOException;
@@ -14,9 +13,9 @@ import java.util.List;
 public class DefinitionTestEngine extends TestEngine {
   public static class DefinitionTest implements Test {
     private final DefinitionParams params;
-    private final Either<List<? extends Location>, List<? extends LocationLink>> answer;
+    private final List<? extends LocationLink> answer;
 
-    private DefinitionTest(DefinitionParams params, Either<List<? extends Location>, List<? extends LocationLink>> answer) {
+    private DefinitionTest(DefinitionParams params, List<? extends LocationLink> answer) {
       this.params = params;
       this.answer = answer;
     }
@@ -25,7 +24,7 @@ public class DefinitionTestEngine extends TestEngine {
       return params;
     }
 
-    public Either<List<? extends Location>, List<? extends LocationLink>> getAnswer() {
+    public List<? extends LocationLink> getAnswer() {
       return answer;
     }
   }
@@ -54,8 +53,8 @@ public class DefinitionTestEngine extends TestEngine {
     }
   }
 
-  public DefinitionTestEngine(Path directoryPath) throws IOException {
-    super(directoryPath);
+  public DefinitionTestEngine(Path directoryPath, Project project) throws IOException {
+    super(directoryPath, project);
   }
 
   @Override

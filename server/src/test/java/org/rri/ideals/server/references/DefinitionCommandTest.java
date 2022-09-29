@@ -188,13 +188,13 @@ public class DefinitionCommandTest extends ReferencesCommandTestBase {
   @Test
   public void newDefinitionJavaTest() {
     try {
-      final var dirPath = Paths.get("./test-data/references/java/project-definition/src/");
-      final TestEngine engine = new DefinitionTestEngine(dirPath);
+      final var dirPath = Paths.get(getTestDataPath() + "/java/project-definition/");
+      final TestEngine engine = new DefinitionTestEngine(dirPath, getProject());
       final var definitionTests = engine.generateTests(myFixture);
       for (final var test : definitionTests) {
         assertTrue(test instanceof DefinitionTestEngine.DefinitionTest);
         final var params = ((DefinitionTestEngine.DefinitionTest) test).getParams();
-        final var answer = ((DefinitionTestEngine.DefinitionTest) test).getAnswer().getRight();
+        final var answer = ((DefinitionTestEngine.DefinitionTest) test).getAnswer();
 
         final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
         final var future = new FindDefinitionCommand(params.getPosition()).runAsync(getProject(), path);
@@ -207,11 +207,5 @@ public class DefinitionCommandTest extends ReferencesCommandTestBase {
     } catch (IOException e) {
       fail();
     }
-  }
-
-  @Test
-  public void testHelp() {;
-    final var file = myFixture.addFileToProject("org/Another.java", "");
-    System.out.println(file.getVirtualFile().getPresentableUrl());
   }
 }
