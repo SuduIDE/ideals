@@ -1,6 +1,6 @@
 package org;
 
-public class Another {
+public class </cursor>Another {
     private int elem;
 
     public Another(int elem) {
@@ -9,7 +9,7 @@ public class Another {
 
     public Another(int coordX, int coordY) {
         this.elem = coordX + coordY;
-        DefinitionJava.</target id='foo'>f</cursor>oo</>();
+        </location id='foo'>DefinitionJava.</cursor>foo</>();
     }
 
     public int get() { return elem; }
