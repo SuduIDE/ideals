@@ -2,9 +2,7 @@ package org.rri.ideals.server;
 
 import com.intellij.openapi.project.Project;
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture;
-import org.eclipse.lsp4j.Position;
 import org.jetbrains.annotations.NotNull;
-import org.rri.ideals.server.util.MiscUtil;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -23,30 +21,34 @@ abstract public class TestEngine {
   }
 
   protected static abstract class Marker {
-    private Position position;
+    private int offset;
 
-    public void setPosition(Position position) {
-      this.position = position;
+    public void setOffset(int offset) {
+      this.offset = offset;
     }
 
-    public Position getPosition() {
-      return position;
+    public int getOffset() {
+      return offset;
     }
   }
 
   private final Path targetDirectory;
-  private final Map<Path, String> textsByFile;
-  protected Map<Path, List<Marker>> markersByFile;
+  private final Map<String, String> textsByFile; // <Path, Text>
+  protected Map<String, List<Marker>> markersByFile; // <Path, List<Marker>>
+  protected Project project;
 
   protected TestEngine(Path targetDirectory, Project project) throws IOException {
-    if(!Files.isDirectory(targetDirectory)) { throw new IOException("Path is not a directory"); }
+    if(!Files.isDirectory(targetDirectory)) {
+      throw new IOException("Path is not a directory");
+    }
     this.targetDirectory = targetDirectory;
+    this.project = project;
     textsByFile = new HashMap<>();
     markersByFile = new HashMap<>();
-    preprocessFiles(project);
+    preprocessFiles();
   }
 
-  private void preprocessFiles(Project project) throws IOException {
+  private void preprocessFiles() throws IOException {
     try (final var stream = Files.newDirectoryStream(targetDirectory)) {
       for(final var path : stream) {
         final var name = path.toFile().getName();
@@ -55,40 +57,36 @@ abstract public class TestEngine {
         }
         if (Files.isDirectory(path)) {
           try (final var filesStream = Files.walk(path)) {
-            filesStream.forEach(curPath -> preprocessFile(curPath, project));
+            filesStream.forEach(this::preprocessFile);
           }
         } else {
-          preprocessFile(path, project);
+          preprocessFile(path);
         }
       }
     }
   }
 
-  private void preprocessFile(@NotNull Path path, Project project) throws RuntimeException {
+  private void preprocessFile(@NotNull Path path) throws RuntimeException {
+    if (Files.isDirectory(path)) {
+      return;
+    }
     try (BufferedReader reader = Files.newBufferedReader(path)) {
-      final var file = MiscUtil.resolvePsiFile(project, LspPath.fromLocalPath(path));
-      if (file == null) {
-        throw new RuntimeException("PsiFile is null. Path: " + path);
-      }
-      final var doc = MiscUtil.getDocument(file);
-      if (doc == null) {
-        throw new RuntimeException("Document is null. Path: " + path);
-      }
-      int c;
+      int num;
       int offset = 0;
       final StringBuilder builder = new StringBuilder();
       final StringBuilder markerBuilder = new StringBuilder();
       final List<Marker> markers = new ArrayList<>();
-      while((c = reader.read()) != -1) {
+      while((num = reader.read()) != -1) {
+        char c = (char) num;
         if (c == '<') {
-          c = reader.read();
+          c = (char) reader.read();
           if (c == '/') {
             markerBuilder.setLength(0);
-            while((c = reader.read()) != '>') {
+            while((c = (char) reader.read()) != '>') {
               markerBuilder.append(c);
             }
             final var marker = parseSingeMarker(markerBuilder.toString());
-            marker.setPosition(MiscUtil.offsetToPosition(doc, offset));
+            marker.setOffset(offset);
             markers.add(marker);
           } else {
             builder.append('<');
@@ -100,8 +98,8 @@ abstract public class TestEngine {
           offset++;
         }
       }
-      textsByFile.put(path, builder.toString());
-      markersByFile.put(path, markers);
+      textsByFile.put(path.toString(), builder.toString());
+      markersByFile.put(path.toString(), markers);
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -125,11 +123,13 @@ abstract public class TestEngine {
   }
 
   private void processPath(@NotNull Path path, @NotNull CodeInsightTestFixture fixture) {
-    final var pathTail = getPathTail(targetDirectory, path);
-    final var newFile = fixture.addFileToProject(pathTail, textsByFile.get(path));
-    final var newPath = LspPath.fromVirtualFile(newFile.getVirtualFile());
-    final var markers = markersByFile.remove(path);
-    markersByFile.put(newPath.toPath(), markers);
+    if (!Files.isDirectory(path)) {
+      final var pathTail = getPathTail(targetDirectory, path);
+      final var newFile = fixture.addFileToProject(pathTail, textsByFile.get(path.toString()));
+      final var newPath = LspPath.fromVirtualFile(newFile.getVirtualFile());
+      final var markers = markersByFile.remove(path.toString());
+      markersByFile.put(newPath.toLspUri(), markers);
+    }
   }
 
   public List<? extends Test> generateTests(CodeInsightTestFixture fixture) throws IOException {

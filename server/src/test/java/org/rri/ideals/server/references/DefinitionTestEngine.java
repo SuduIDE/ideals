@@ -9,6 +9,7 @@ import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.jetbrains.annotations.Nullable;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.TestEngine;
+import org.rri.ideals.server.util.MiscUtil;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -65,10 +66,18 @@ public class DefinitionTestEngine extends TestEngine {
   @Override
   protected List<? extends Test> processMarkers() {
     final Stack<DefinitionMarker> positionsStack = new Stack<>();
-    final Map<String, Pair<Range, Path>> originInfos = new HashMap<>();
-    final Map<String, List<Pair<Range, Path>>> targetInfos = new HashMap<>();
+    final Map<String, Pair<Range, String>> originInfos = new HashMap<>();
+    final Map<String, List<Pair<Range, String>>> targetInfos = new HashMap<>();
     for (final var entry : markersByFile.entrySet()) {
       final var path = entry.getKey();
+      final var file = MiscUtil.resolvePsiFile(project, LspPath.fromLspUri(path));
+      if (file == null) {
+        throw new RuntimeException("PsiFile is null. Path: " + path);
+      }
+      final var doc = MiscUtil.getDocument(file);
+      if (doc == null) {
+        throw new RuntimeException("Document is null. Path: " + path);
+      }
       for (final var raw : entry.getValue()) {
         if (!(raw instanceof final DefinitionMarker marker)) {
           throw new RuntimeException("Incorrect marker. DefinitionMarker expected");
@@ -77,7 +86,8 @@ public class DefinitionTestEngine extends TestEngine {
           positionsStack.add(marker);
         } else {
           final var startMarker = positionsStack.pop();
-          final var range = new Range(startMarker.getPosition(), marker.getPosition());
+          final var range = new Range(MiscUtil.offsetToPosition(doc, startMarker.getOffset()),
+              MiscUtil.offsetToPosition(doc, marker.getOffset()));
           if (startMarker.isTarget()) {
             if (!targetInfos.containsKey(startMarker.getId())) {
               targetInfos.put(startMarker.getId(), new ArrayList<>());
@@ -91,10 +101,10 @@ public class DefinitionTestEngine extends TestEngine {
     }
     final List<DefinitionTest> result = new ArrayList<>();
     for (final var entry : originInfos.entrySet()) {
-      final var uri = LspPath.fromLocalPath(entry.getValue().getSecond()).toLspUri();
+      final var uri = LspPath.fromLspUri(entry.getValue().getSecond()).toLspUri();
       final var params = new DefinitionParams(new TextDocumentIdentifier(uri), entry.getValue().getFirst().getStart());
       final var locationLinks = targetInfos.get(entry.getKey()).stream()
-          .map(pair -> new LocationLink(LspPath.fromLocalPath(pair.getSecond()).toLspUri(),
+          .map(pair -> new LocationLink(LspPath.fromLspUri(pair.getSecond()).toLspUri(),
               entry.getValue().getFirst(),
               pair.getFirst(),
               pair.getFirst())).toList();
