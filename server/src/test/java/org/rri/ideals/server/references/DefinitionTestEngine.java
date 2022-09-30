@@ -105,9 +105,9 @@ public class DefinitionTestEngine extends TestEngine {
       final var params = new DefinitionParams(new TextDocumentIdentifier(uri), entry.getValue().getFirst().getStart());
       final var locationLinks = targetInfos.get(entry.getKey()).stream()
           .map(pair -> new LocationLink(LspPath.fromLspUri(pair.getSecond()).toLspUri(),
-              entry.getValue().getFirst(),
               pair.getFirst(),
-              pair.getFirst())).toList();
+              pair.getFirst(),
+              entry.getValue().getFirst())).toList();
       final var test = new DefinitionTest(params, locationLinks);
       result.add(test);
     }
@@ -149,6 +149,6 @@ public class DefinitionTestEngine extends TestEngine {
       throw new RuntimeException("Id is incorrect. id=" + id);
     }
     id = id.substring(1, id.length() - 1);
-    return new DefinitionMarker(elements[0].equals("origin"), id, true);
+    return new DefinitionMarker(elements[0].equals("target"), id, true);
   }
 }
