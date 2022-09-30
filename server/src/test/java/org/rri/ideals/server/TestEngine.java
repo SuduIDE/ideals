@@ -1,20 +1,18 @@
 package org.rri.ideals.server;
 
 import com.intellij.openapi.project.Project;
-import com.intellij.testFramework.fixtures.CodeInsightTestFixture;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
-abstract public class TestEngine {
+abstract public class TestEngine<T extends TestEngine.Test, M extends TestEngine.Marker> {
   public interface Test {
     Object getParams();
     Object getAnswer();
@@ -34,7 +32,7 @@ abstract public class TestEngine {
 
   private final Path targetDirectory;
   private final Map<String, String> textsByFile; // <Path, Text>
-  protected Map<String, List<Marker>> markersByFile; // <Path, List<Marker>>
+  protected Map<String, List<M>> markersByFile; // <Path, List<Marker>>
   protected Project project;
 
   protected TestEngine(Path targetDirectory, Project project) throws IOException {
@@ -75,7 +73,7 @@ abstract public class TestEngine {
       int offset = 0;
       final StringBuilder builder = new StringBuilder();
       final StringBuilder markerBuilder = new StringBuilder();
-      final List<Marker> markers = new ArrayList<>();
+      final List<M> markers = new ArrayList<>();
       while((num = reader.read()) != -1) {
         char c = (char) num;
         if (c == '<') {
@@ -105,43 +103,24 @@ abstract public class TestEngine {
     }
   }
 
-  @SuppressWarnings("unused")
-  public List<? extends Test> generateTests(Path sandboxDirectory) {
-    // Copy file to the target directory
-    return processMarkers();
-  }
-
-  private String getPathTail(Path directoryPath, Path path) {
-    StringBuilder builder = new StringBuilder();
-    for (int i = directoryPath.getNameCount(); i < path.getNameCount(); i++) {
-      builder.append(path.getName(i).toFile().getName());
-      if (i != path.getNameCount() - 1) {
-        builder.append('/');
-      }
-    }
-    return builder.toString();
-  }
-
-  private void processPath(@NotNull Path path, @NotNull CodeInsightTestFixture fixture) {
+  private void processPath(@NotNull Path path, @NotNull TestFixture fixture) {
     if (!Files.isDirectory(path)) {
-      final var pathTail = getPathTail(targetDirectory, path);
-      final var newFile = fixture.addFileToProject(pathTail, textsByFile.get(path.toString()));
-      final var newPath = LspPath.fromVirtualFile(newFile.getVirtualFile());
+      final var newPath = fixture.writeFileToProject(TestUtil.getPathTail(targetDirectory, path),
+          textsByFile.remove(path.toString()));
       final var markers = markersByFile.remove(path.toString());
       markersByFile.put(newPath.toLspUri(), markers);
     }
   }
 
-  public List<? extends Test> generateTests(CodeInsightTestFixture fixture) throws IOException {
+  public List<? extends T> generateTests(TestFixture fixture) throws IOException {
     try (final var stream = Files.newDirectoryStream(targetDirectory)) {
       for (final var path : stream) {
         final var name = path.toFile().getName();
-        final var dirPath = Paths.get(fixture.getTestDataPath());
         if (name.equals(".idea")) {
-          fixture.copyDirectoryToProject(getPathTail(dirPath, path), "");
+          fixture.copyDirectoryToProject(path);
           continue;
         } else if (name.matches(".*\\.iml")) {
-          fixture.copyFileToProject(getPathTail(dirPath, path));
+          fixture.copyFileToProject(path);
           continue;
         }
         if (Files.isDirectory(path)) {
@@ -156,7 +135,7 @@ abstract public class TestEngine {
     return processMarkers();
   }
 
-  abstract protected List<? extends Test> processMarkers();
+  abstract protected List<? extends T> processMarkers();
 
-  abstract protected Marker parseSingeMarker(String markerText);
+  abstract protected M parseSingeMarker(String markerText);
 }

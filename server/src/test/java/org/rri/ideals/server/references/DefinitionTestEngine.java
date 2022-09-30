@@ -14,8 +14,9 @@ import org.rri.ideals.server.util.MiscUtil;
 import java.io.IOException;
 import java.nio.file.Path;
 import java.util.*;
+import java.util.stream.Collectors;
 
-public class DefinitionTestEngine extends TestEngine {
+public class DefinitionTestEngine extends TestEngine<DefinitionTestEngine.DefinitionTest, DefinitionTestEngine.DefinitionMarker> {
   public static class DefinitionTest implements Test {
     private final DefinitionParams params;
     private final List<? extends LocationLink> answer;
@@ -34,7 +35,7 @@ public class DefinitionTestEngine extends TestEngine {
     }
   }
 
-  private static class DefinitionMarker extends Marker {
+  protected static class DefinitionMarker extends Marker {
     private final boolean isTarget;
     @Nullable
     private final String id;
@@ -64,24 +65,18 @@ public class DefinitionTestEngine extends TestEngine {
   }
 
   @Override
-  protected List<? extends Test> processMarkers() {
+  protected List<DefinitionTest> processMarkers() {
     final Stack<DefinitionMarker> positionsStack = new Stack<>();
     final Map<String, Pair<Range, String>> originInfos = new HashMap<>();
     final Map<String, List<Pair<Range, String>>> targetInfos = new HashMap<>();
     for (final var entry : markersByFile.entrySet()) {
       final var path = entry.getKey();
-      final var file = MiscUtil.resolvePsiFile(project, LspPath.fromLspUri(path));
-      if (file == null) {
-        throw new RuntimeException("PsiFile is null. Path: " + path);
-      }
-      final var doc = MiscUtil.getDocument(file);
-      if (doc == null) {
-        throw new RuntimeException("Document is null. Path: " + path);
-      }
-      for (final var raw : entry.getValue()) {
-        if (!(raw instanceof final DefinitionMarker marker)) {
-          throw new RuntimeException("Incorrect marker. DefinitionMarker expected");
-        }
+      final var file = Optional.ofNullable(MiscUtil.resolvePsiFile(project, LspPath.fromLspUri(path)))
+          .orElseThrow(() -> new RuntimeException("PsiFile is null. Path: " + path));
+      final var doc = Optional.ofNullable(MiscUtil.getDocument(file))
+          .orElseThrow(() -> new RuntimeException("Document is null. Path: " + path));
+
+      for (final var marker : entry.getValue()) {
         if (marker.isStart()) {
           positionsStack.add(marker);
         } else {
@@ -115,21 +110,13 @@ public class DefinitionTestEngine extends TestEngine {
   }
 
   private String createErrorMessage(String markerText, String[] elements) {
-    final var messageBuilder = new StringBuilder("Incorrect marker. Marker: ");
-    messageBuilder.append(markerText);
-    messageBuilder.append(". Get [");
-    for (int i = 0; i < elements.length; ++i) {
-      messageBuilder.append(elements[i]);
-      if (i != elements.length - 1) {
-        messageBuilder.append(", ");
-      }
-    }
-    messageBuilder.append(']');
-    return messageBuilder.toString();
+    return "Incorrect marker. Marker: " + markerText + Arrays.stream(elements)
+        .flatMap(str -> str.describeConstable().stream())
+        .collect(Collectors.joining(". Get [", ", ", "]"));
   }
 
   @Override
-  protected Marker parseSingeMarker(String markerText) {
+  protected DefinitionMarker parseSingeMarker(String markerText) {
     if (markerText.equals("")) {
       return new DefinitionMarker(false, null, false);
     }
