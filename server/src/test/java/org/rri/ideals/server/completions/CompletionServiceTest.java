@@ -14,6 +14,7 @@ import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemKind;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
+import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
@@ -21,11 +22,17 @@ import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.rri.ideals.server.IdeaTestFixture;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.TestUtil;
+import org.rri.ideals.server.references.FindDefinitionCommand;
 
+import java.io.IOException;
+import java.nio.file.Path;
+import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.function.Function;
@@ -36,6 +43,40 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   private static final Key<Boolean> ourShowTemplatesInTests = Key.create("ShowTemplatesInTests");
   private static final Key<Boolean> ourTemplateTesting = Key.create("TemplateTesting");
   private final Gson gson = new GsonBuilder().create();
+
+  @Override
+  protected String getTestDataPath() {
+    return "test-data/completion";
+  }
+
+  @Test
+  public void testCompletionForStaticImport() {
+    final var dirPath = Paths.get(getTestDataPath(), "import-static-project");
+    testWithEngine(dirPath);
+  }
+
+  private void testWithEngine(Path dirPath) {
+    try {
+      final var engine = new CompletionTestEngine(dirPath, getProject());
+      final var definitionTests = engine.generateTests(new IdeaTestFixture(myFixture));
+      for (final var test : definitionTests) {
+        final var params = test.getParams();
+        final var answer = test.getAnswer();
+
+        final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
+        final var future = new FindDefinitionCommand(params.getPosition()).runAsync(getProject(), path);
+        final var actual =
+            Optional.ofNullable(TestUtil.getNonBlockingEdt(future, 50000)).map(Either::getRight);
+
+        assertTrue(actual.isPresent());
+        assertEquals(answer, actual.get());
+      }
+    } catch (IOException | RuntimeException e) {
+      System.out.println(e instanceof IOException ? "IOException:" : "RuntimeException");
+      System.out.println(e.getMessage());
+      fail();
+    }
+  }
 
   @Test
   public void testCompletionForKeywordsThatContainsLetterD() {
@@ -387,10 +428,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
     }
   }
 
-  @Override
-  protected String getTestDataPath() {
-    return "test-data/completion/completion-project";
-  }
+
 
 
   @NotNull
