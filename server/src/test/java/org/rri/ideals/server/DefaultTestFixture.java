@@ -1,5 +1,6 @@
 package org.rri.ideals.server;
 
+import org.apache.commons.io.FileUtils;
 import org.jetbrains.annotations.NotNull;
 
 import java.io.FileWriter;
@@ -13,8 +14,27 @@ public class DefaultTestFixture implements TestFixture {
   @NotNull
   private final Path sandboxPath;
 
-  public DefaultTestFixture(@NotNull Path sandboxPath) {
+  public DefaultTestFixture(@NotNull Path sandboxPath) throws IOException {
+    if (!Files.exists(sandboxPath)) {
+      Files.createDirectories(sandboxPath);
+    }
+    if (!Files.isDirectory(sandboxPath)) {
+      throw new RuntimeException("Path is not a directory. Path: " + sandboxPath);
+    }
     this.sandboxPath = sandboxPath;
+    try (final var files = Files.newDirectoryStream(sandboxPath)) {
+        files.forEach(path -> {
+          try {
+            if (Files.isDirectory(path)) {
+              FileUtils.deleteDirectory(path.toFile());
+            } else {
+              Files.delete(path);
+            }
+          } catch (IOException e) {
+            throw new RuntimeException(e);
+          }
+        });
+    }
   }
 
   @Override
