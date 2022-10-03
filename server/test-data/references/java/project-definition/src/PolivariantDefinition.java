@@ -1,3 +1,4 @@
+
 public class PolivariantDefinition {
   private int </target id='poliFoo'>foo</>(String s) {
     return s.length();

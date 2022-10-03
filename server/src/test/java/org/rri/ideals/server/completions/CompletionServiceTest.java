@@ -13,8 +13,8 @@ import com.jetbrains.python.PythonFileType;
 import org.eclipse.lsp4j.CompletionItem;
 import org.eclipse.lsp4j.CompletionItemKind;
 import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.TextEdit;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
-import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Assert;
@@ -25,14 +25,12 @@ import org.junit.runners.JUnit4;
 import org.rri.ideals.server.IdeaTestFixture;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.TestUtil;
-import org.rri.ideals.server.references.FindDefinitionCommand;
 
 import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Optional;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.function.Function;
@@ -52,24 +50,37 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   @Test
   public void testCompletionForStaticImport() {
     final var dirPath = Paths.get(getTestDataPath(), "import-static-project");
-    testWithEngine(dirPath);
+    testWithEngine(dirPath, true);
   }
 
-  private void testWithEngine(Path dirPath) {
+  @Test
+  public void testTemplateCompletion() {
+    final var dirPath = Paths.get(getTestDataPath(), "templates-project");
+    testWithEngine(dirPath, false);
+  }
+
+  private void testWithEngine(@NotNull Path dirPath, boolean needToResolve) {
     try {
       final var engine = new CompletionTestEngine(dirPath, getProject());
-      final var definitionTests = engine.generateTests(new IdeaTestFixture(myFixture));
-      for (final var test : definitionTests) {
+      final var completionTest = engine.generateTests(new IdeaTestFixture(myFixture));
+      for (final var test : completionTest) {
         final var params = test.getParams();
-        final var answer = test.getAnswer();
-
-        final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
-        final var future = new FindDefinitionCommand(params.getPosition()).runAsync(getProject(), path);
-        final var actual =
-            Optional.ofNullable(TestUtil.getNonBlockingEdt(future, 50000)).map(Either::getRight);
-
-        assertTrue(actual.isPresent());
-        assertEquals(answer, actual.get());
+        final var expectedText = test.getAnswer();
+        var cs = getProject().getService(CompletionService.class);
+        var ans = cs.computeCompletions(
+            LspPath.fromLspUri(params.getTextDocument().getUri()), params.getPosition(),
+            new TestUtil.DumbCancelChecker());
+        var compItem = ans.get(0);
+        compItem.setData(gson.fromJson(gson.toJson(compItem.getData()), JsonObject.class));
+        var resolved = cs.resolveCompletion(compItem, new TestUtil.DumbCancelChecker());
+        if (needToResolve) {
+          assertNotNull(expectedText);
+          assertNotNull(test.getSourceText());
+          var allEdits = new ArrayList<TextEdit>();
+          allEdits.add(resolved.getTextEdit().getLeft());
+          allEdits.addAll(resolved.getAdditionalTextEdits());
+          assertEquals(expectedText, TestUtil.applyEdits(test.getSourceText(), allEdits));
+        }
       }
     } catch (IOException | RuntimeException e) {
       System.out.println(e instanceof IOException ? "IOException:" : "RuntimeException");

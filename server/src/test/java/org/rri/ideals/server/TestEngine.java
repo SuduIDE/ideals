@@ -125,10 +125,11 @@ abstract public class TestEngine<T extends TestEngine.Test, M extends TestEngine
 
   private void processPath(@NotNull Path path, @NotNull TestFixture fixture) {
     if (!Files.isDirectory(path)) {
-      final var newPath = fixture.writeFileToProject(TestUtil.getPathTail(targetDirectory, path),
-          textsByFile.remove(path.toString()));
+      var text = textsByFile.remove(path.toString());
+      final var newPath = fixture.writeFileToProject(TestUtil.getPathTail(targetDirectory, path), text);
       final var markers = markersByFile.remove(path.toString());
       markersByFile.put(newPath.toLspUri(), markers);
+      textsByFile.put(newPath.toLspUri(), text);
     }
   }
 

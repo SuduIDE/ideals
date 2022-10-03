@@ -2,6 +2,6 @@ import ImportClass;
 
 public class TestClass {
   {
-    ImportClass.met</cursor>
+    ImportClass.methodToImport();$0
   }
 }
