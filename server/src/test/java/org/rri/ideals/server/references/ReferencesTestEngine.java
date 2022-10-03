@@ -2,10 +2,7 @@ package org.rri.ideals.server.references;
 
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Pair;
-import org.eclipse.lsp4j.DefinitionParams;
-import org.eclipse.lsp4j.LocationLink;
-import org.eclipse.lsp4j.Range;
-import org.eclipse.lsp4j.TextDocumentIdentifier;
+import org.eclipse.lsp4j.*;
 import org.jetbrains.annotations.Nullable;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.TestEngine;
@@ -16,7 +13,7 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class DefinitionTestEngine extends TestEngine<DefinitionTestEngine.DefinitionTest, DefinitionTestEngine.DefinitionMarker> {
+public class ReferencesTestEngine extends TestEngine<ReferencesTestEngine.DefinitionTest, ReferencesTestEngine.DefinitionMarker> {
   public static class DefinitionTest implements Test {
     private final DefinitionParams params;
     private final List<? extends LocationLink> answer;
@@ -60,14 +57,14 @@ public class DefinitionTestEngine extends TestEngine<DefinitionTestEngine.Defini
     }
   }
 
-  public DefinitionTestEngine(Path directoryPath, Project project) throws IOException {
+  public ReferencesTestEngine(Path directoryPath, Project project) throws IOException {
     super(directoryPath, project);
   }
 
   @Override
   protected List<DefinitionTest> processMarkers() {
     final Stack<DefinitionMarker> positionsStack = new Stack<>();
-    final Map<String, Pair<Range, String>> originInfos = new HashMap<>();
+    final Map<String, List<Pair<Range, String>>> originInfos = new HashMap<>();
     final Map<String, List<Pair<Range, String>>> targetInfos = new HashMap<>();
     for (final var entry : markersByFile.entrySet()) {
       final var path = entry.getKey();
@@ -89,22 +86,28 @@ public class DefinitionTestEngine extends TestEngine<DefinitionTestEngine.Defini
             }
             targetInfos.get(startMarker.getId()).add(new Pair<>(range, path));
           } else {
-            originInfos.put(startMarker.getId(), new Pair<>(range, path));
+            if (!originInfos.containsKey(startMarker.getId())) {
+              originInfos.put(startMarker.getId(), new ArrayList<>());
+            }
+            originInfos.get(startMarker.getId()).add(new Pair<>(range, path));
           }
         }
       }
     }
     final List<DefinitionTest> result = new ArrayList<>();
     for (final var entry : originInfos.entrySet()) {
-      final var uri = LspPath.fromLspUri(entry.getValue().getSecond()).toLspUri();
-      final var params = new DefinitionParams(new TextDocumentIdentifier(uri), entry.getValue().getFirst().getStart());
-      final var locationLinks = targetInfos.get(entry.getKey()).stream()
-          .map(pair -> new LocationLink(LspPath.fromLspUri(pair.getSecond()).toLspUri(),
-              pair.getFirst(),
-              pair.getFirst(),
-              entry.getValue().getFirst())).toList();
-      final var test = new DefinitionTest(params, locationLinks);
-      result.add(test);
+      final var locations = targetInfos.get(entry.getKey()).stream()
+          .map(pair -> new Location(LspPath.fromLspUri(pair.getSecond()).toLspUri(), pair.getFirst()))
+          .toList();
+      entry.getValue().forEach(pair -> {
+            final var uri = LspPath.fromLspUri(pair.getSecond()).toLspUri();
+            final var params = new DefinitionParams(new TextDocumentIdentifier(uri), pair.getFirst().getStart());
+            final var locLinks = locations.stream()
+                .map(loc -> new LocationLink(loc.getUri(), loc.getRange(), loc.getRange(), pair.getFirst()))
+                .toList();
+            final var test = new DefinitionTest(params, locLinks);
+            result.add(test);
+          });
     }
     return result;
   }
