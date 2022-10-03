@@ -3,16 +3,21 @@ package org.rri.ideals.server.references;
 import com.intellij.openapi.vfs.VirtualFile;
 import org.eclipse.lsp4j.LocationLink;
 import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.rri.ideals.server.IdeaTestFixture;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.util.MiscUtil;
 
+import java.io.IOException;
+import java.nio.file.Paths;
 import java.util.Map;
+import java.util.Optional;
 
 @RunWith(JUnit4.class)
 public class TypeDefinitionCommandTest extends ReferencesCommandTestBase {
@@ -70,6 +75,31 @@ public class TypeDefinitionCommandTest extends ReferencesCommandTestBase {
       final var result = lst.getRight();
       assertEquals(1, result.size());
       assertEquals(ans, result.get(0));
+    }
+  }
+
+  @Test
+  public void newTestTypeDefinitionJava() {
+    try {
+      final var dirPath = Paths.get(getTestDataPath(), "java/project-type-definition");
+      final var engine = new ReferencesTestEngine(dirPath, getProject());
+      final var definitionTests = engine.generateTests(new IdeaTestFixture(myFixture));
+      for (final var test : definitionTests) {
+        final var params = test.getParams();
+        final var answer = test.getAnswer();
+
+        final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
+        final var future = new FindDefinitionCommand(params.getPosition()).runAsync(getProject(), path);
+        final var actual =
+            Optional.ofNullable(TestUtil.getNonBlockingEdt(future, 50000)).map(Either::getRight);
+
+        assertTrue(actual.isPresent());
+        assertEquals(answer, actual.get());
+      }
+    } catch (IOException | RuntimeException e) {
+      System.out.println(e instanceof IOException ? "IOException:" : "RuntimeException");
+      System.out.println(e.getMessage());
+      fail();
     }
   }
 }

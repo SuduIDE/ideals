@@ -30,7 +30,7 @@ public class DefinitionCommandTest extends ReferencesCommandTestBase {
 
   private void checkDefinitionByDirectory(Path dirPath) {
     try {
-      final var engine = new DefinitionTestEngine(dirPath, getProject());
+      final var engine = new ReferencesTestEngine(dirPath, getProject());
       final var definitionTests = engine.generateTests(new IdeaTestFixture(myFixture));
       for (final var test : definitionTests) {
         final var params = test.getParams();

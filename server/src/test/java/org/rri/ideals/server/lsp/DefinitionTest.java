@@ -4,7 +4,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.junit.Test;
 import org.rri.ideals.server.DefaultTestFixture;
 import org.rri.ideals.server.TestUtil;
-import org.rri.ideals.server.references.DefinitionTestEngine;
+import org.rri.ideals.server.references.ReferencesTestEngine;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -20,7 +20,7 @@ public class DefinitionTest extends LspServerTestBase {
   public void definition() {
     try {
       final var sandboxPath =  getTestDataRoot().resolve("sandbox");
-      final var engine = new DefinitionTestEngine(getProjectPath(), server().getProject());
+      final var engine = new ReferencesTestEngine(getProjectPath(), server().getProject());
       final var definitionTests = engine.generateTests(new DefaultTestFixture(sandboxPath));
       for (final var test : definitionTests) {
         final var params = test.getParams();
