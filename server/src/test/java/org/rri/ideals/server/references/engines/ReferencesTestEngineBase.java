@@ -3,6 +3,7 @@ package org.rri.ideals.server.references.engines;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Pair;
 import org.eclipse.lsp4j.*;
+import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.TestEngine;
@@ -16,13 +17,14 @@ import java.util.stream.Collectors;
 abstract class ReferencesTestEngineBase<T extends ReferencesTestEngineBase.ReferencesTestBase>
     extends TestEngine<T, ReferencesTestEngineBase.ReferencesMarker> {
   protected abstract static class ReferencesTestBase implements Test {
+    @NotNull
     private final List<? extends LocationLink> answer;
 
-    protected ReferencesTestBase(List<? extends LocationLink> answer) {
+    protected ReferencesTestBase(@NotNull List<? extends LocationLink> answer) {
       this.answer = answer;
     }
 
-    public List<? extends LocationLink> getAnswer() {
+    public @NotNull List<? extends LocationLink> getAnswer() {
       return answer;
     }
   }
@@ -52,12 +54,12 @@ abstract class ReferencesTestEngineBase<T extends ReferencesTestEngineBase.Refer
     }
   }
 
-  public ReferencesTestEngineBase(Path directoryPath, Project project) throws IOException {
+  public ReferencesTestEngineBase(@NotNull Path directoryPath, @NotNull Project project) throws IOException {
     super(directoryPath, project);
   }
 
   @Override
-  protected List<? extends T> processMarkers() {
+  protected @NotNull List<? extends T> processMarkers() {
     final Stack<ReferencesMarker> positionsStack = new Stack<>();
     final Map<String, List<Pair<Range, String>>> originInfos = new HashMap<>();
     final Map<String, List<Pair<Range, String>>> targetInfos = new HashMap<>();
@@ -106,14 +108,14 @@ abstract class ReferencesTestEngineBase<T extends ReferencesTestEngineBase.Refer
     return result;
   }
 
-  private String createErrorMessage(String markerText, String[] elements) {
+  private @NotNull String createErrorMessage(@NotNull String markerText, String @NotNull [] elements) {
     return "Incorrect marker. Marker: " + markerText + Arrays.stream(elements)
         .flatMap(str -> str.describeConstable().stream())
         .collect(Collectors.joining(". Get [", ", ", "]"));
   }
 
   @Override
-  protected ReferencesMarker parseSingeMarker(String markerText) {
+  protected @NotNull ReferencesMarker parseSingeMarker(@NotNull String markerText) {
     if (markerText.equals("")) {
       return new ReferencesMarker(false, null, false);
     }
@@ -136,5 +138,5 @@ abstract class ReferencesTestEngineBase<T extends ReferencesTestEngineBase.Refer
     return new ReferencesMarker(elements[0].equals("target"), id, true);
   }
 
-  abstract protected T createReferencesTest(String uri, Position pos, List<LocationLink> locLinks);
+  abstract protected @NotNull T createReferencesTest(@NotNull String uri, @NotNull Position pos, @NotNull List<? extends LocationLink> locLinks);
 }

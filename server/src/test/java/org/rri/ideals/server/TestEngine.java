@@ -14,8 +14,8 @@ import java.util.Map;
 
 abstract public class TestEngine<T extends TestEngine.Test, M extends TestEngine.Marker> {
   public interface Test {
-    Object getParams();
-    Object getAnswer();
+    @NotNull Object getParams();
+    @NotNull Object getAnswer();
   }
 
   protected static abstract class Marker {
@@ -30,12 +30,28 @@ abstract public class TestEngine<T extends TestEngine.Test, M extends TestEngine
     }
   }
 
+  protected static class InsertTextMarker extends Marker {
+    @NotNull
+    private final String text;
+    public InsertTextMarker(@NotNull String text) {
+      this.text = text;
+    }
+
+    public @NotNull String getText(){
+      return text;
+    }
+  }
+
+  @NotNull
   private final Path targetDirectory;
-  private final Map<String, String> textsByFile; // <Path, Text>
-  protected Map<String, List<M>> markersByFile; // <Path, List<Marker>>
+  @NotNull
+  private final Map<@NotNull String, @NotNull String> textsByFile; // <Path, Text>
+  @NotNull
+  protected Map<@NotNull String, @NotNull List<@NotNull M>> markersByFile; // <Path, List<Marker>>
+  @NotNull
   protected Project project;
 
-  protected TestEngine(Path targetDirectory, Project project) throws IOException {
+  protected TestEngine(@NotNull Path targetDirectory, @NotNull Project project) throws IOException {
     if(!Files.isDirectory(targetDirectory)) {
       throw new IOException("Path is not a directory");
     }
@@ -84,8 +100,12 @@ abstract public class TestEngine<T extends TestEngine.Test, M extends TestEngine
               markerBuilder.append(c);
             }
             final var marker = parseSingeMarker(markerBuilder.toString());
-            marker.setOffset(offset);
-            markers.add(marker);
+            if (marker instanceof final InsertTextMarker insertMarker) {
+              builder.append(insertMarker.getText());
+            } else {
+              marker.setOffset(offset);
+              markers.add(marker);
+            }
           } else {
             builder.append('<');
             builder.append(c);
@@ -112,7 +132,7 @@ abstract public class TestEngine<T extends TestEngine.Test, M extends TestEngine
     }
   }
 
-  public List<? extends T> generateTests(TestFixture fixture) throws IOException {
+  public List<? extends T> generateTests(@NotNull TestFixture fixture) throws IOException {
     try (final var stream = Files.newDirectoryStream(targetDirectory)) {
       for (final var path : stream) {
         final var name = path.toFile().getName();
@@ -135,7 +155,7 @@ abstract public class TestEngine<T extends TestEngine.Test, M extends TestEngine
     return processMarkers();
   }
 
-  abstract protected List<? extends T> processMarkers();
+  abstract protected @NotNull List<? extends T> processMarkers();
 
-  abstract protected M parseSingeMarker(String markerText);
+  abstract protected @NotNull M parseSingeMarker(String markerText);
 }

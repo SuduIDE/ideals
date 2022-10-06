@@ -2,6 +2,7 @@ package org.rri.ideals.server.references.engines;
 
 import com.intellij.openapi.project.Project;
 import org.eclipse.lsp4j.*;
+import org.jetbrains.annotations.NotNull;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -17,7 +18,7 @@ public class TypeDefinitionTestEngine extends ReferencesTestEngineBase<TypeDefin
     }
 
     @Override
-    public TypeDefinitionParams getParams() {
+    public @NotNull TypeDefinitionParams getParams() {
       return params;
     }
   }
@@ -25,7 +26,8 @@ public class TypeDefinitionTestEngine extends ReferencesTestEngineBase<TypeDefin
   public TypeDefinitionTestEngine(Path directoryPath, Project project) throws IOException {
     super(directoryPath, project);
   }
-  protected TypeDefinitionTest createReferencesTest(String uri, Position pos, List<LocationLink> locLinks) {
+
+  protected @NotNull TypeDefinitionTest createReferencesTest(@NotNull String uri, @NotNull Position pos, @NotNull List<? extends LocationLink> locLinks) {
     return new TypeDefinitionTest(new TypeDefinitionParams(new TextDocumentIdentifier(uri), pos), locLinks);
   }
 }
