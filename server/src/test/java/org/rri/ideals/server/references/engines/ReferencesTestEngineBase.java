@@ -1,4 +1,4 @@
-package org.rri.ideals.server.references;
+package org.rri.ideals.server.references.engines;
 
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Pair;
@@ -13,18 +13,13 @@ import java.nio.file.Path;
 import java.util.*;
 import java.util.stream.Collectors;
 
-public class ReferencesTestEngine extends TestEngine<ReferencesTestEngine.DefinitionTest, ReferencesTestEngine.DefinitionMarker> {
-  public static class DefinitionTest implements Test {
-    private final DefinitionParams params;
+abstract class ReferencesTestEngineBase<T extends ReferencesTestEngineBase.ReferencesTestBase>
+    extends TestEngine<T, ReferencesTestEngineBase.ReferencesMarker> {
+  protected abstract static class ReferencesTestBase implements Test {
     private final List<? extends LocationLink> answer;
 
-    private DefinitionTest(DefinitionParams params, List<? extends LocationLink> answer) {
-      this.params = params;
+    protected ReferencesTestBase(List<? extends LocationLink> answer) {
       this.answer = answer;
-    }
-
-    public DefinitionParams getParams() {
-      return params;
     }
 
     public List<? extends LocationLink> getAnswer() {
@@ -32,13 +27,13 @@ public class ReferencesTestEngine extends TestEngine<ReferencesTestEngine.Defini
     }
   }
 
-  protected static class DefinitionMarker extends Marker {
+  protected static class ReferencesMarker extends Marker {
     private final boolean isTarget;
     @Nullable
     private final String id;
     private final boolean isStart;
 
-    private DefinitionMarker(boolean isTarget, @Nullable String id, boolean isStart) {
+    private ReferencesMarker(boolean isTarget, @Nullable String id, boolean isStart) {
       this.isTarget = isTarget;
       this.id = id;
       this.isStart = isStart;
@@ -57,13 +52,13 @@ public class ReferencesTestEngine extends TestEngine<ReferencesTestEngine.Defini
     }
   }
 
-  public ReferencesTestEngine(Path directoryPath, Project project) throws IOException {
+  public ReferencesTestEngineBase(Path directoryPath, Project project) throws IOException {
     super(directoryPath, project);
   }
 
   @Override
-  protected List<DefinitionTest> processMarkers() {
-    final Stack<DefinitionMarker> positionsStack = new Stack<>();
+  protected List<? extends T> processMarkers() {
+    final Stack<ReferencesMarker> positionsStack = new Stack<>();
     final Map<String, List<Pair<Range, String>>> originInfos = new HashMap<>();
     final Map<String, List<Pair<Range, String>>> targetInfos = new HashMap<>();
     for (final var entry : markersByFile.entrySet()) {
@@ -94,18 +89,17 @@ public class ReferencesTestEngine extends TestEngine<ReferencesTestEngine.Defini
         }
       }
     }
-    final List<DefinitionTest> result = new ArrayList<>();
+    final List<T> result = new ArrayList<>();
     for (final var entry : originInfos.entrySet()) {
       final var locations = targetInfos.get(entry.getKey()).stream()
           .map(pair -> new Location(LspPath.fromLspUri(pair.getSecond()).toLspUri(), pair.getFirst()))
           .toList();
       entry.getValue().forEach(pair -> {
             final var uri = LspPath.fromLspUri(pair.getSecond()).toLspUri();
-            final var params = new DefinitionParams(new TextDocumentIdentifier(uri), pair.getFirst().getStart());
             final var locLinks = locations.stream()
                 .map(loc -> new LocationLink(loc.getUri(), loc.getRange(), loc.getRange(), pair.getFirst()))
                 .toList();
-            final var test = new DefinitionTest(params, locLinks);
+            final var test = createReferencesTest(uri, pair.getFirst().getStart(), locLinks);
             result.add(test);
           });
     }
@@ -119,9 +113,9 @@ public class ReferencesTestEngine extends TestEngine<ReferencesTestEngine.Defini
   }
 
   @Override
-  protected DefinitionMarker parseSingeMarker(String markerText) {
+  protected ReferencesMarker parseSingeMarker(String markerText) {
     if (markerText.equals("")) {
-      return new DefinitionMarker(false, null, false);
+      return new ReferencesMarker(false, null, false);
     }
     String[] elements = markerText.split("[\s\n]+");
     if (elements.length != 2) {
@@ -139,6 +133,8 @@ public class ReferencesTestEngine extends TestEngine<ReferencesTestEngine.Defini
       throw new RuntimeException("Id is incorrect. id=" + id);
     }
     id = id.substring(1, id.length() - 1);
-    return new DefinitionMarker(elements[0].equals("target"), id, true);
+    return new ReferencesMarker(elements[0].equals("target"), id, true);
   }
+
+  abstract protected T createReferencesTest(String uri, Position pos, List<LocationLink> locLinks);
 }

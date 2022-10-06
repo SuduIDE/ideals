@@ -7,6 +7,7 @@ import org.junit.runners.JUnit4;
 import org.rri.ideals.server.IdeaTestFixture;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.TestUtil;
+import org.rri.ideals.server.references.engines.TypeDefinitionTestEngine;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -29,7 +30,7 @@ public class TypeDefinitionCommandTest extends ReferencesCommandTestBase {
 
   private void checkTypeDefinitionByDirectory(Path dirPath) {
     try {
-      final var engine = new ReferencesTestEngine(dirPath, getProject());
+      final var engine = new TypeDefinitionTestEngine(dirPath, getProject());
       final var referencesTests = engine.generateTests(new IdeaTestFixture(myFixture));
       for (final var test : referencesTests) {
         final var params = test.getParams();
