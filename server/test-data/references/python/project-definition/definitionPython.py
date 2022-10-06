@@ -1,5 +1,6 @@
 import </origin id='class1'>class1</>
 import class2
+from second import *
 
 
 def </target id='func'>func</>():
