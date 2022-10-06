@@ -2,6 +2,7 @@ package org.rri.ideals.server;
 
 import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -15,7 +16,7 @@ import java.util.Map;
 abstract public class TestEngine<T extends TestEngine.Test, M extends TestEngine.Marker> {
   public interface Test {
     @NotNull Object getParams();
-    @NotNull Object getAnswer();
+    @Nullable Object getAnswer();
   }
 
   protected static abstract class Marker {
@@ -30,22 +31,14 @@ abstract public class TestEngine<T extends TestEngine.Test, M extends TestEngine
     }
   }
 
-  protected static class InsertTextMarker extends Marker {
-    @NotNull
-    private final String text;
-    public InsertTextMarker(@NotNull String text) {
-      this.text = text;
-    }
-
-    public @NotNull String getText(){
-      return text;
-    }
+  protected interface InsertTextMarker  {
+    @NotNull String getText();
   }
 
   @NotNull
   private final Path targetDirectory;
   @NotNull
-  private final Map<@NotNull String, @NotNull String> textsByFile; // <Path, Text>
+  protected final Map<@NotNull String, @NotNull String> textsByFile; // <Path, Text>
   @NotNull
   protected Map<@NotNull String, @NotNull List<@NotNull M>> markersByFile; // <Path, List<Marker>>
   @NotNull

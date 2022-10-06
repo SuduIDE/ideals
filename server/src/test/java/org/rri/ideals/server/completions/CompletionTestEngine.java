@@ -59,12 +59,14 @@ public class CompletionTestEngine extends
   @Override
   @NotNull
   protected CompletionMarker parseSingeMarker(@NotNull String markerText) {
-    if (!markerText.matches("\s*cursor\s*")) {
-      throw new RuntimeException("unexpected marker: "+ markerText);
+    if (markerText.matches("\s*s\s*")) {
+      return new SpaceMarker();
     }
-    return new CompletionMarker();
+    if (markerText.matches("\s*cursor\s*")) {
+      return new CursorMarker();
+    }
+    throw new RuntimeException("unexpected marker: "+ markerText);
   }
-
   public static class CompletionTest implements TestEngine.Test {
     @NotNull
     private final TextDocumentIdentifier documentIdentifier;
@@ -110,5 +112,15 @@ public class CompletionTestEngine extends
   }
 
   protected static class CompletionMarker extends TestEngine.Marker {
+  }
+
+  protected static class CursorMarker extends CompletionMarker {
+  }
+
+  protected static class SpaceMarker extends CompletionMarker implements InsertTextMarker {
+    @Override
+    public @NotNull String getText() {
+      return " ";
+    }
   }
 }

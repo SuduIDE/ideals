@@ -4,7 +4,6 @@ import com.google.gson.Gson;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.intellij.ide.highlighter.JavaFileType;
-import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.openapi.util.Key;
 import com.intellij.psi.PsiFile;
 import com.intellij.testFramework.TestModeFlags;
@@ -14,7 +13,6 @@ import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.junit.Assert;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.runner.RunWith;
@@ -30,7 +28,6 @@ import java.util.ArrayList;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
-import java.util.function.Function;
 import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
@@ -62,63 +59,6 @@ public class CompletionServiceTest extends BasePlatformTestCase {
                                       @Nullable MarkupContent documentation,
                                       @Nullable Set<CompletionItem> expectedItems) {
   }
-
-  private void testWithEngine(@NotNull CompletionTestParams completionTestParams) {
-    try {
-      final var engine = new CompletionTestEngine(completionTestParams.dirPath, getProject());
-      final var completionTest = engine.generateTests(new IdeaTestFixture(myFixture));
-      final var test = completionTest.get(0);
-      final var params = test.getParams();
-      final var expectedText = test.getAnswer();
-      var cs = getProject().getService(CompletionService.class);
-      var completionItems = cs.computeCompletions(
-          LspPath.fromLspUri(params.getTextDocument().getUri()), params.getPosition(),
-          new TestUtil.DumbCancelChecker());
-      if (completionTestParams.finder != null) {
-        var compItem = completionItems.stream().filter(completionTestParams.finder).findFirst().orElseThrow();
-        compItem.setData(gson.fromJson(gson.toJson(compItem.getData()), JsonObject.class));
-        var resolved = cs.resolveCompletion(compItem, new TestUtil.DumbCancelChecker());
-        assertNotNull(expectedText);
-        assertNotNull(test.getSourceText());
-        var allEdits = new ArrayList<TextEdit>();
-        allEdits.add(resolved.getTextEdit().getLeft());
-        allEdits.addAll(resolved.getAdditionalTextEdits());
-        assertEquals(expectedText, TestUtil.applyEdits(test.getSourceText(), allEdits));
-
-        if (completionTestParams.documentation != null) {
-          assertEquals(completionTestParams.documentation, compItem.getDocumentation().getRight());
-        }
-      }
-      if (completionTestParams.expectedItems != null) {
-        assertEquals(completionTestParams.expectedItems(),
-            completionItems.stream().map(CompletionServiceTestUtil::removeResolveInfo).collect(Collectors.toSet()));
-      }
-    } catch (Exception e) {
-      throw MiscUtil.wrap(e);
-    }
-  }
-
-  @Test
-  public void testCompletionForKeywordsThatContainsLetterD() {
-    final var file = myFixture.configureByFile("only_d_file.py");
-    var completionItemList = getCompletionListAtPosition(
-        file, new Position(0, 1));
-
-    var expected = Set.of(
-        CompletionServiceTestUtil.createCompletionItem(
-            "del", "", null, new ArrayList<>(), "del", CompletionItemKind.Keyword
-        ), CompletionServiceTestUtil.createCompletionItem(
-            "def", "", null, new ArrayList<>(), "def", CompletionItemKind.Keyword
-        ), CompletionServiceTestUtil.createCompletionItem(
-            "and", "", null, new ArrayList<>(), "and", CompletionItemKind.Keyword
-        ), CompletionServiceTestUtil.createCompletionItem(
-            "lambda", "", null, new ArrayList<>(), "lambda", CompletionItemKind.Keyword)
-    );
-    Assert.assertNotNull(completionItemList);
-    Assertions.assertEquals(expected,
-        completionItemList.stream().map(CompletionServiceTestUtil::removeResolveInfo).collect(Collectors.toSet()));
-  }
-
   @Test
   public void testCompletionForKeywordAndFunctionPython() {
     var expected = Set.of(CompletionServiceTestUtil.createCompletionItem(
@@ -135,7 +75,6 @@ public class CompletionServiceTest extends BasePlatformTestCase {
         new ArrayList<>(),
         "formula",
         CompletionItemKind.Function));
-
 
     final var dirPath = Paths.get(getTestDataPath(), "python-function-and-keyword-project");
     testWithEngine(new CompletionTestParams(dirPath, null, null, expected));
@@ -241,7 +180,8 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   @Test
   public void testPythonLiveTemplate() {
     final var dirPath = Paths.get(getTestDataPath(), "python-live-template-project");
-    testWithEngine(new CompletionTestParams(dirPath, completionItem -> completionItem.getLabel().equals("iter"), null, null));
+    runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams(dirPath,
+        completionItem -> completionItem.getLabel().equals("iter"), null, null)));
   }
 
   @Test
@@ -343,7 +283,40 @@ public class CompletionServiceTest extends BasePlatformTestCase {
         )
     );
   }
+  private void testWithEngine(@NotNull CompletionTestParams completionTestParams) {
+    try {
+      final var engine = new CompletionTestEngine(completionTestParams.dirPath, getProject());
+      final var completionTest = engine.generateTests(new IdeaTestFixture(myFixture));
+      final var test = completionTest.get(0);
+      final var params = test.getParams();
+      final var expectedText = test.getAnswer();
+      var cs = getProject().getService(CompletionService.class);
+      var completionItems = cs.computeCompletions(
+              LspPath.fromLspUri(params.getTextDocument().getUri()), params.getPosition(),
+              new TestUtil.DumbCancelChecker());
+      if (completionTestParams.finder != null) {
+        var compItem = completionItems.stream().filter(completionTestParams.finder).findFirst().orElseThrow();
+        compItem.setData(gson.fromJson(gson.toJson(compItem.getData()), JsonObject.class));
+        var resolved = cs.resolveCompletion(compItem, new TestUtil.DumbCancelChecker());
+        assertNotNull(expectedText);
+        assertNotNull(test.getSourceText());
+        var allEdits = new ArrayList<TextEdit>();
+        allEdits.add(resolved.getTextEdit().getLeft());
+        allEdits.addAll(resolved.getAdditionalTextEdits());
+        assertEquals(expectedText, TestUtil.applyEdits(test.getSourceText(), allEdits));
 
+        if (completionTestParams.documentation != null) {
+          assertEquals(completionTestParams.documentation, compItem.getDocumentation().getRight());
+        }
+      }
+      if (completionTestParams.expectedItems != null) {
+        assertEquals(completionTestParams.expectedItems(),
+                completionItems.stream().map(CompletionServiceTestUtil::removeResolveInfo).collect(Collectors.toSet()));
+      }
+    } catch (Exception e) {
+      throw MiscUtil.wrap(e);
+    }
+  }
   @Test
   public void testOwnJavadoc() {
     CompletionServiceTest.runWithTemplateFlags(() -> testResolve(
@@ -422,7 +395,6 @@ public class CompletionServiceTest extends BasePlatformTestCase {
     }
     Assert.assertEquals(expectedText, TestUtil.applyEdits(originalText, allEdits));
   }
-
   @Test
   public void testCompletionCancellation() {
     var cancelChecker = new AlwaysTrueCancelChecker();
@@ -441,19 +413,16 @@ public class CompletionServiceTest extends BasePlatformTestCase {
     var psiFile = myFixture.configureByText(
         JavaFileType.INSTANCE,
         """
-            class Test {
-            \s\s\s\s
-            }
-            """);
+             """);
 
     var completionList = Assertions.assertDoesNotThrow(
-        () -> getCompletionListAtPosition(psiFile, new Position(1, 3)));
+        () -> getCompletionListAtPosition(psiFile, new Position(0, 0)));
 
     var cancelChecker = new AlwaysTrueCancelChecker();
 
     var targetCompletionItem =
         completionList.stream()
-            .filter(completionItem -> completionItem.getLabel().equals("public"))
+            .filter(completionItem -> completionItem.getLabel().equals("class"))
             .findFirst()
             .orElseThrow(() -> new AssertionError("completion item not found"));
 
@@ -461,7 +430,9 @@ public class CompletionServiceTest extends BasePlatformTestCase {
         gson.toJson(targetCompletionItem.getData()),
         JsonObject.class));
     Assertions.assertThrows(CancellationException.class,
-        () -> getResolvedCompletionItem(targetCompletionItem, cancelChecker));
+        () ->getProject()
+            .getService(CompletionService.class)
+            .resolveCompletion(targetCompletionItem, cancelChecker));
   }
 
   private static class AlwaysTrueCancelChecker implements CancelChecker {
@@ -470,9 +441,6 @@ public class CompletionServiceTest extends BasePlatformTestCase {
       throw new CancellationException();
     }
   }
-
-
-
 
   @NotNull
   private List<@NotNull CompletionItem> getCompletionListAtPosition(@NotNull PsiFile file,
@@ -486,19 +454,6 @@ public class CompletionServiceTest extends BasePlatformTestCase {
                                                                     @NotNull CancelChecker cancelChecker) {
     return getProject().getService(CompletionService.class).computeCompletions(
         LspPath.fromVirtualFile(file.getVirtualFile()), position, cancelChecker);
-  }
-
-  @NotNull
-  private CompletionItem getResolvedCompletionItem(@NotNull CompletionItem unresolved) {
-    return getResolvedCompletionItem(unresolved, new TestUtil.DumbCancelChecker());
-  }
-
-  @NotNull
-  private CompletionItem getResolvedCompletionItem(@NotNull CompletionItem unresolved,
-                                                   @NotNull CancelChecker cancelChecker) {
-    return getProject()
-        .getService(CompletionService.class)
-        .resolveCompletion(unresolved, cancelChecker);
   }
 
   static private void runWithTemplateFlags(@NotNull Runnable action) {
