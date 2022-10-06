@@ -319,9 +319,9 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   }
   @Test
   public void testJavaPostfixTemplate() {
-    final var dirPath = Paths.get(getTestDataPath(), "java-live-template-project");
-    runWithTemplateFlags( () -> testWithEngine(new CompletionTestParams(dirPath,
-            completionItem -> completionItem.getLabel().equals("lambda"), null, null)));
+    final var dirPath = Paths.get(getTestDataPath(), "java-postfix-template-project");
+    runWithTemplateFlags(() -> runWithTemplateFlags( () -> testWithEngine(new CompletionTestParams(dirPath,
+        completionItem -> completionItem.getLabel().equals("lambda"), null, null))));
   }
   @Test
   public void testJavaPostfixTemplate() {
