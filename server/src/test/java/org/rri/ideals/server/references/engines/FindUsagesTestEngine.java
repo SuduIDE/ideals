@@ -123,7 +123,7 @@ public class FindUsagesTestEngine extends TestEngine<FindUsagesTestEngine.FindUs
     }
     String[] elements = markerText.split("[\s\n]+");
     if (elements.length != 2 || !(elements[0].equals("location") || elements[0].equals("cursor"))) {
-      throw new RuntimeException("Incorrect marker: " + markerText + ".\n"
+      throw new RuntimeException("Incorrect marker: " + markerText + ". \n"
           + "Expected: \"cursor\"/\"\"/\"location id='markerId'\"");
     }
     boolean isCursor = elements[0].equals("cursor");

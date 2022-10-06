@@ -14,14 +14,18 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.HashSet;
 import java.util.Optional;
-import java.util.Set;
-import java.util.stream.Collectors;
 
 @RunWith(JUnit4.class)
 public class FindUsagesCommandTest extends ReferencesCommandTestBase {
   @Test
   public void testFindUsagesJava() {
-    final var dirPath = Paths.get(getTestDataPath(), "java/project-find-usages/src");
+    final var dirPath = Paths.get(getTestDataPath(), "java/project-find-usages");
+    checkDefinitionByDirectory(dirPath);
+  }
+
+  @Test
+  public void testFindUsagesPython() {
+    final var dirPath = Paths.get(getTestDataPath(), "python/project-find-usages");
     checkDefinitionByDirectory(dirPath);
   }
 
