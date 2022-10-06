@@ -22,6 +22,7 @@ import org.junit.runners.JUnit4;
 import org.rri.ideals.server.IdeaTestFixture;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.TestUtil;
+import org.rri.ideals.server.util.MiscUtil;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -93,8 +94,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
             completionItems.stream().map(CompletionServiceTestUtil::removeResolveInfo).collect(Collectors.toSet()));
       }
     } catch (Exception e) {
-      System.out.println(e.getMessage());
-      fail();
+      throw MiscUtil.wrap(e);
     }
   }
 
@@ -136,14 +136,9 @@ public class CompletionServiceTest extends BasePlatformTestCase {
         "formula",
         CompletionItemKind.Function));
 
-    final var file = myFixture.configureByFile("function_and_keyword.py");
 
-    var completionItemList = getCompletionListAtPosition(
-        file, new Position(3, 3)
-    );
-    Assert.assertNotNull(completionItemList);
-    Assert.assertEquals(expected,
-        completionItemList.stream().map(CompletionServiceTestUtil::removeResolveInfo).collect(Collectors.toSet()));
+    final var dirPath = Paths.get(getTestDataPath(), "python-function-and-keyword-project");
+    testWithEngine(new CompletionTestParams(dirPath, null, null, expected));
   }
 
   @Test
