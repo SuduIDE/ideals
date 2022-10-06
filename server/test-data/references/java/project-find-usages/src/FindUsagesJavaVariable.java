@@ -1,11 +1,11 @@
 public class FindUsagesJavaVariable {
-    private int </cursor>x;
+    private int </cursor id='x'>x;
     public FindUsagesJavaVariable() {
-        </cursor></location id='x'>x</> = 1;
+        </cursor id='x'></location id='x'>x</> = 1;
     }
 
     public void set(int x) {
-        this.</location id='x'>x</> = x;
+        </location id='x'>this.x</> = x;
     }
 
     public int get() {

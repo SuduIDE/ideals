@@ -24,6 +24,7 @@ abstract class ReferencesTestEngineBase<T extends ReferencesTestEngineBase.Refer
       this.answer = answer;
     }
 
+    @Override
     public @NotNull List<? extends LocationLink> getAnswer() {
       return answer;
     }
