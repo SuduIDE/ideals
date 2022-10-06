@@ -31,8 +31,8 @@ public class DefinitionCommandTest extends ReferencesCommandTestBase {
   private void checkDefinitionByDirectory(Path dirPath) {
     try {
       final var engine = new ReferencesTestEngine(dirPath, getProject());
-      final var definitionTests = engine.generateTests(new IdeaTestFixture(myFixture));
-      for (final var test : definitionTests) {
+      final var referencesTests = engine.generateTests(new IdeaTestFixture(myFixture));
+      for (final var test : referencesTests) {
         final var params = test.getParams();
         final var answer = test.getAnswer();
 
@@ -45,8 +45,8 @@ public class DefinitionCommandTest extends ReferencesCommandTestBase {
         assertEquals(answer, actual.get());
       }
     } catch (IOException | RuntimeException e) {
-      System.out.println(e instanceof IOException ? "IOException:" : "RuntimeException");
-      System.out.println(e.getMessage());
+      System.err.println(e instanceof IOException ? "IOException:" : "RuntimeException");
+      System.err.println(e.getMessage());
       fail();
     }
   }
