@@ -10,10 +10,7 @@ import com.intellij.psi.PsiFile;
 import com.intellij.testFramework.TestModeFlags;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import com.jetbrains.python.PythonFileType;
-import org.eclipse.lsp4j.CompletionItem;
-import org.eclipse.lsp4j.CompletionItemKind;
-import org.eclipse.lsp4j.Position;
-import org.eclipse.lsp4j.TextEdit;
+import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -26,7 +23,6 @@ import org.rri.ideals.server.IdeaTestFixture;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.TestUtil;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
@@ -34,6 +30,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.function.Function;
+import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @RunWith(JUnit4.class)
@@ -50,40 +47,52 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   @Test
   public void testCompletionForStaticImport() {
     final var dirPath = Paths.get(getTestDataPath(), "import-static-project");
-    testWithEngine(dirPath, true);
+    testWithEngine(new CompletionTestParams(dirPath, completionItem -> true, null, null));
   }
 
   @Test
   public void testTemplateCompletion() {
-    final var dirPath = Paths.get(getTestDataPath(), "templates-project");
-    testWithEngine(dirPath, false);
+    final var dirPath = Paths.get(getTestDataPath(), "template-main-project");
+    runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams(dirPath, completionItem -> true, null, null)));
   }
 
-  private void testWithEngine(@NotNull Path dirPath, boolean needToResolve) {
+  private record CompletionTestParams(@NotNull Path dirPath,
+                                      @Nullable Predicate<? super CompletionItem> finder,
+                                      @Nullable MarkupContent documentation,
+                                      @Nullable Set<CompletionItem> expectedItems) {
+  }
+
+  private void testWithEngine(@NotNull CompletionTestParams completionTestParams) {
     try {
-      final var engine = new CompletionTestEngine(dirPath, getProject());
+      final var engine = new CompletionTestEngine(completionTestParams.dirPath, getProject());
       final var completionTest = engine.generateTests(new IdeaTestFixture(myFixture));
-      for (final var test : completionTest) {
-        final var params = test.getParams();
-        final var expectedText = test.getAnswer();
-        var cs = getProject().getService(CompletionService.class);
-        var ans = cs.computeCompletions(
-            LspPath.fromLspUri(params.getTextDocument().getUri()), params.getPosition(),
-            new TestUtil.DumbCancelChecker());
-        var compItem = ans.get(0);
+      final var test = completionTest.get(0);
+      final var params = test.getParams();
+      final var expectedText = test.getAnswer();
+      var cs = getProject().getService(CompletionService.class);
+      var completionItems = cs.computeCompletions(
+          LspPath.fromLspUri(params.getTextDocument().getUri()), params.getPosition(),
+          new TestUtil.DumbCancelChecker());
+      if (completionTestParams.finder != null) {
+        var compItem = completionItems.stream().filter(completionTestParams.finder).findFirst().orElseThrow();
         compItem.setData(gson.fromJson(gson.toJson(compItem.getData()), JsonObject.class));
         var resolved = cs.resolveCompletion(compItem, new TestUtil.DumbCancelChecker());
-        if (needToResolve) {
-          assertNotNull(expectedText);
-          assertNotNull(test.getSourceText());
-          var allEdits = new ArrayList<TextEdit>();
-          allEdits.add(resolved.getTextEdit().getLeft());
-          allEdits.addAll(resolved.getAdditionalTextEdits());
-          assertEquals(expectedText, TestUtil.applyEdits(test.getSourceText(), allEdits));
+        assertNotNull(expectedText);
+        assertNotNull(test.getSourceText());
+        var allEdits = new ArrayList<TextEdit>();
+        allEdits.add(resolved.getTextEdit().getLeft());
+        allEdits.addAll(resolved.getAdditionalTextEdits());
+        assertEquals(expectedText, TestUtil.applyEdits(test.getSourceText(), allEdits));
+
+        if (completionTestParams.documentation != null) {
+          assertEquals(completionTestParams.documentation, compItem.getDocumentation().getRight());
         }
       }
-    } catch (IOException | RuntimeException e) {
-      System.out.println(e instanceof IOException ? "IOException:" : "RuntimeException");
+      if (completionTestParams.expectedItems != null) {
+        assertEquals(completionTestParams.expectedItems(),
+            completionItems.stream().map(CompletionServiceTestUtil::removeResolveInfo).collect(Collectors.toSet()));
+      }
+    } catch (Exception e) {
       System.out.println(e.getMessage());
       fail();
     }
