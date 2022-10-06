@@ -158,79 +158,90 @@ public class CompletionServiceTest extends BasePlatformTestCase {
         "for",
         CompletionItemKind.Keyword
     ));
+    final var dirPath = Paths.get(getTestDataPath(), "java-function-and-keyword-project");
+    testWithEngine(new CompletionTestParams(dirPath, null, null, expected));
+  }
 
-    final var file = myFixture.configureByFile("function_and_keyword.java");
-
-    var completionItemList = getCompletionListAtPosition(
-        file, new Position(2, 7)
-    );
-    Assert.assertNotNull(completionItemList);
-    Assert.assertEquals(expected,
-        completionItemList.stream().map(CompletionServiceTestUtil::removeResolveInfo).collect(Collectors.toSet()));
+  @Test
+  public void testCompletionResolveFunctionsWithParameters() {
+    final var dirPath = Paths.get(getTestDataPath(), "python-function-with-parameter-project");
+    testWithEngine(new CompletionTestParams(dirPath, completionItem -> completionItem.getLabel().equals("foo"), null, null));
   }
 
   @Test
   public void testCompletionResolveFunctionsWithParameters() {
     testResolve(
-        """
-            def foo(x):
-                ""\"
-                :param x: real human bean
-                :return: actual real hero
-                ""\"
-                foo(x)
-                    
-            foo
-            """,
-        """
-            def foo(x):
-                ""\"
-                :param x: real human bean
-                :return: actual real hero
-                ""\"
-                foo(x)
-                 
-            foo($0)
-            """,
-        new Position(7, 3),
-        completionItem -> completionItem.getLabel().equals("foo"), PythonFileType.INSTANCE,
-        """
-            [aaa](psi_element://#module#aaa)\s\s
-            def **foo**(x: Any) -> None
+            """
+                def foo(x):
+                    ""\"
+                    :param x: real human bean
+                    :return: actual real hero
+                    ""\"
+                    foo(x)
                         
-            Unittest placeholder
-                        
-            Params:
-                        
-            `x` \u2013 real human bean
-                        
-            Returns:
-                        
-            actual real hero"""
+                foo
+                """,
+            """
+                def foo(x):
+                    ""\"
+                    :param x: real human bean
+                    :return: actual real hero
+                    ""\"
+                    foo(x)
+                     
+                foo($0)
+                """,
+            new Position(7, 3),
+            completionItem -> completionItem.getLabel().equals("foo"), PythonFileType.INSTANCE,
+            """
+                [aaa](psi_element://#module#aaa)\s\s
+                def **foo**(x: Any) -> None
+                            
+                Unittest placeholder
+                            
+                Params:
+                            
+                `x` \u2013 real human bean
+                            
+                Returns:
+                            
+                actual real hero"""
     );
   }
 
   @Test
   public void testCompletionResolveFunctionsWithoutParameters() {
+    final var dirPath = Paths.get(getTestDataPath(), "python-function-without-parameter-project");
+    testWithEngine(new CompletionTestParams(dirPath, completionItem -> completionItem.getLabel().equals("foo"), null, null));
+  }
+
+  @Test
+  public void testCompletionResolveFunctionsWithoutParameters() {
     testResolve(
-        """
-            def foo():
-                foo()
-                    
-            foo
-            """,
-        """
-            def foo():
-                foo()
-                 
-            foo()$0
-            """,
-        new Position(3, 3),
-        completionItem -> completionItem.getLabel().equals("foo"), PythonFileType.INSTANCE,
-        """
-            [aaa](psi_element://#module#aaa)\s\s
-            def **foo**() -> None"""
+            """
+                def foo():
+                    foo()
+                        
+                foo
+                """,
+            """
+                def foo():
+                    foo()
+                     
+                foo()$0
+                """,
+            new Position(3, 3),
+            completionItem -> completionItem.getLabel().equals("foo"), PythonFileType.INSTANCE,
+            """
+                [aaa](psi_element://#module#aaa)\s\s
+                def **foo**() -> None"""
     );
+  }
+
+  @Test
+  public void testPythonLiveTemplate() {
+    final var dirPath = Paths.get(getTestDataPath(), "python-live-template-project");
+    testWithEngine(new CompletionTestParams(dirPath, completionItem -> completionItem.getLabel().equals("iter"), null, null));
   }
 
   @Test
@@ -252,6 +263,13 @@ public class CompletionServiceTest extends BasePlatformTestCase {
         )
     );
   }
+
+  @Test
+  public void testPythonPostfixTemplate() {
+    final var dirPath = Paths.get(getTestDataPath(), "python-postfix-template-project");
+    runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams(dirPath,
+            completionItem -> completionItem.getLabel().equals("if"), null, null)));
+  }
   @Test
   public void testPythonPostfixTemplate() {
     CompletionServiceTest.runWithTemplateFlags(
@@ -267,7 +285,12 @@ public class CompletionServiceTest extends BasePlatformTestCase {
             null)
     );
   }
-
+  @Test
+  public void testJavaLiveTemplate() {
+    final var dirPath = Paths.get(getTestDataPath(), "java-live-template-project");
+    runWithTemplateFlags( () -> testWithEngine(new CompletionTestParams(dirPath,
+            completionItem -> completionItem.getLabel().equals("fori"), null, null)));
+  }
   @Test
   public void testJavaLiveTemplate() {
     CompletionServiceTest.runWithTemplateFlags(
@@ -294,7 +317,12 @@ public class CompletionServiceTest extends BasePlatformTestCase {
                 Create iteration loop"""
         ));
   }
-
+  @Test
+  public void testJavaPostfixTemplate() {
+    final var dirPath = Paths.get(getTestDataPath(), "java-live-template-project");
+    runWithTemplateFlags( () -> testWithEngine(new CompletionTestParams(dirPath,
+            completionItem -> completionItem.getLabel().equals("lambda"), null, null)));
+  }
   @Test
   public void testJavaPostfixTemplate() {
     CompletionServiceTest.runWithTemplateFlags(() -> testResolve(
