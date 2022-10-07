@@ -13,15 +13,15 @@ public class GotoTypeDefinitionTest extends LspServerTestBase {
 
   @Override
   protected String getProjectRelativePath() {
-    return "references/java/project-type-definition-integration";
+    return "sandbox";
   }
 
   @Test
   public void typeDefinition() {
     try {
-      final var sandboxPath =  getTestDataRoot().resolve("sandbox");
-      final var engine = new TypeDefinitionTestEngine(getProjectPath(), server().getProject());
-      final var typeDefinitionTests = engine.generateTests(new DefaultTestFixture(sandboxPath));
+      final var dirPath =  getTestDataRoot().resolve("references/java/project-type-definition-integration");
+      final var engine = new TypeDefinitionTestEngine(dirPath, server().getProject());
+      final var typeDefinitionTests = engine.generateTests(new DefaultTestFixture(getProjectPath(), dirPath));
       for (final var test : typeDefinitionTests) {
         final var params = test.getParams();
         final var answer = test.getAnswer();

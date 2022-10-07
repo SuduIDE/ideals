@@ -1,5 +1,7 @@
 package org;
 
+import org.FindUsagesJava;
+
 public class </cursor id='orgAnother'>Another {
     private int elem;
 

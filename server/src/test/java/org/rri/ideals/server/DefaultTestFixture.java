@@ -1,5 +1,6 @@
 package org.rri.ideals.server;
 
+import com.intellij.openapi.fileEditor.FileDocumentManager;
 import org.apache.commons.io.FileUtils;
 import org.jetbrains.annotations.NotNull;
 
@@ -13,8 +14,11 @@ public class DefaultTestFixture implements TestFixture {
 
   @NotNull
   private final Path sandboxPath;
+  @NotNull
+  private final Path targetDirPath;
 
-  public DefaultTestFixture(@NotNull Path sandboxPath) throws IOException {
+  public DefaultTestFixture(@NotNull Path sandboxPath, @NotNull Path targetDirPath) throws IOException {
+    this.targetDirPath = targetDirPath;
     if (!Files.exists(sandboxPath)) {
       Files.createDirectories(sandboxPath);
     }
@@ -42,8 +46,11 @@ public class DefaultTestFixture implements TestFixture {
     try (final var files =  Files.walk(sourceDirectory)) {
       files.forEach(source -> {
         if (!Files.isDirectory(source)) {
-          Path target = Paths.get(sandboxPath.toString(), TestUtil.getPathTail(sourceDirectory, source));
+          Path target = Paths.get(sandboxPath.toString(), TestUtil.getPathTail(targetDirPath, source));
           try {
+            if (!Files.exists(target.getParent())) {
+              Files.createDirectories(target.getParent());
+            }
             Files.copy(source, target);
           } catch (IOException e) {
             throw new RuntimeException(e);

@@ -37,7 +37,7 @@ public abstract class LspServerTestBase extends HeavyPlatformTestCase {
   }
 
   @NotNull
-  protected Path getProjectPath() {
+  final protected Path getProjectPath() {
     return getTestDataRoot().resolve(getProjectRelativePath());
   }
 
@@ -82,6 +82,8 @@ public abstract class LspServerTestBase extends HeavyPlatformTestCase {
 
   @Before
   public void setupServer() {
+
+
     server = new LspServer();
     client = new MockLanguageClient();
     server.connect(client);
