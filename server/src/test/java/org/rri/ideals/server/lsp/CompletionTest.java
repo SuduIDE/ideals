@@ -3,18 +3,21 @@ package org.rri.ideals.server.lsp;
 import com.google.gson.GsonBuilder;
 import com.google.gson.JsonObject;
 import com.intellij.openapi.util.Ref;
-import org.eclipse.lsp4j.*;
+import org.eclipse.lsp4j.CompletionItem;
+import org.eclipse.lsp4j.CompletionItemKind;
+import org.eclipse.lsp4j.CompletionList;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
-import org.rri.ideals.server.LspPath;
+import org.rri.ideals.server.DefaultTestFixture;
 import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.completions.CompletionServiceTestUtil;
+import org.rri.ideals.server.completions.engines.CompletionTestEngine;
+import org.rri.ideals.server.util.MiscUtil;
 
 import java.io.IOException;
-import java.nio.file.Files;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -24,13 +27,12 @@ public class CompletionTest extends LspServerTestBase {
 
   @Override
   protected String getProjectRelativePath() {
-    return "completion/completion-project";
+    return "completion/integration-test";
   }
 
   @Test
   public void completion() {
     final String label = "completionVariant";
-    final Position completionInvokePosition = new Position(8, 7);
 
     final Set<CompletionItem> expectedCompletionList = Set.of(
         CompletionServiceTestUtil.createCompletionItem(
@@ -49,14 +51,16 @@ public class CompletionTest extends LspServerTestBase {
             label,
             CompletionItemKind.Method)
     );
-
-    final var filePath = LspPath.fromLocalPath(getProjectPath().resolve("src/CompletionExampleTest.java"));
-
-    var params = new CompletionParams();
-
-    params.setTextDocument(TestUtil.getDocumentIdentifier(filePath));
-    params.setPosition(completionInvokePosition);
-
+    CompletionTestEngine.CompletionTest test;
+    try {
+      assertNotNull(server().getProject());
+      CompletionTestEngine engine = new CompletionTestEngine(getProjectPath(), server().getProject());
+      test =
+          engine.generateTests(new DefaultTestFixture(getTestDataRoot().resolve("sandbox"))).get(0);
+    } catch (IOException e) {
+      throw MiscUtil.wrap(e);
+    }
+    var params = test.getParams();
     Ref<Either<List<CompletionItem>, CompletionList>> completionResRef = new Ref<>();
 
     Assertions.assertDoesNotThrow(() -> completionResRef.set(
@@ -78,31 +82,13 @@ public class CompletionTest extends LspServerTestBase {
                 itemForResolve
             ),
         3000);
-    String originalText;
-    try {
-      originalText = new String(
-          Files.readAllBytes(LspPath.fromLspUri(params.getTextDocument().getUri()).toPath())
-      );
-    } catch (IOException e) {
-      throw new AssertionError(e);
-    }
+    String originalText = test.getSourceText();
     var allEdits = new ArrayList<>(resolvedItem.getAdditionalTextEdits());
     allEdits.add(resolvedItem.getTextEdit().getLeft());
 
     var insertedText = TestUtil.applyEdits(originalText, allEdits);
-    var expectedText =
-        """
-        class CompletionExampleTest {
-          void completionVariant(int x) {
-          }
-                                
-          int completionVariant() {
-          }
-                                
-          void main() {
-            completionVariant()$0;
-          }
-        }""";
+    var expectedText = test.getAnswer();
+    assertNotNull(expectedText);
     Assertions.assertEquals(expectedText, insertedText);
     Assertions.assertEquals(
         """

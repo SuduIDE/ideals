@@ -1,4 +1,4 @@
-class CompletionExampleTest {
+class Test {
   void completionVariant(int x) {
   }
 
@@ -6,6 +6,6 @@ class CompletionExampleTest {
   }
 
   void main() {
-    com;
+    completionVariant()$0;
   }
 }

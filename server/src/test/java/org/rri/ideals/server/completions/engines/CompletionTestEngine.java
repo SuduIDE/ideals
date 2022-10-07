@@ -1,4 +1,4 @@
-package org.rri.ideals.server.completions;
+package org.rri.ideals.server.completions.engines;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;

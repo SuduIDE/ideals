@@ -20,6 +20,7 @@ import org.junit.runners.JUnit4;
 import org.rri.ideals.server.IdeaTestFixture;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.TestUtil;
+import org.rri.ideals.server.completions.engines.CompletionTestEngine;
 import org.rri.ideals.server.util.MiscUtil;
 
 import java.nio.file.Path;
