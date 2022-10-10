@@ -67,10 +67,10 @@ public class TestLexer {
   private final Path targetDirectory;
 
   @NotNull
-  protected final Map<@NotNull String, @NotNull String> textsByFile; // <Path, Text>
+  public final Map<@NotNull String, @NotNull String> textsByFile; // <Path, Text>
 
   @NotNull
-  protected Map<@NotNull String, @NotNull List<@NotNull Marker>> markersByFile; // <Path, List<Marker>>
+  public Map<@NotNull String, @NotNull List<@NotNull Marker>> markersByFile; // <Path, List<Marker>>
 
   @NotNull
   protected final Project project;
@@ -142,10 +142,12 @@ public class TestLexer {
                         new RangeAsOffsets(openToken.offset, token.offset));
                 marker.additionalData.putAll(openToken.additionalData);
                 marker.additionalData.putAll(token.additionalData);
+                markers.add(marker);
               } else if (token.isSingleToken()) {
                 assert token.name != null;
                 Marker marker = new Marker(token.name, null, new RangeAsOffsets(token.offset, token.offset));
                 marker.additionalData.putAll(token.additionalData);
+                markers.add(marker);
               } else {
                 tokens.add(token);
               }

@@ -9,7 +9,10 @@ import com.intellij.psi.PsiFile;
 import com.intellij.testFramework.TestModeFlags;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import com.jetbrains.python.PythonFileType;
-import org.eclipse.lsp4j.*;
+import org.eclipse.lsp4j.CompletionItem;
+import org.eclipse.lsp4j.CompletionItemKind;
+import org.eclipse.lsp4j.MarkupContent;
+import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -19,8 +22,8 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.rri.ideals.server.IdeaTestFixture;
 import org.rri.ideals.server.LspPath;
+import org.rri.ideals.server.TestLexer;
 import org.rri.ideals.server.TestUtil;
-import org.rri.ideals.server.completions.engines.CompletionTestEngine;
 import org.rri.ideals.server.util.MiscUtil;
 
 import java.nio.file.Path;
@@ -31,7 +34,6 @@ import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.function.Predicate;
-import java.util.stream.Collectors;
 
 @RunWith(JUnit4.class)
 public class CompletionServiceTest extends BasePlatformTestCase {
