@@ -1,12 +1,11 @@
 package org.rri.ideals.server.lsp;
 
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
-import org.rri.ideals.server.DefaultTestFixture;
 import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.references.engines.FindUsagesTestEngine;
 
-import java.io.IOException;
-import java.nio.file.Paths;
+import java.nio.file.Path;
 import java.util.Optional;
 
 public class FindUsagesTest extends LspServerTestBase {
@@ -15,15 +14,19 @@ public class FindUsagesTest extends LspServerTestBase {
     return "sandbox";
   }
 
+  @Override
+  protected @Nullable Path getTargetProjectPath() {
+    return getTestDataRoot().resolve("references/java/project-find-usages-integration");
+  }
+
   @Test
   public void findUsages() {
     try {
-      final var dirPath =  getTestDataRoot().resolve("references/java/project-find-usages-integration");
-      final var engine = new FindUsagesTestEngine(dirPath, server().getProject());
-      final var definitionTests = engine.generateTests(new DefaultTestFixture(getProjectPath(), dirPath));
+      final var engine = new FindUsagesTestEngine(server().getProject(), lexer.textsByFile, lexer.markersByFile);
+      final var definitionTests = engine.processMarkers();
       for (final var test : definitionTests) {
-        final var params = test.getParams();
-        final var answer = test.getAnswer();
+        final var params = test.params();
+        final var answer = test.answer();
 
         final var future = server().getTextDocumentService().references(params);
         final var actual = Optional.ofNullable(TestUtil.getNonBlockingEdt(future, 50000));
@@ -31,7 +34,7 @@ public class FindUsagesTest extends LspServerTestBase {
         assertTrue(actual.isPresent());
         assertEquals(answer, actual.get());
       }
-    } catch (IOException | RuntimeException e) {
+    } catch (RuntimeException e) {
       e.printStackTrace();
       fail();
     }

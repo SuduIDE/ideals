@@ -7,18 +7,15 @@ import org.eclipse.lsp4j.LocationLink;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.TestEngine;
+import org.rri.ideals.server.TestLexer;
 import org.rri.ideals.server.util.MiscUtil;
 
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.*;
-import java.util.stream.Collectors;
 
-abstract class ReferencesTestEngineBase<T extends ReferencesTestEngineBase.ReferencesTestBase>
-    extends TestEngine<T, ReferencesTestEngineBase.ReferencesMarker> {
+abstract class ReferencesTestEngineBase<T extends ReferencesTestEngineBase.ReferencesTestBase> extends TestEngine<T> {
+
   protected abstract static class ReferencesTestBase implements Test {
     @NotNull
     private final List<? extends LocationLink> answer;
@@ -28,43 +25,18 @@ abstract class ReferencesTestEngineBase<T extends ReferencesTestEngineBase.Refer
     }
 
     @Override
-    public @NotNull List<? extends LocationLink> getAnswer() {
+    public @NotNull List<? extends LocationLink> answer() {
       return answer;
     }
   }
 
-  protected static class ReferencesMarker extends Marker {
-    private final boolean isTarget;
-    @Nullable
-    private final String id;
-    private final boolean isStart;
-
-    private ReferencesMarker(boolean isTarget, @Nullable String id, boolean isStart) {
-      this.isTarget = isTarget;
-      this.id = id;
-      this.isStart = isStart;
-    }
-
-    public boolean isTarget() {
-      return isTarget;
-    }
-
-    public @Nullable String getId() {
-      return id;
-    }
-
-    public boolean isStart() {
-      return isStart;
-    }
+  public ReferencesTestEngineBase(@NotNull Project project,
+                                  @NotNull Map<@NotNull String, @NotNull String> textsByFile,
+                                  @NotNull Map<@NotNull String, @NotNull List<TestLexer.Marker>> markersByFile) {
+    super(project, textsByFile, markersByFile);
   }
 
-  public ReferencesTestEngineBase(@NotNull Path directoryPath, @NotNull Project project) throws IOException {
-    super(project, directoryPath, project);
-  }
-
-  @Override
-  protected @NotNull List<? extends T> processMarkers() {
-    final Stack<ReferencesMarker> positionsStack = new Stack<>();
+  public @NotNull List<? extends T> processMarkers() {
     final Map<String, List<Pair<Range, String>>> originInfos = new HashMap<>();
     final Map<String, List<Pair<Range, String>>> targetInfos = new HashMap<>();
     for (final var entry : markersByFile.entrySet()) {
@@ -75,24 +47,14 @@ abstract class ReferencesTestEngineBase<T extends ReferencesTestEngineBase.Refer
           .orElseThrow(() -> new RuntimeException("Document is null. Path: " + path));
 
       for (final var marker : entry.getValue()) {
-        if (marker.isStart()) {
-          positionsStack.add(marker);
-        } else {
-          final var startMarker = positionsStack.pop();
-          final var range = new Range(MiscUtil.offsetToPosition(doc, startMarker.getOffset()),
-              MiscUtil.offsetToPosition(doc, marker.getOffset()));
-          if (startMarker.isTarget()) {
-            if (!targetInfos.containsKey(startMarker.getId())) {
-              targetInfos.put(startMarker.getId(), new ArrayList<>());
-            }
-            targetInfos.get(startMarker.getId()).add(new Pair<>(range, path));
-          } else {
-            if (!originInfos.containsKey(startMarker.getId())) {
-              originInfos.put(startMarker.getId(), new ArrayList<>());
-            }
-            originInfos.get(startMarker.getId()).add(new Pair<>(range, path));
-          }
+        final var range = new Range(MiscUtil.offsetToPosition(doc, marker.range.startOffset()),
+            MiscUtil.offsetToPosition(doc, marker.range.endOffset()));
+        final var map = marker.name.equals("target") ? targetInfos : originInfos;
+        final var id = marker.additionalData.get("id");
+        if (!map.containsKey(id)) {
+          map.put(id, new ArrayList<>());
         }
+        map.get(id).add(new Pair<>(range, path));
       }
     }
     final List<T> result = new ArrayList<>();
@@ -101,45 +63,15 @@ abstract class ReferencesTestEngineBase<T extends ReferencesTestEngineBase.Refer
           .map(pair -> new Location(LspPath.fromLspUri(pair.getSecond()).toLspUri(), pair.getFirst()))
           .toList();
       entry.getValue().forEach(pair -> {
-            final var uri = LspPath.fromLspUri(pair.getSecond()).toLspUri();
-            final var locLinks = locations.stream()
-                .map(loc -> new LocationLink(loc.getUri(), loc.getRange(), loc.getRange(), pair.getFirst()))
-                .toList();
-            final var test = createReferencesTest(uri, pair.getFirst().getStart(), locLinks);
-            result.add(test);
-          });
+        final var uri = LspPath.fromLspUri(pair.getSecond()).toLspUri();
+        final var locLinks = locations.stream()
+            .map(loc -> new LocationLink(loc.getUri(), loc.getRange(), loc.getRange(), pair.getFirst()))
+            .toList();
+        final var test = createReferencesTest(uri, pair.getFirst().getStart(), locLinks);
+        result.add(test);
+      });
     }
     return result;
-  }
-
-  private @NotNull String createErrorMessage(@NotNull String markerText, String @NotNull [] elements) {
-    return "Incorrect marker. Marker: " + markerText + Arrays.stream(elements)
-        .flatMap(str -> str.describeConstable().stream())
-        .collect(Collectors.joining(". Get [", ", ", "]"));
-  }
-
-  @Override
-  protected @NotNull ReferencesMarker parseSingeMarker(@NotNull String markerText) {
-    if (markerText.equals("")) {
-      return new ReferencesMarker(false, null, false);
-    }
-    String[] elements = markerText.split("[\s\n]+");
-    if (elements.length != 2) {
-      throw new RuntimeException(createErrorMessage(markerText, elements));
-    }
-    if (!(elements[0].equals("origin") || elements[0].equals("target"))) {
-      throw new RuntimeException("First element must be origin or target. Get: " + elements[0]);
-    }
-    String[] idSplit = elements[1].split("=");
-    if (idSplit.length != 2) {
-      throw new RuntimeException(createErrorMessage(elements[1], idSplit));
-    }
-    String id = idSplit[1];
-    if (!id.startsWith("'") || !id.endsWith("'")) {
-      throw new RuntimeException("Id is incorrect. id=" + id);
-    }
-    id = id.substring(1, id.length() - 1);
-    return new ReferencesMarker(elements[0].equals("target"), id, true);
   }
 
   abstract protected @NotNull T createReferencesTest(@NotNull String uri, @NotNull Position pos, @NotNull List<? extends LocationLink> locLinks);

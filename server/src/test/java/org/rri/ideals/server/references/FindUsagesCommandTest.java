@@ -6,6 +6,7 @@ import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.rri.ideals.server.IdeaTestFixture;
 import org.rri.ideals.server.LspPath;
+import org.rri.ideals.server.TestLexer;
 import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.references.engines.FindUsagesTestEngine;
 
@@ -31,11 +32,13 @@ public class FindUsagesCommandTest extends ReferencesCommandTestBase {
 
   private void checkDefinitionByDirectory(Path dirPath) {
     try {
-      final var engine = new FindUsagesTestEngine(dirPath, getProject());
-      final var referencesTests = engine.generateTests(new IdeaTestFixture(myFixture));
+      final var lexer = new TestLexer(dirPath);
+      lexer.initSandbox(new IdeaTestFixture(myFixture));
+      final var engine = new FindUsagesTestEngine(getProject(), lexer.textsByFile, lexer.markersByFile);
+      final var referencesTests = engine.processMarkers();
       for (final var test : referencesTests) {
-        final var params = test.getParams();
-        final var answer = test.getAnswer();
+        final var params = test.params();
+        final var answer = test.answer();
 
         final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
         final var future = new FindUsagesCommand(params.getPosition()).runAsync(getProject(), path);

@@ -288,11 +288,14 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   }
   private void testWithEngine(@NotNull CompletionTestParams completionTestParams) {
     try {
-      final var engine = new CompletionTestEngine(completionTestParams.dirPath, getProject());
-      final var completionTest = engine.generateTests(new IdeaTestFixture(myFixture));
+      final var lexer = new TestLexer(completionTestParams.dirPath);
+      lexer.initSandbox(new IdeaTestFixture(myFixture));
+      final var engine = new CompletionTestEngine(getProject(), lexer.textsByFile, lexer.markersByFile);
+
+      final var completionTest = engine.processMarkers();
       final var test = completionTest.get(0);
-      final var params = test.getParams();
-      final var expectedText = test.getAnswer();
+      final var params = test.params();
+      final var expectedText = test.answer();
       var cs = getProject().getService(CompletionService.class);
       var completionItems = cs.computeCompletions(
               LspPath.fromLspUri(params.getTextDocument().getUri()), params.getPosition(),

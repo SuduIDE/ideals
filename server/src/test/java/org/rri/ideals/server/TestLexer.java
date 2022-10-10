@@ -82,9 +82,9 @@ public class TestLexer {
   public final Map<@NotNull String, @NotNull String> textsByFile; // <Path, Text>
 
   @NotNull
-  public Map<@NotNull String, @NotNull List<@NotNull Marker>> markersByFile; // <Path, List<Marker>>
+  public final Map<@NotNull String, @NotNull List<@NotNull Marker>> markersByFile; // <Path, List<Marker>>
 
-  public TestLexer(@NotNull Path targetDirectory, @NotNull Project project) throws IOException {
+  public TestLexer(@NotNull Path targetDirectory) throws IOException {
     this.targetDirectory = targetDirectory;
     this.textsByFile = new HashMap<>();
     this.markersByFile = new HashMap<>();

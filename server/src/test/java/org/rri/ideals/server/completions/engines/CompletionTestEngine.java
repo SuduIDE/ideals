@@ -76,7 +76,7 @@ public class CompletionTestEngine extends TestEngine<CompletionTestEngine.Comple
 
     @Override
     @NotNull
-    public CompletionParams getParams() {
+    public CompletionParams params() {
       return MiscUtil.with(new CompletionParams(), params -> {
         params.setPosition(position);
         params.setTextDocument(documentIdentifier);
@@ -90,7 +90,7 @@ public class CompletionTestEngine extends TestEngine<CompletionTestEngine.Comple
 
     @Override
     @Nullable
-    public String getAnswer() {
+    public String answer() {
       return expectedText;
     }
 

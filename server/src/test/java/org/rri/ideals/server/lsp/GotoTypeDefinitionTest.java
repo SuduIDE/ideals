@@ -3,6 +3,7 @@ package org.rri.ideals.server.lsp;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.junit.Test;
 import org.rri.ideals.server.DefaultTestFixture;
+import org.rri.ideals.server.TestLexer;
 import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.references.engines.TypeDefinitionTestEngine;
 
@@ -20,11 +21,13 @@ public class GotoTypeDefinitionTest extends LspServerTestBase {
   public void typeDefinition() {
     try {
       final var dirPath =  getTestDataRoot().resolve("references/java/project-type-definition-integration");
-      final var engine = new TypeDefinitionTestEngine(dirPath, server().getProject());
-      final var typeDefinitionTests = engine.generateTests(new DefaultTestFixture(getProjectPath(), dirPath));
+      final var lexer = new TestLexer(dirPath);
+      lexer.initSandbox(new DefaultTestFixture(getProjectPath(), dirPath));
+      final var engine = new TypeDefinitionTestEngine(server().getProject(), lexer.textsByFile, lexer.markersByFile);
+      final var typeDefinitionTests = engine.processMarkers();
       for (final var test : typeDefinitionTests) {
-        final var params = test.getParams();
-        final var answer = test.getAnswer();
+        final var params = test.params();
+        final var answer = test.answer();
 
         final var future = server().getTextDocumentService().typeDefinition(params);
         final var actual = Optional.ofNullable(TestUtil.getNonBlockingEdt(future, 50000)).map(Either::getRight);

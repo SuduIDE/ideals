@@ -6,10 +6,10 @@ import org.eclipse.lsp4j.LocationLink;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.jetbrains.annotations.NotNull;
+import org.rri.ideals.server.TestLexer;
 
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.List;
+import java.util.Map;
 
 public class DefinitionTestEngine extends ReferencesTestEngineBase<DefinitionTestEngine.DefinitionTest>{
   public static class DefinitionTest extends ReferencesTestEngineBase.ReferencesTestBase {
@@ -22,14 +22,17 @@ public class DefinitionTestEngine extends ReferencesTestEngineBase<DefinitionTes
     }
 
     @Override
-    public @NotNull DefinitionParams getParams() {
+    public @NotNull DefinitionParams params() {
       return params;
     }
   }
 
-  public DefinitionTestEngine(Path directoryPath, Project project) throws IOException {
-    super(directoryPath, project);
+  public DefinitionTestEngine(@NotNull Project project,
+                              @NotNull Map<@NotNull String, @NotNull String> textsByFile,
+                              @NotNull Map<@NotNull String, @NotNull List<TestLexer.Marker>> markersByFile) {
+    super(project, textsByFile, markersByFile);
   }
+
   protected @NotNull DefinitionTest createReferencesTest(@NotNull String uri, @NotNull Position pos, @NotNull List<? extends LocationLink> locLinks) {
     return new DefinitionTest(new DefinitionParams(new TextDocumentIdentifier(uri), pos), locLinks);
   }

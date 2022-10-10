@@ -9,9 +9,10 @@ import java.util.Map;
 
 abstract public class TestEngine<T extends TestEngine.Test> {
   public interface Test {
-    @NotNull Object getParams();
-    @Nullable Object getAnswer();
+    @NotNull Object params();
+    @Nullable Object answer();
   }
+
   @NotNull
   protected final Project project;
   @NotNull
