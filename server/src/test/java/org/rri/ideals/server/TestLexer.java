@@ -37,14 +37,15 @@ public class TestLexer {
 
     private Token(@NotNull String tokenContent, int offset) {
       this.tokenContent = tokenContent;
-      var splitTokenElements = tokenContent.split("[\s\n]+=?[\s\n]+");
+      var splitTokenElements = tokenContent.split("\s+");
       if (splitTokenElements.length == 0) {
         this.name = null;
       } else {
         this.name = splitTokenElements[0];
-        assert splitTokenElements.length % 2 == 1;
-        for (int i = 1; i < splitTokenElements.length; i += 2) {
-          additionalData.put(splitTokenElements[i], splitTokenElements[i + 1]);
+        assert splitTokenElements.length % 3 == 1;
+        for (int i = 1; i < splitTokenElements.length; i += 3) {
+          assert splitTokenElements[i + 1].equals("=");
+          additionalData.put(splitTokenElements[i], splitTokenElements[i + 2]);
         }
       }
       this.offset = offset;
@@ -128,7 +129,7 @@ public class TestLexer {
               tokenBuilder.append(c);
             }
             final var token = new Token(tokenBuilder.toString(), offset);
-            String insertText = getInsertTextFromToken(token);
+            String insertText = getInsertTextFromTokenIfExist(token);
             if (insertText != null) {
               builder.append(insertText);
             } else {
@@ -166,11 +167,43 @@ public class TestLexer {
     }
   }
 
-  private String getInsertTextFromToken(Token token) {
+  private String getInsertTextFromTokenIfExist(Token token) {
     return switch (token.tokenContent) {
       case "s/" -> "\s";
       case "t/" -> "\t";
       default -> null;
     };
+  }
+
+  private void processPath(@NotNull Path path, @NotNull TestFixture fixture) {
+    if (!Files.isDirectory(path)) {
+      var text = textsByFile.remove(path.toString());
+      final var newPath = fixture.writeFileToProject(TestUtil.getPathTail(targetDirectory, path), text);
+      final var markers = markersByFile.remove(path.toString());
+      markersByFile.put(newPath.toLspUri(), markers);
+      textsByFile.put(newPath.toLspUri(), text);
+    }
+  }
+
+  public void initSandbox(@NotNull TestFixture fixture) throws IOException {
+    try (final var stream = Files.newDirectoryStream(targetDirectory)) {
+      for (final var path : stream) {
+        final var name = path.toFile().getName();
+        if (Objects.equals(name, ".idea")) {
+          fixture.copyDirectoryToProject(path);
+          continue;
+        } else if (name.matches(".*\\.iml")) {
+          fixture.copyFileToProject(path);
+          continue;
+        }
+        if (Files.isDirectory(path)) {
+          try (final var filesStream = Files.walk(path)) {
+            filesStream.forEach(curPath -> processPath(curPath, fixture));
+          }
+        } else {
+          processPath(path, fixture);
+        }
+      }
+    }
   }
 }
