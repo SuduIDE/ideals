@@ -8,10 +8,7 @@ import java.io.BufferedReader;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 abstract public class TestEngine<T extends TestEngine.Test, M extends TestEngine.Marker> {
   public interface Test {
@@ -130,7 +127,7 @@ abstract public class TestEngine<T extends TestEngine.Test, M extends TestEngine
     try (final var stream = Files.newDirectoryStream(targetDirectory)) {
       for (final var path : stream) {
         final var name = path.toFile().getName();
-        if (name.equals(".idea")) {
+        if (Objects.equals(name, ".idea")) {
           fixture.copyDirectoryToProject(path);
           continue;
         } else if (name.matches(".*\\.iml")) {

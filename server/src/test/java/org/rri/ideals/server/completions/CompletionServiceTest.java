@@ -27,6 +27,7 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.CancellationException;
 import java.util.function.Predicate;
@@ -105,7 +106,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   @Test
   public void testCompletionResolveFunctionsWithParameters() {
     final var dirPath = Paths.get(getTestDataPath(), "python-function-with-parameter-project");
-    testWithEngine(new CompletionTestParams(dirPath, completionItem -> completionItem.getLabel().equals("foo"), null, null));
+    testWithEngine(new CompletionTestParams(dirPath, completionItem -> Objects.equals(completionItem.getLabel(), "foo"), null, null));
   }
 
   @Test
@@ -152,7 +153,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   @Test
   public void testCompletionResolveFunctionsWithoutParameters() {
     final var dirPath = Paths.get(getTestDataPath(), "python-function-without-parameter-project");
-    testWithEngine(new CompletionTestParams(dirPath, completionItem -> completionItem.getLabel().equals("foo"), null, null));
+    testWithEngine(new CompletionTestParams(dirPath, completionItem -> Objects.equals(completionItem.getLabel(), "foo"), null, null));
   }
 
   @Test
@@ -182,7 +183,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   public void testPythonLiveTemplate() {
     final var dirPath = Paths.get(getTestDataPath(), "python-live-template-project");
     runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams(dirPath,
-        completionItem -> completionItem.getLabel().equals("iter"), null, null)));
+        completionItem -> Objects.equals(completionItem.getLabel(), "iter"), null, null)));
   }
 
   @Test
@@ -209,7 +210,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   public void testPythonPostfixTemplate() {
     final var dirPath = Paths.get(getTestDataPath(), "python-postfix-template-project");
     runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams(dirPath,
-            completionItem -> completionItem.getLabel().equals("if"), null, null)));
+        completionItem -> Objects.equals(completionItem.getLabel(), "if"), null, null)));
   }
   @Test
   public void testPythonPostfixTemplate() {
@@ -230,7 +231,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   public void testJavaLiveTemplate() {
     final var dirPath = Paths.get(getTestDataPath(), "java-live-template-project");
     runWithTemplateFlags( () -> testWithEngine(new CompletionTestParams(dirPath,
-            completionItem -> completionItem.getLabel().equals("fori"), null, null)));
+        completionItem -> Objects.equals(completionItem.getLabel(), "fori"), null, null)));
   }
   @Test
   public void testJavaLiveTemplate() {
@@ -262,7 +263,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   public void testJavaPostfixTemplate() {
     final var dirPath = Paths.get(getTestDataPath(), "java-postfix-template-project");
     runWithTemplateFlags(() -> runWithTemplateFlags( () -> testWithEngine(new CompletionTestParams(dirPath,
-        completionItem -> completionItem.getLabel().equals("lambda"), null, null))));
+        completionItem -> Objects.equals(completionItem.getLabel(), "lambda"), null, null))));
   }
   @Test
   public void testJavaPostfixTemplate() {
