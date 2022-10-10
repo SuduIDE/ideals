@@ -179,8 +179,8 @@ public class TestLexer {
 
   private String getInsertTextFromTokenIfExist(Token token) {
     return switch (token.tokenContent) {
-      case "s/" -> "\s";
-      case "t/" -> "\t";
+      case "s" -> "\s";
+      case "t" -> "\t";
       default -> null;
     };
   }
