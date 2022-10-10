@@ -1,5 +1,5 @@
 class Test {
     void test() {
-        x.lam</cursor/>
+        x.lam</cursor id = faggot />
     }
 }

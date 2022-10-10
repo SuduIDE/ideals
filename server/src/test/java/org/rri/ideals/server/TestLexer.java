@@ -42,10 +42,13 @@ public class TestLexer {
         this.name = null;
       } else {
         this.name = splitTokenElements[0];
-        assert splitTokenElements.length % 3 == 1;
-        for (int i = 1; i < splitTokenElements.length; i += 3) {
-          assert splitTokenElements[i + 1].equals("=");
-          additionalData.put(splitTokenElements[i], splitTokenElements[i + 2]);
+        var correctSplit = new ArrayList<String>();
+        for (String s : splitTokenElements) {
+          var splitRes = s.split("=");
+          correctSplit.addAll(List.of(splitRes));
+        }
+        for (int i = 1; i + 1 < correctSplit.size(); i += 2) {
+          additionalData.put(correctSplit.get(i), correctSplit.get(i + 1));
         }
       }
       this.offset = offset;
