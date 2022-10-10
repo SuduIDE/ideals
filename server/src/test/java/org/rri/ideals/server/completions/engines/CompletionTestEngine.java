@@ -9,25 +9,24 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.TestEngine;
+import org.rri.ideals.server.TestLexer;
 import org.rri.ideals.server.util.MiscUtil;
 
-import java.io.IOException;
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
-public class CompletionTestEngine extends
-    TestEngine<CompletionTestEngine.CompletionTest, CompletionTestEngine.CompletionMarker> {
+public class CompletionTestEngine extends TestEngine<CompletionTestEngine.CompletionTest> {
   protected static final Logger LOG = Logger.getInstance(CompletionTestEngine.class);
 
-  public CompletionTestEngine(Path targetDirectory, Project project) throws IOException {
-    super(targetDirectory, project);
+  public CompletionTestEngine(Project project, @NotNull Map<@NotNull String, @NotNull String> textsByFile, @NotNull Map<@NotNull String, @NotNull List<TestLexer.Marker>> markersByFile) {
+    super(project, textsByFile, markersByFile);
   }
 
-  @Override
+
   @NotNull
-  protected List<? extends CompletionTest> processMarkers() {
+  public List<? extends CompletionTest> processMarkers() {
     ArrayList<CompletionTest> ans = new ArrayList<>();
     for (var pathAndMarkers : this.markersByFile.entrySet()) {
       var path = pathAndMarkers.getKey();
@@ -38,7 +37,7 @@ public class CompletionTestEngine extends
             .orElseThrow(() -> new RuntimeException("PsiFile is null. Path: " + path));
         final var doc = Optional.ofNullable(MiscUtil.getDocument(file))
             .orElseThrow(() -> new RuntimeException("Document is null. Path: " + path));
-        var callPos = MiscUtil.offsetToPosition(doc, cursorMarker.getOffset());
+        var callPos = MiscUtil.offsetToPosition(doc, cursorMarker.range.startOffset());
 
         var test = new CompletionTest(
             new TextDocumentIdentifier(LspPath.fromLspUri(path).toLspUri()),
@@ -56,17 +55,6 @@ public class CompletionTestEngine extends
     return ans;
   }
 
-  @Override
-  @NotNull
-  protected CompletionMarker parseSingeMarker(@NotNull String markerText) {
-    if (markerText.matches("\s*s\s*")) {
-      return new SpaceMarker();
-    }
-    if (markerText.matches("\s*cursor\s*")) {
-      return new CursorMarker();
-    }
-    throw new RuntimeException("unexpected marker: "+ markerText);
-  }
   public static class CompletionTest implements TestEngine.Test {
     @NotNull
     private final TextDocumentIdentifier documentIdentifier;
@@ -108,19 +96,6 @@ public class CompletionTestEngine extends
 
     public void setExpectedText(@Nullable String expectedText) {
       this.expectedText = expectedText;
-    }
-  }
-
-  protected static class CompletionMarker extends TestEngine.Marker {
-  }
-
-  protected static class CursorMarker extends CompletionMarker {
-  }
-
-  protected static class SpaceMarker extends CompletionMarker implements InsertTextMarker {
-    @Override
-    public @NotNull String getText() {
-      return " ";
     }
   }
 }

@@ -2,7 +2,10 @@ package org.rri.ideals.server.references.engines;
 
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Pair;
-import org.eclipse.lsp4j.*;
+import org.eclipse.lsp4j.Location;
+import org.eclipse.lsp4j.LocationLink;
+import org.eclipse.lsp4j.Position;
+import org.eclipse.lsp4j.Range;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.ideals.server.LspPath;
@@ -56,7 +59,7 @@ abstract class ReferencesTestEngineBase<T extends ReferencesTestEngineBase.Refer
   }
 
   public ReferencesTestEngineBase(@NotNull Path directoryPath, @NotNull Project project) throws IOException {
-    super(directoryPath, project);
+    super(project, directoryPath, project);
   }
 
   @Override

@@ -16,10 +16,10 @@ public class TestLexer {
   public record RangeAsOffsets(int startOffset, int endOffset) {}
 
   public static class Marker {
-    @NotNull final String name;
-    @NotNull final RangeAsOffsets range;
-    @Nullable final String content;
-    @NotNull final Map<String, String> additionalData = new HashMap<>();
+    @NotNull public final String name;
+    @NotNull public final RangeAsOffsets range;
+    @Nullable public final String content;
+    @NotNull public final Map<String, String> additionalData = new HashMap<>();
 
     public Marker(@NotNull String name, @Nullable String content, @NotNull RangeAsOffsets range) {
       this.name = name;
@@ -84,13 +84,8 @@ public class TestLexer {
   @NotNull
   public Map<@NotNull String, @NotNull List<@NotNull Marker>> markersByFile; // <Path, List<Marker>>
 
-  @NotNull
-  protected final Project project;
-
-
   public TestLexer(@NotNull Path targetDirectory, @NotNull Project project) throws IOException {
     this.targetDirectory = targetDirectory;
-    this.project = project;
     this.textsByFile = new HashMap<>();
     this.markersByFile = new HashMap<>();
     preprocessFiles();

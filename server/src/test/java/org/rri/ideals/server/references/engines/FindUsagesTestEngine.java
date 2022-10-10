@@ -62,7 +62,7 @@ public class FindUsagesTestEngine extends TestEngine<FindUsagesTestEngine.FindUs
   }
 
   public FindUsagesTestEngine(Path targetDirectory, Project project) throws IOException {
-    super(targetDirectory, project);
+    super(project, targetDirectory, project);
   }
 
   @Override
