@@ -4,7 +4,6 @@ package org.rri.ideals.server;
 import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.rri.ideals.server.util.MiscUtil;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -33,11 +32,25 @@ public class TestLexer {
     @NotNull final String tokenContent;
     @Nullable final String name;
     final int offset;
+    final boolean isSingleToken;
     @NotNull final Map<String, String> additionalData = new HashMap<>();
 
     private Token(@NotNull String tokenContent, int offset) {
+      this.offset = offset;
+      if ("".equals(tokenContent)) {
+        this.name = null;
+        this.tokenContent = "";
+        isSingleToken = false;
+        return;
+      }
+      if (tokenContent.length() > 0 && tokenContent.charAt(tokenContent.length() - 1) == '/') {
+        tokenContent = tokenContent.substring(0, tokenContent.length()-1);
+        this.isSingleToken = true;
+      } else {
+        this.isSingleToken = false;
+      }
       this.tokenContent = tokenContent;
-      var splitTokenElements = tokenContent.split("\s+");
+      var splitTokenElements = this.tokenContent.split("\s+");
       if (splitTokenElements.length == 0) {
         this.name = null;
       } else {
@@ -51,14 +64,10 @@ public class TestLexer {
           additionalData.put(correctSplit.get(i), correctSplit.get(i + 1));
         }
       }
-      this.offset = offset;
     }
 
     public boolean isSingleToken() {
-      if (tokenContent.length() == 0) {
-        return false;
-      }
-      return tokenContent.charAt(tokenContent.length() - 1) == '/';
+      return this.isSingleToken;
     }
 
     public boolean isCloseToken() {
@@ -109,12 +118,7 @@ public class TestLexer {
     if (Files.isDirectory(path)) {
       return;
     }
-    String srcText;
-    try {
-      srcText = new String(Files.readAllBytes(path));
-    } catch (IOException e) {
-      throw MiscUtil.wrap(e);
-    }
+
     try (BufferedReader reader = Files.newBufferedReader(path)) {
       int num;
       int offset = 0;
@@ -139,6 +143,7 @@ public class TestLexer {
               if (token.isCloseToken()) {
                 var openToken = tokens.pop();
                 assert openToken.name != null;
+                var srcText = builder.toString();
                 Marker marker = new Marker(
                         openToken.name,
                         srcText.substring(openToken.offset, token.offset),
