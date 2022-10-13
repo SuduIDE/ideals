@@ -11,7 +11,7 @@ import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.engine.TestEngine;
 import org.rri.ideals.server.generator.IdeaOffsetPositionConverter;
-import org.rri.ideals.server.references.engines.DefinitionTestGenerator;
+import org.rri.ideals.server.references.generators.DefinitionTestGenerator;
 
 import java.nio.file.Paths;
 import java.util.List;

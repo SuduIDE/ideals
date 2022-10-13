@@ -1,4 +1,4 @@
-package org.rri.ideals.server.completions.engines;
+package org.rri.ideals.server.completions.generators;
 
 import com.intellij.openapi.diagnostic.Logger;
 import org.eclipse.lsp4j.CompletionParams;
@@ -54,30 +54,25 @@ public class CompletionTestGenerator extends TestGenerator<CompletionTestGenerat
 
   public static class CompletionTest implements TestGenerator.Test {
     @NotNull
-    private final TextDocumentIdentifier documentIdentifier;
-
-    @NotNull
-    private final Position position;
-
-    @NotNull
     private final String sourceText;
 
     @Nullable
     private String expectedText;
+    @NotNull
+    private final CompletionParams params;
 
     public CompletionTest(@NotNull TextDocumentIdentifier documentIdentifier, @NotNull Position position, @NotNull String sourceText) {
-      this.documentIdentifier = documentIdentifier;
-      this.position = position;
       this.sourceText = sourceText;
+      this.params = MiscUtil.with(new CompletionParams(), params -> {
+        params.setPosition(position);
+        params.setTextDocument(documentIdentifier);
+      });
     }
 
     @Override
     @NotNull
     public CompletionParams params() {
-      return MiscUtil.with(new CompletionParams(), params -> {
-        params.setPosition(position);
-        params.setTextDocument(documentIdentifier);
-      });
+      return params;
     }
 
     @NotNull

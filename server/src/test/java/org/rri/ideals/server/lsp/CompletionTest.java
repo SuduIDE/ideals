@@ -13,7 +13,7 @@ import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.completions.CompletionServiceTestUtil;
-import org.rri.ideals.server.completions.engines.CompletionTestGenerator;
+import org.rri.ideals.server.completions.generators.CompletionTestGenerator;
 import org.rri.ideals.server.engine.DefaultTestFixture;
 import org.rri.ideals.server.engine.TestEngine;
 import org.rri.ideals.server.generator.IdeaOffsetPositionConverter;

@@ -1,4 +1,4 @@
-package org.rri.ideals.server.references.engines;
+package org.rri.ideals.server.references.generators;
 
 import org.eclipse.lsp4j.DefinitionParams;
 import org.eclipse.lsp4j.LocationLink;

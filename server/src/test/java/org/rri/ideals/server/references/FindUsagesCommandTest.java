@@ -13,7 +13,7 @@ import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.engine.IdeaTestFixture;
 import org.rri.ideals.server.engine.TestEngine;
 import org.rri.ideals.server.generator.IdeaOffsetPositionConverter;
-import org.rri.ideals.server.references.engines.FindUsagesTestGenerator;
+import org.rri.ideals.server.references.generators.FindUsagesTestGenerator;
 
 import java.io.IOException;
 import java.nio.file.Path;

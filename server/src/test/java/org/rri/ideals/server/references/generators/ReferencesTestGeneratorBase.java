@@ -1,4 +1,4 @@
-package org.rri.ideals.server.references.engines;
+package org.rri.ideals.server.references.generators;
 
 import com.intellij.openapi.util.Pair;
 import org.eclipse.lsp4j.Location;

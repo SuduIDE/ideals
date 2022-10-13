@@ -6,7 +6,7 @@ import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.engine.DefaultTestFixture;
 import org.rri.ideals.server.engine.TestEngine;
 import org.rri.ideals.server.generator.IdeaOffsetPositionConverter;
-import org.rri.ideals.server.references.engines.TypeDefinitionTestGenerator;
+import org.rri.ideals.server.references.generators.TypeDefinitionTestGenerator;
 
 import java.io.IOException;
 import java.util.Optional;

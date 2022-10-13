@@ -4,7 +4,7 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.generator.IdeaOffsetPositionConverter;
-import org.rri.ideals.server.references.engines.FindUsagesTestGenerator;
+import org.rri.ideals.server.references.generators.FindUsagesTestGenerator;
 
 import java.nio.file.Path;
 import java.util.Optional;
