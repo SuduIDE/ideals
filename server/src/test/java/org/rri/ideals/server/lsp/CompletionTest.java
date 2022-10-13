@@ -11,11 +11,12 @@ import org.jetbrains.annotations.NotNull;
 import org.junit.Assert;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
-import org.rri.ideals.server.DefaultTestFixture;
-import org.rri.ideals.server.TestLexer;
 import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.completions.CompletionServiceTestUtil;
-import org.rri.ideals.server.completions.engines.CompletionTestEngine;
+import org.rri.ideals.server.completions.engines.CompletionTestGenerator;
+import org.rri.ideals.server.engine.DefaultTestFixture;
+import org.rri.ideals.server.engine.TestEngine;
+import org.rri.ideals.server.generator.IdeaOffsetPositionConverter;
 import org.rri.ideals.server.util.MiscUtil;
 
 import java.io.IOException;
@@ -52,13 +53,13 @@ public class CompletionTest extends LspServerTestBase {
             label,
             CompletionItemKind.Method)
     );
-    CompletionTestEngine.CompletionTest test;
+    CompletionTestGenerator.CompletionTest test;
     try {
       assertNotNull(server().getProject());
-      var lexer = new TestLexer(getProjectPath());
-      lexer.initSandbox(new DefaultTestFixture(getTestDataRoot().resolve("sandbox"), getProjectPath()));
-      CompletionTestEngine engine = new CompletionTestEngine(server().getProject(), lexer.textsByFile, lexer.markersByFile);
-      test = engine.generateTests().get(0);
+      var engine = new TestEngine(getProjectPath());
+      engine.initSandbox(new DefaultTestFixture(getTestDataRoot().resolve("sandbox"), getProjectPath()));
+      CompletionTestGenerator generator = new CompletionTestGenerator(engine.textsByFile, engine.markersByFile, new IdeaOffsetPositionConverter(server().getProject()));
+      test = generator.generateTests().get(0);
     } catch (IOException e) {
       throw MiscUtil.wrap(e);
     }

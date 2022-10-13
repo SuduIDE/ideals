@@ -1,27 +1,28 @@
 package org.rri.ideals.server.completions.engines;
 
 import com.intellij.openapi.diagnostic.Logger;
-import com.intellij.openapi.project.Project;
 import org.eclipse.lsp4j.CompletionParams;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.ideals.server.LspPath;
-import org.rri.ideals.server.TestEngine;
-import org.rri.ideals.server.TestLexer;
+import org.rri.ideals.server.engine.TestEngine;
+import org.rri.ideals.server.generator.TestGenerator;
 import org.rri.ideals.server.util.MiscUtil;
 
 import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
-import java.util.Optional;
 
-public class CompletionTestEngine extends TestEngine<CompletionTestEngine.CompletionTest> {
-  protected static final Logger LOG = Logger.getInstance(CompletionTestEngine.class);
+public class CompletionTestGenerator extends TestGenerator<CompletionTestGenerator.CompletionTest> {
+  protected static final Logger LOG = Logger.getInstance(CompletionTestGenerator.class);
 
-  public CompletionTestEngine(Project project, @NotNull Map<@NotNull String, @NotNull String> textsByFile, @NotNull Map<@NotNull String, @NotNull List<TestLexer.Marker>> markersByFile) {
-    super(project, textsByFile, markersByFile);
+  public CompletionTestGenerator(
+          @NotNull Map<@NotNull String, @NotNull String> textsByFile,
+          @NotNull Map<@NotNull String, @NotNull List<TestEngine.Marker>> markersByFile,
+          @NotNull OffsetPositionConverter converter) {
+    super(textsByFile, markersByFile, converter);
   }
 
 
@@ -33,15 +34,11 @@ public class CompletionTestEngine extends TestEngine<CompletionTestEngine.Comple
       var markers = pathAndMarkers.getValue();
       if (markers.size() == 1) {
         var cursorMarker = markers.get(0);
-        final var file = Optional.ofNullable(MiscUtil.resolvePsiFile(project, LspPath.fromLspUri(path)))
-            .orElseThrow(() -> new RuntimeException("PsiFile is null. Path: " + path));
-        final var doc = Optional.ofNullable(MiscUtil.getDocument(file))
-            .orElseThrow(() -> new RuntimeException("Document is null. Path: " + path));
-        var callPos = MiscUtil.offsetToPosition(doc, cursorMarker.range.startOffset());
+        var callPos = converter.offsetToPosition(cursorMarker.range.startOffset(), path);
 
         var test = new CompletionTest(
             new TextDocumentIdentifier(LspPath.fromLspUri(path).toLspUri()),
-            callPos, doc.getText());
+            callPos, textsByFile.get(path));
         var expected = this.textsByFile.get(path + ".out");
         if (expected != null) {
           test.setExpectedText(expected);
@@ -55,7 +52,7 @@ public class CompletionTestEngine extends TestEngine<CompletionTestEngine.Comple
     return ans;
   }
 
-  public static class CompletionTest implements TestEngine.Test {
+  public static class CompletionTest implements TestGenerator.Test {
     @NotNull
     private final TextDocumentIdentifier documentIdentifier;
 

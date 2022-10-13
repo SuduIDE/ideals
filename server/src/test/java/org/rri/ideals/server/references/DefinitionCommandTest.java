@@ -4,11 +4,12 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.rri.ideals.server.IdeaTestFixture;
 import org.rri.ideals.server.LspPath;
-import org.rri.ideals.server.TestLexer;
 import org.rri.ideals.server.TestUtil;
-import org.rri.ideals.server.references.engines.DefinitionTestEngine;
+import org.rri.ideals.server.engine.IdeaTestFixture;
+import org.rri.ideals.server.engine.TestEngine;
+import org.rri.ideals.server.generator.IdeaOffsetPositionConverter;
+import org.rri.ideals.server.references.engines.DefinitionTestGenerator;
 
 import java.io.IOException;
 import java.nio.file.Path;
@@ -32,10 +33,10 @@ public class DefinitionCommandTest extends ReferencesCommandTestBase {
 
   private void checkDefinitionByDirectory(Path dirPath) {
     try {
-      final var lexer = new TestLexer(dirPath);
-      lexer.initSandbox(new IdeaTestFixture(myFixture));
-      final var engine = new DefinitionTestEngine(getProject(), lexer.textsByFile, lexer.markersByFile);
-      final var referencesTests = engine.generateTests();
+      final var engine = new TestEngine(dirPath);
+      engine.initSandbox(new IdeaTestFixture(myFixture));
+      final var generator = new DefinitionTestGenerator(engine.textsByFile, engine.markersByFile, new IdeaOffsetPositionConverter(getProject()));
+      final var referencesTests = generator.generateTests();
       for (final var test : referencesTests) {
         final var params = test.params();
         final var answer = test.answer();

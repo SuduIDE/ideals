@@ -3,7 +3,8 @@ package org.rri.ideals.server.lsp;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 import org.rri.ideals.server.TestUtil;
-import org.rri.ideals.server.references.engines.FindUsagesTestEngine;
+import org.rri.ideals.server.generator.IdeaOffsetPositionConverter;
+import org.rri.ideals.server.references.engines.FindUsagesTestGenerator;
 
 import java.nio.file.Path;
 import java.util.Optional;
@@ -22,7 +23,7 @@ public class FindUsagesTest extends LspServerTestBase {
   @Test
   public void findUsages() {
     try {
-      final var engine = new FindUsagesTestEngine(server().getProject(), lexer.textsByFile, lexer.markersByFile);
+      final var engine = new FindUsagesTestGenerator(this.engine.textsByFile, this.engine.markersByFile, new IdeaOffsetPositionConverter(server().getProject()));
       final var definitionTests = engine.generateTests();
       for (final var test : definitionTests) {
         final var params = test.params();

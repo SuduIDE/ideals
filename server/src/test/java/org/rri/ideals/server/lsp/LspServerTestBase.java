@@ -11,10 +11,10 @@ import org.junit.After;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.rri.ideals.server.DefaultTestFixture;
 import org.rri.ideals.server.LspServer;
-import org.rri.ideals.server.TestLexer;
 import org.rri.ideals.server.TestUtil;
+import org.rri.ideals.server.engine.DefaultTestFixture;
+import org.rri.ideals.server.engine.TestEngine;
 import org.rri.ideals.server.mocks.MockLanguageClient;
 
 import java.io.IOException;
@@ -88,14 +88,14 @@ public abstract class LspServerTestBase extends HeavyPlatformTestCase {
     return null;
   }
 
-  protected TestLexer lexer;
+  protected TestEngine engine;
 
   @Before
   public void setupServer() throws IOException {
     final var dirPath = getTargetProjectPath();
     if (dirPath != null) {
-      lexer = new TestLexer(dirPath);
-      lexer.initSandbox(new DefaultTestFixture(getProjectPath(), dirPath));
+      engine = new TestEngine(dirPath);
+      engine.initSandbox(new DefaultTestFixture(getProjectPath(), dirPath));
     }
 
     server = new LspServer();

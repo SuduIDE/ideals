@@ -1,6 +1,7 @@
-package org.rri.ideals.server;
+package org.rri.ideals.server.engine;
 
 import org.jetbrains.annotations.NotNull;
+import org.rri.ideals.server.LspPath;
 
 import java.nio.file.Path;
 

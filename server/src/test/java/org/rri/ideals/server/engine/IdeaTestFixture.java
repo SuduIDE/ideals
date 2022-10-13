@@ -1,7 +1,9 @@
-package org.rri.ideals.server;
+package org.rri.ideals.server.engine;
 
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture;
 import org.jetbrains.annotations.NotNull;
+import org.rri.ideals.server.LspPath;
+import org.rri.ideals.server.TestUtil;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;

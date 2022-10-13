@@ -1,9 +1,9 @@
-package org.rri.ideals.server;
+package org.rri.ideals.server.engine;
 
 
-import com.intellij.openapi.project.Project;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.rri.ideals.server.TestUtil;
 
 import java.io.BufferedReader;
 import java.io.IOException;
@@ -12,69 +12,7 @@ import java.nio.file.Path;
 import java.util.*;
 
 
-public class TestLexer {
-  public record RangeAsOffsets(int startOffset, int endOffset) {}
-
-  public static class Marker {
-    @NotNull public final String name;
-    @NotNull public final RangeAsOffsets range;
-    @Nullable public final String content;
-    @NotNull public final Map<String, String> additionalData = new HashMap<>();
-
-    public Marker(@NotNull String name, @Nullable String content, @NotNull RangeAsOffsets range) {
-      this.name = name;
-      this.content = content;
-      this.range = range;
-    }
-  }
-
-  private static class Token {
-    @NotNull final String tokenContent;
-    @Nullable final String name;
-    final int offset;
-    final boolean isSingleToken;
-    @NotNull final Map<String, String> additionalData = new HashMap<>();
-
-    private Token(@NotNull String tokenContent, int offset) {
-      this.offset = offset;
-      if ("".equals(tokenContent)) {
-        this.name = null;
-        this.tokenContent = "";
-        isSingleToken = false;
-        return;
-      }
-      if (tokenContent.length() > 0 && tokenContent.charAt(tokenContent.length() - 1) == '/') {
-        tokenContent = tokenContent.substring(0, tokenContent.length()-1);
-        this.isSingleToken = true;
-      } else {
-        this.isSingleToken = false;
-      }
-      this.tokenContent = tokenContent;
-      var splitTokenElements = this.tokenContent.split("\s+");
-      if (splitTokenElements.length == 0) {
-        this.name = null;
-      } else {
-        this.name = splitTokenElements[0];
-        var correctSplit = new ArrayList<String>();
-        for (String s : splitTokenElements) {
-          var splitRes = s.split("=");
-          correctSplit.addAll(List.of(splitRes));
-        }
-        for (int i = 1; i + 1 < correctSplit.size(); i += 2) {
-          additionalData.put(correctSplit.get(i), correctSplit.get(i + 1));
-        }
-      }
-    }
-
-    public boolean isSingleToken() {
-      return this.isSingleToken;
-    }
-
-    public boolean isCloseToken() {
-      return name == null;
-    }
-  }
-
+public class TestEngine {
   @NotNull
   private final Path targetDirectory;
 
@@ -84,7 +22,7 @@ public class TestLexer {
   @NotNull
   public final Map<@NotNull String, @NotNull List<@NotNull Marker>> markersByFile; // <Path, List<Marker>>
 
-  public TestLexer(@NotNull Path targetDirectory) throws IOException {
+  public TestEngine(@NotNull Path targetDirectory) throws IOException {
     this.targetDirectory = targetDirectory;
     this.textsByFile = new HashMap<>();
     this.markersByFile = new HashMap<>();
@@ -118,41 +56,41 @@ public class TestLexer {
       int num;
       int offset = 0;
       final StringBuilder builder = new StringBuilder();
-      final StringBuilder tokenBuilder = new StringBuilder();
+      final StringBuilder labelBuilder = new StringBuilder();
       final List<Marker> markers = new ArrayList<>();
-      final Stack<Token> tokens = new Stack<>();
+      final Stack<Label> labels = new Stack<>();
       while((num = reader.read()) != -1) {
         char c = (char) num;
         if (c == '<') {
           c = (char) reader.read();
           if (c == '/') {
-            tokenBuilder.setLength(0);
+            labelBuilder.setLength(0);
             while((c = (char) reader.read()) != '>') {
-              tokenBuilder.append(c);
+              labelBuilder.append(c);
             }
-            final var token = new Token(tokenBuilder.toString(), offset);
-            String insertText = getInsertTextFromTokenIfExist(token);
+            final var label = new Label(labelBuilder.toString(), offset);
+            String insertText = getInsertTextFromLabelIfExist(label);
             if (insertText != null) {
               builder.append(insertText);
             } else {
-              if (token.isCloseToken()) {
-                var openToken = tokens.pop();
-                assert openToken.name != null;
+              if (label.isCloseLabel()) {
+                var openLabel = labels.pop();
+                assert openLabel.name != null;
                 var srcText = builder.toString();
                 Marker marker = new Marker(
-                        openToken.name,
-                        srcText.substring(openToken.offset, token.offset),
-                        new RangeAsOffsets(openToken.offset, token.offset));
-                marker.additionalData.putAll(openToken.additionalData);
-                marker.additionalData.putAll(token.additionalData);
+                        openLabel.name,
+                        srcText.substring(openLabel.offset, label.offset),
+                        new RangeAsOffsets(openLabel.offset, label.offset));
+                marker.additionalData.putAll(openLabel.additionalData);
+                marker.additionalData.putAll(label.additionalData);
                 markers.add(marker);
-              } else if (token.isSingleToken()) {
-                assert token.name != null;
-                Marker marker = new Marker(token.name, null, new RangeAsOffsets(token.offset, token.offset));
-                marker.additionalData.putAll(token.additionalData);
+              } else if (label.isSingleLabel()) {
+                assert label.name != null;
+                Marker marker = new Marker(label.name, null, new RangeAsOffsets(label.offset, label.offset));
+                marker.additionalData.putAll(label.additionalData);
                 markers.add(marker);
               } else {
-                tokens.add(token);
+                labels.add(label);
               }
             }
           } else {
@@ -172,8 +110,8 @@ public class TestLexer {
     }
   }
 
-  private String getInsertTextFromTokenIfExist(Token token) {
-    return switch (token.tokenContent) {
+  private String getInsertTextFromLabelIfExist(Label label) {
+    return switch (label.labelContent) {
       case "s" -> "\s";
       case "t" -> "\t";
       default -> null;
@@ -209,6 +147,68 @@ public class TestLexer {
           processPath(path, fixture);
         }
       }
+    }
+  }
+
+  public record RangeAsOffsets(int startOffset, int endOffset) {}
+
+  public static class Marker {
+    @NotNull public final String name;
+    @NotNull public final RangeAsOffsets range;
+    @Nullable public final String content;
+    @NotNull public final Map<String, String> additionalData = new HashMap<>();
+
+    public Marker(@NotNull String name, @Nullable String content, @NotNull RangeAsOffsets range) {
+      this.name = name;
+      this.content = content;
+      this.range = range;
+    }
+  }
+
+  private static class Label {
+    @NotNull final String labelContent;
+    @Nullable final String name;
+    final int offset;
+    final boolean isSingleLabel;
+    @NotNull final Map<String, String> additionalData = new HashMap<>();
+
+    private Label(@NotNull String labelContent, int offset) {
+      this.offset = offset;
+      if ("".equals(labelContent)) {
+        this.name = null;
+        this.labelContent = "";
+        isSingleLabel = false;
+        return;
+      }
+      if (labelContent.length() > 0 && labelContent.charAt(labelContent.length() - 1) == '/') {
+        labelContent = labelContent.substring(0, labelContent.length()-1);
+        this.isSingleLabel = true;
+      } else {
+        this.isSingleLabel = false;
+      }
+      this.labelContent = labelContent;
+      var splitLabelElements = this.labelContent.split("\s+");
+      if (splitLabelElements.length == 0) {
+        this.name = null;
+      } else {
+        this.name = splitLabelElements[0];
+        var correctSplit = new ArrayList<String>();
+        for (String s : splitLabelElements) {
+          var splitRes = s.split("=");
+          correctSplit.addAll(List.of(splitRes));
+        }
+        for (int i = 1; i + 1 < correctSplit.size(); i += 2) {
+          additionalData.put(correctSplit.get(i), correctSplit.get(i + 1));
+        }
+      }
+    }
+
+    public boolean isSingleLabel() {
+      return this.isSingleLabel;
+    }
+
+    public boolean isCloseLabel() {
+      return name == null;
     }
   }
 }

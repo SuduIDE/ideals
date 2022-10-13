@@ -1,8 +1,9 @@
-package org.rri.ideals.server;
+package org.rri.ideals.server.engine;
 
-import com.intellij.openapi.fileEditor.FileDocumentManager;
 import org.apache.commons.io.FileUtils;
 import org.jetbrains.annotations.NotNull;
+import org.rri.ideals.server.LspPath;
+import org.rri.ideals.server.TestUtil;
 
 import java.io.FileWriter;
 import java.io.IOException;

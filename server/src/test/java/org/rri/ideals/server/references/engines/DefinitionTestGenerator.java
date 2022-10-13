@@ -1,18 +1,17 @@
 package org.rri.ideals.server.references.engines;
 
-import com.intellij.openapi.project.Project;
 import org.eclipse.lsp4j.DefinitionParams;
 import org.eclipse.lsp4j.LocationLink;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.jetbrains.annotations.NotNull;
-import org.rri.ideals.server.TestLexer;
+import org.rri.ideals.server.engine.TestEngine;
 
 import java.util.List;
 import java.util.Map;
 
-public class DefinitionTestEngine extends ReferencesTestEngineBase<DefinitionTestEngine.DefinitionTest>{
-  public static class DefinitionTest extends ReferencesTestEngineBase.ReferencesTestBase {
+public class DefinitionTestGenerator extends ReferencesTestGeneratorBase<DefinitionTestGenerator.DefinitionTest> {
+  public static class DefinitionTest extends ReferencesTestGeneratorBase.ReferencesTestBase {
     @NotNull
     private final DefinitionParams params;
 
@@ -27,10 +26,10 @@ public class DefinitionTestEngine extends ReferencesTestEngineBase<DefinitionTes
     }
   }
 
-  public DefinitionTestEngine(@NotNull Project project,
-                              @NotNull Map<@NotNull String, @NotNull String> textsByFile,
-                              @NotNull Map<@NotNull String, @NotNull List<TestLexer.Marker>> markersByFile) {
-    super(project, textsByFile, markersByFile);
+  public DefinitionTestGenerator(@NotNull Map<@NotNull String, @NotNull String> textsByFile,
+                                 @NotNull Map<@NotNull String, @NotNull List<TestEngine.Marker>> markersByFile,
+                                 @NotNull OffsetPositionConverter converter) {
+    super(textsByFile, markersByFile, converter);
   }
 
   protected @NotNull DefinitionTest createReferencesTest(@NotNull String uri, @NotNull Position pos, @NotNull List<? extends LocationLink> locLinks) {

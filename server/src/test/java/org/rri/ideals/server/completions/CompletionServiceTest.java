@@ -17,11 +17,12 @@ import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
-import org.rri.ideals.server.IdeaTestFixture;
 import org.rri.ideals.server.LspPath;
-import org.rri.ideals.server.TestLexer;
 import org.rri.ideals.server.TestUtil;
-import org.rri.ideals.server.completions.engines.CompletionTestEngine;
+import org.rri.ideals.server.completions.engines.CompletionTestGenerator;
+import org.rri.ideals.server.engine.IdeaTestFixture;
+import org.rri.ideals.server.engine.TestEngine;
+import org.rri.ideals.server.generator.IdeaOffsetPositionConverter;
 import org.rri.ideals.server.util.MiscUtil;
 
 import java.nio.file.Path;
@@ -288,11 +289,11 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   }
   private void testWithEngine(@NotNull CompletionTestParams completionTestParams) {
     try {
-      final var lexer = new TestLexer(completionTestParams.dirPath);
-      lexer.initSandbox(new IdeaTestFixture(myFixture));
-      final var engine = new CompletionTestEngine(getProject(), lexer.textsByFile, lexer.markersByFile);
+      final var engine = new TestEngine(completionTestParams.dirPath);
+      engine.initSandbox(new IdeaTestFixture(myFixture));
+      final var generator = new CompletionTestGenerator(engine.textsByFile, engine.markersByFile, new IdeaOffsetPositionConverter(getProject()));
 
-      final var completionTest = engine.generateTests();
+      final var completionTest = generator.generateTests();
       final var test = completionTest.get(0);
       final var params = test.params();
       final var expectedText = test.answer();

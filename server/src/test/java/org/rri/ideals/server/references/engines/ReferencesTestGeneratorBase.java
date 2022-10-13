@@ -1,6 +1,5 @@
 package org.rri.ideals.server.references.engines;
 
-import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Pair;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.LocationLink;
@@ -8,13 +7,15 @@ import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
 import org.jetbrains.annotations.NotNull;
 import org.rri.ideals.server.LspPath;
-import org.rri.ideals.server.TestEngine;
-import org.rri.ideals.server.TestLexer;
-import org.rri.ideals.server.util.MiscUtil;
+import org.rri.ideals.server.engine.TestEngine;
+import org.rri.ideals.server.generator.TestGenerator;
 
-import java.util.*;
+import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
+import java.util.Map;
 
-abstract class ReferencesTestEngineBase<T extends ReferencesTestEngineBase.ReferencesTestBase> extends TestEngine<T> {
+abstract class ReferencesTestGeneratorBase<T extends ReferencesTestGeneratorBase.ReferencesTestBase> extends TestGenerator<T> {
 
   protected abstract static class ReferencesTestBase implements Test {
     @NotNull
@@ -30,25 +31,21 @@ abstract class ReferencesTestEngineBase<T extends ReferencesTestEngineBase.Refer
     }
   }
 
-  public ReferencesTestEngineBase(@NotNull Project project,
-                                  @NotNull Map<@NotNull String, @NotNull String> textsByFile,
-                                  @NotNull Map<@NotNull String, @NotNull List<TestLexer.Marker>> markersByFile) {
-    super(project, textsByFile, markersByFile);
+  public ReferencesTestGeneratorBase(@NotNull Map<@NotNull String, @NotNull String> textsByFile,
+                                     @NotNull Map<@NotNull String, @NotNull List<TestEngine.Marker>> markersByFile,
+                                     @NotNull OffsetPositionConverter converter) {
+    super(textsByFile, markersByFile, converter);
   }
 
   public @NotNull List<? extends T> generateTests() {
     final Map<String, List<Pair<Range, String>>> originInfos = new HashMap<>();
     final Map<String, List<Pair<Range, String>>> targetInfos = new HashMap<>();
     for (final var entry : markersByFile.entrySet()) {
-      final var path = entry.getKey();
-      final var file = Optional.ofNullable(MiscUtil.resolvePsiFile(project, LspPath.fromLspUri(path)))
-          .orElseThrow(() -> new RuntimeException("PsiFile is null. Path: " + path));
-      final var doc = Optional.ofNullable(MiscUtil.getDocument(file))
-          .orElseThrow(() -> new RuntimeException("Document is null. Path: " + path));
 
+      final var path = entry.getKey();
       for (final var marker : entry.getValue()) {
-        final var range = new Range(MiscUtil.offsetToPosition(doc, marker.range.startOffset()),
-            MiscUtil.offsetToPosition(doc, marker.range.endOffset()));
+        final var range = new Range(converter.offsetToPosition(marker.range.startOffset(), path),
+            converter.offsetToPosition(marker.range.endOffset(), path));
         final var map = marker.name.equals("target") ? targetInfos : originInfos;
         final var id = marker.additionalData.get("id");
         if (!map.containsKey(id)) {
