@@ -1,6 +1,10 @@
 package org.rri.ideals.server.references;
 
+import org.eclipse.lsp4j.DefinitionParams;
 import org.eclipse.lsp4j.Location;
+import org.eclipse.lsp4j.ReferenceParams;
+import org.eclipse.lsp4j.jsonrpc.messages.Either;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -18,7 +22,7 @@ import java.util.HashSet;
 import java.util.Optional;
 
 @RunWith(JUnit4.class)
-public class FindUsagesCommandTest extends ReferencesCommandTestBase {
+public class FindUsagesCommandTest extends ReferencesCommandTestBase<FindUsagesTestGenerator> {
   @Test
   public void testFindUsagesJava() {
     final var dirPath = Paths.get(getTestDataPath(), "java/project-find-usages");
@@ -53,5 +57,18 @@ public class FindUsagesCommandTest extends ReferencesCommandTestBase {
       e.printStackTrace();
       fail();
     }
+  }
+
+  @Override
+  protected @NotNull FindUsagesTestGenerator getGenerator(@NotNull TestEngine engine) {
+    return new FindUsagesTestGenerator(engine.textsByFile, engine.markersByFile, new IdeaOffsetPositionConverter(getProject()));
+  }
+
+  @Override
+  protected @NotNull Optional<?> getActual(@NotNull Object params) {
+    final ReferenceParams refParams = (ReferenceParams) params;
+    final var path = LspPath.fromLspUri(refParams.getTextDocument().getUri());
+    final var future = new FindUsagesCommand(refParams.getPosition()).runAsync(getProject(), path);
+    return Optional.ofNullable(TestUtil.getNonBlockingEdt(future, 50000));
   }
 }

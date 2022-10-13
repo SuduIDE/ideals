@@ -1,58 +1,48 @@
 package org.rri.ideals.server.references;
 
+import org.eclipse.lsp4j.DefinitionParams;
+import org.eclipse.lsp4j.LocationLink;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
+import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.TestUtil;
-import org.rri.ideals.server.engine.IdeaTestFixture;
 import org.rri.ideals.server.engine.TestEngine;
 import org.rri.ideals.server.generator.IdeaOffsetPositionConverter;
 import org.rri.ideals.server.references.engines.DefinitionTestGenerator;
 
-import java.io.IOException;
-import java.nio.file.Path;
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Optional;
 
 
 @RunWith(JUnit4.class)
-public class DefinitionCommandTest extends ReferencesCommandTestBase {
+public class DefinitionCommandTest extends ReferencesCommandTestBase<DefinitionTestGenerator> {
   @Test
-  public void newDefinitionJavaTest() {
+  public void definitionJavaTest() {
     final var dirPath = Paths.get(getTestDataPath(), "java/project-definition");
-    checkDefinitionByDirectory(dirPath);
+    checkReferencesByDirectory(dirPath);
   }
 
   @Test
-  public void newDefinitionPythonTest() {
+  public void definitionPythonTest() {
     final var dirPath = Paths.get(getTestDataPath(), "python/project-definition");
-    checkDefinitionByDirectory(dirPath);
+    checkReferencesByDirectory(dirPath);
   }
 
-  private void checkDefinitionByDirectory(Path dirPath) {
-    try {
-      final var engine = new TestEngine(dirPath);
-      engine.initSandbox(new IdeaTestFixture(myFixture));
-      final var generator = new DefinitionTestGenerator(engine.textsByFile, engine.markersByFile, new IdeaOffsetPositionConverter(getProject()));
-      final var referencesTests = generator.generateTests();
-      for (final var test : referencesTests) {
-        final var params = test.params();
-        final var answer = test.answer();
 
-        final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
-        final var future = new FindDefinitionCommand(params.getPosition()).runAsync(getProject(), path);
-        final var actual =
-            Optional.ofNullable(TestUtil.getNonBlockingEdt(future, 50000)).map(Either::getRight);
+  @Override
+  protected @NotNull DefinitionTestGenerator getGenerator(@NotNull TestEngine engine) {
+    return new DefinitionTestGenerator(engine.textsByFile, engine.markersByFile, new IdeaOffsetPositionConverter(getProject()));
+  }
 
-        assertTrue(actual.isPresent());
-        assertEquals(answer, actual.get());
-      }
-    } catch (IOException | RuntimeException e) {
-      System.err.println(e instanceof IOException ? "IOException:" : "RuntimeException");
-      System.err.println(e.getMessage());
-      fail();
-    }
+  @Override
+  protected @NotNull Optional<? extends List<? extends LocationLink>> getActual(@NotNull Object params) {
+    final DefinitionParams defParams = (DefinitionParams) params;
+    final var path = LspPath.fromLspUri(defParams.getTextDocument().getUri());
+    final var future = new FindDefinitionCommand(defParams.getPosition()).runAsync(getProject(), path);
+    return Optional.ofNullable(TestUtil.getNonBlockingEdt(future, 50000)).map(Either::getRight);
   }
 }
