@@ -2,7 +2,7 @@ package org;
 
 import org.FindUsagesJava;
 
-public class </cursor id='orgAnother'>Another {
+public class </cursor id='orgAnother'/>Another {
     private int elem;
 
     public Another(int elem) {
@@ -11,7 +11,7 @@ public class </cursor id='orgAnother'>Another {
 
     public Another(int coordX, int coordY) {
         this.elem = coordX + coordY;
-        </location id='foo'>FindUsagesJava.</cursor id='foo'>foo</>();
+        </location id='foo'>FindUsagesJava.</cursor id='foo'/>foo</>();
     }
 
     public int get() { return elem; }
