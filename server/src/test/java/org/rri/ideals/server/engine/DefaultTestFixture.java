@@ -4,6 +4,7 @@ import org.apache.commons.io.FileUtils;
 import org.jetbrains.annotations.NotNull;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.TestUtil;
+import org.rri.ideals.server.util.MiscUtil;
 
 import java.io.FileWriter;
 import java.io.IOException;
@@ -16,29 +17,33 @@ public class DefaultTestFixture implements TestFixture {
   @NotNull
   private final Path sandboxPath;
   @NotNull
-  private final Path targetDirPath;
+  private final Path testDataPath;
 
-  public DefaultTestFixture(@NotNull Path sandboxPath, @NotNull Path targetDirPath) throws IOException {
-    this.targetDirPath = targetDirPath;
-    if (!Files.exists(sandboxPath)) {
-      Files.createDirectories(sandboxPath);
-    }
-    if (!Files.isDirectory(sandboxPath)) {
-      throw new RuntimeException("Path is not a directory. Path: " + sandboxPath);
-    }
-    this.sandboxPath = sandboxPath;
-    try (final var files = Files.newDirectoryStream(sandboxPath)) {
-        files.forEach(path -> {
-          try {
-            if (Files.isDirectory(path)) {
-              FileUtils.deleteDirectory(path.toFile());
-            } else {
-              Files.delete(path);
+  public DefaultTestFixture(@NotNull Path sandboxPath, @NotNull Path testDataPath) {
+    try {
+      this.testDataPath = testDataPath;
+      if (!Files.exists(sandboxPath)) {
+        Files.createDirectories(sandboxPath);
+      }
+      if (!Files.isDirectory(sandboxPath)) {
+        throw new RuntimeException("Path is not a directory. Path: " + sandboxPath);
+      }
+      this.sandboxPath = sandboxPath;
+      try (final var files = Files.newDirectoryStream(sandboxPath)) {
+          files.forEach(path -> {
+            try {
+              if (Files.isDirectory(path)) {
+                FileUtils.deleteDirectory(path.toFile());
+              } else {
+                Files.delete(path);
+              }
+            } catch (IOException e) {
+              throw new RuntimeException(e);
             }
-          } catch (IOException e) {
-            throw new RuntimeException(e);
-          }
-        });
+          });
+      }
+    } catch (IOException e) {
+      throw MiscUtil.wrap(e);
     }
   }
 
@@ -47,7 +52,7 @@ public class DefaultTestFixture implements TestFixture {
     try (final var files =  Files.walk(sourceDirectory)) {
       files.forEach(source -> {
         if (!Files.isDirectory(source)) {
-          Path target = Paths.get(sandboxPath.toString(), TestUtil.getPathTail(targetDirPath, source));
+          Path target = Paths.get(sandboxPath.toString(), TestUtil.getPathTail(testDataPath, source));
           try {
             if (!Files.exists(target.getParent())) {
               Files.createDirectories(target.getParent());

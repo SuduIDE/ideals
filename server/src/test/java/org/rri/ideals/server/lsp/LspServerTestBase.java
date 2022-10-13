@@ -17,7 +17,6 @@ import org.rri.ideals.server.engine.DefaultTestFixture;
 import org.rri.ideals.server.engine.TestEngine;
 import org.rri.ideals.server.mocks.MockLanguageClient;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.List;
@@ -91,7 +90,7 @@ public abstract class LspServerTestBase extends HeavyPlatformTestCase {
   protected TestEngine engine;
 
   @Before
-  public void setupServer() throws IOException {
+  public void setupServer() {
     final var dirPath = getTargetProjectPath();
     if (dirPath != null) {
       engine = new TestEngine(dirPath);

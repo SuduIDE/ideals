@@ -17,9 +17,7 @@ import org.rri.ideals.server.completions.generators.CompletionTestGenerator;
 import org.rri.ideals.server.engine.DefaultTestFixture;
 import org.rri.ideals.server.engine.TestEngine;
 import org.rri.ideals.server.generator.IdeaOffsetPositionConverter;
-import org.rri.ideals.server.util.MiscUtil;
 
-import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
@@ -54,15 +52,13 @@ public class CompletionTest extends LspServerTestBase {
             CompletionItemKind.Method)
     );
     CompletionTestGenerator.CompletionTest test;
-    try {
-      assertNotNull(server().getProject());
-      var engine = new TestEngine(getProjectPath());
-      engine.initSandbox(new DefaultTestFixture(getTestDataRoot().resolve("sandbox"), getProjectPath()));
-      CompletionTestGenerator generator = new CompletionTestGenerator(engine.textsByFile, engine.markersByFile, new IdeaOffsetPositionConverter(server().getProject()));
-      test = generator.generateTests().get(0);
-    } catch (IOException e) {
-      throw MiscUtil.wrap(e);
-    }
+
+    assertNotNull(server().getProject());
+    var engine = new TestEngine(getProjectPath());
+    engine.initSandbox(new DefaultTestFixture(getTestDataRoot().resolve("sandbox"), getProjectPath()));
+    CompletionTestGenerator generator = new CompletionTestGenerator(engine.textsByFile, engine.markersByFile, new IdeaOffsetPositionConverter(server().getProject()));
+    test = generator.generateTests().get(0);
+
     var params = test.params();
     Ref<Either<List<CompletionItem>, CompletionList>> completionResRef = new Ref<>();
 
@@ -90,7 +86,7 @@ public class CompletionTest extends LspServerTestBase {
     allEdits.add(resolvedItem.getTextEdit().getLeft());
 
     var insertedText = TestUtil.applyEdits(originalText, allEdits);
-    var expectedText = test.answer();
+    var expectedText = test.expected();
     assertNotNull(expectedText);
     Assertions.assertEquals(expectedText, insertedText);
     completionItemList.forEach(CompletionServiceTestUtil::removeResolveInfo);

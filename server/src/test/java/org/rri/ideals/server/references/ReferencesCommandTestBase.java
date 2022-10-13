@@ -2,14 +2,13 @@ package org.rri.ideals.server.references;
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.rri.ideals.server.engine.IdeaTestFixture;
 import org.rri.ideals.server.engine.TestEngine;
 import org.rri.ideals.server.generator.TestGenerator;
 
-import java.io.IOException;
 import java.nio.file.Path;
 import java.nio.file.Paths;
-import java.util.Optional;
 
 public abstract class ReferencesCommandTestBase<E extends TestGenerator<? extends TestGenerator.Test>> extends BasePlatformTestCase {
   @Override
@@ -19,27 +18,20 @@ public abstract class ReferencesCommandTestBase<E extends TestGenerator<? extend
 
   protected abstract @NotNull E getGenerator(@NotNull final TestEngine engine);
 
-  protected abstract @NotNull Optional<?> getActual(@NotNull final Object params);
+  protected abstract @Nullable Object getActuals(@NotNull final Object params);
 
   protected void checkReferencesByDirectory(@NotNull Path dirPath) {
-    try {
       final var engine = new TestEngine(dirPath);
       engine.initSandbox(new IdeaTestFixture(myFixture));
       final var generator = getGenerator(engine);
       final var referencesTests = generator.generateTests();
       for (final var test : referencesTests) {
         final var params = test.params();
-        final var answer = test.answer();
+        final var expected = test.expected();
 
-        final var actual = getActual(params);
+        final var actual = getActuals(params);
 
-        assertTrue(actual.isPresent());
-        assertEquals(answer, actual.get());
+        assertEquals(expected, actual);
       }
-    } catch (IOException | RuntimeException e) {
-      System.err.println(e instanceof IOException ? "IOException:" : "RuntimeException");
-      System.err.println(e.getMessage());
-      fail();
-    }
   }
 }

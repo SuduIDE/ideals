@@ -23,7 +23,6 @@ import org.rri.ideals.server.completions.generators.CompletionTestGenerator;
 import org.rri.ideals.server.engine.IdeaTestFixture;
 import org.rri.ideals.server.engine.TestEngine;
 import org.rri.ideals.server.generator.IdeaOffsetPositionConverter;
-import org.rri.ideals.server.util.MiscUtil;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -184,42 +183,38 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   }
 
   private void testWithEngine(@NotNull CompletionTestParams completionTestParams) {
-    try {
-      final var engine = new TestEngine(completionTestParams.dirPath);
-      engine.initSandbox(new IdeaTestFixture(myFixture));
-      final var generator = new CompletionTestGenerator(engine.textsByFile, engine.markersByFile, new IdeaOffsetPositionConverter(getProject()));
+    final var engine = new TestEngine(completionTestParams.dirPath);
+    engine.initSandbox(new IdeaTestFixture(myFixture));
+    final var generator = new CompletionTestGenerator(engine.textsByFile, engine.markersByFile, new IdeaOffsetPositionConverter(getProject()));
 
-      final var completionTest = generator.generateTests();
-      final var test = completionTest.get(0);
-      final var params = test.params();
-      final var expectedText = test.answer();
-      var cs = getProject().getService(CompletionService.class);
-      var completionItems = cs.computeCompletions(
-              LspPath.fromLspUri(params.getTextDocument().getUri()), params.getPosition(),
-              new TestUtil.DumbCancelChecker());
-      if (completionTestParams.finder != null) {
-        var compItem = completionItems.stream().filter(completionTestParams.finder).findFirst().orElseThrow();
-        compItem.setData(gson.fromJson(gson.toJson(compItem.getData()), JsonObject.class));
-        var resolved = cs.resolveCompletion(compItem, new TestUtil.DumbCancelChecker());
-        assertNotNull(expectedText);
-        assertNotNull(test.getSourceText());
-        var allEdits = new ArrayList<TextEdit>();
-        allEdits.add(resolved.getTextEdit().getLeft());
-        allEdits.addAll(resolved.getAdditionalTextEdits());
-        assertEquals(expectedText, TestUtil.applyEdits(test.getSourceText(), allEdits));
+    final var completionTest = generator.generateTests();
+    final var test = completionTest.get(0);
+    final var params = test.params();
+    final var expectedText = test.expected();
+    var cs = getProject().getService(CompletionService.class);
+    var completionItems = cs.computeCompletions(
+            LspPath.fromLspUri(params.getTextDocument().getUri()), params.getPosition(),
+            new TestUtil.DumbCancelChecker());
+    if (completionTestParams.finder != null) {
+      var compItem = completionItems.stream().filter(completionTestParams.finder).findFirst().orElseThrow();
+      compItem.setData(gson.fromJson(gson.toJson(compItem.getData()), JsonObject.class));
+      var resolved = cs.resolveCompletion(compItem, new TestUtil.DumbCancelChecker());
+      assertNotNull(expectedText);
+      assertNotNull(test.getSourceText());
+      var allEdits = new ArrayList<TextEdit>();
+      allEdits.add(resolved.getTextEdit().getLeft());
+      allEdits.addAll(resolved.getAdditionalTextEdits());
+      assertEquals(expectedText, TestUtil.applyEdits(test.getSourceText(), allEdits));
 
-        if (completionTestParams.documentation != null) {
-          assertEquals(completionTestParams.documentation, compItem.getDocumentation().getRight());
-        } else {
-          assertNull(compItem.getDocumentation());
-        }
+      if (completionTestParams.documentation != null) {
+        assertEquals(completionTestParams.documentation, compItem.getDocumentation().getRight());
+      } else {
+        assertNull(compItem.getDocumentation());
       }
-      if (completionTestParams.expectedItems != null) {
-        assertEquals(completionTestParams.expectedItems(),
-                completionItems.stream().map(CompletionServiceTestUtil::removeResolveInfo).collect(Collectors.toSet()));
-      }
-    } catch (Exception e) {
-      throw MiscUtil.wrap(e);
+    }
+    if (completionTestParams.expectedItems != null) {
+      assertEquals(completionTestParams.expectedItems(),
+              completionItems.stream().map(CompletionServiceTestUtil::removeResolveInfo).collect(Collectors.toSet()));
     }
   }
   @Test

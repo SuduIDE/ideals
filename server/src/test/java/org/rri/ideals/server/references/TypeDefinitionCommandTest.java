@@ -3,6 +3,7 @@ package org.rri.ideals.server.references;
 import org.eclipse.lsp4j.TypeDefinitionParams;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -13,6 +14,7 @@ import org.rri.ideals.server.generator.IdeaOffsetPositionConverter;
 import org.rri.ideals.server.references.generators.TypeDefinitionTestGenerator;
 
 import java.nio.file.Paths;
+import java.util.List;
 import java.util.Optional;
 
 @RunWith(JUnit4.class)
@@ -35,10 +37,10 @@ public class TypeDefinitionCommandTest extends ReferencesCommandTestBase<TypeDef
   }
 
   @Override
-  protected @NotNull Optional<?> getActual(@NotNull Object params) {
+  protected @Nullable List<?> getActuals(@NotNull Object params) {
     final TypeDefinitionParams typeDefParams = (TypeDefinitionParams) params;
     final var path = LspPath.fromLspUri(typeDefParams.getTextDocument().getUri());
     final var future = new FindTypeDefinitionCommand(typeDefParams.getPosition()).runAsync(getProject(), path);
-    return Optional.ofNullable(TestUtil.getNonBlockingEdt(future, 50000)).map(Either::getRight);
+    return Optional.ofNullable(TestUtil.getNonBlockingEdt(future, 50000)).map(Either::getRight).orElse(null);
   }
 }

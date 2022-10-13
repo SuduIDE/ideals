@@ -29,7 +29,7 @@ abstract public class TestGenerator<T extends TestGenerator.Test> {
 
   public interface Test {
     @NotNull Object params();
-    @Nullable Object answer();
+    @Nullable Object expected();
   }
 
   public interface OffsetPositionConverter {

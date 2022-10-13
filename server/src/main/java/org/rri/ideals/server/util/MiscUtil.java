@@ -204,4 +204,19 @@ public class MiscUtil {
   public static <T> Stream<T> streamOf(T @Nullable [] array) {
     return array != null ? Arrays.stream(array) : Stream.empty();
   }
+
+  public interface ThrowingConsumer<T> {
+    void accept(T t) throws Exception;
+  }
+
+  @NotNull
+  public static <T> Consumer<T> toConsumer(@NotNull ThrowingConsumer<T> block) {
+    return t -> {
+      try {
+        block.accept(t);
+      } catch (Exception e) {
+        throw wrap(e);
+      }
+    };
+  }
 }

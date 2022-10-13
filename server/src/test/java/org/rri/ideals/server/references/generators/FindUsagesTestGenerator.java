@@ -12,7 +12,7 @@ import java.util.Map;
 
 public class FindUsagesTestGenerator extends TestGenerator<FindUsagesTestGenerator.FindUsagesTest> {
   public record FindUsagesTest(@NotNull ReferenceParams params,
-                               @NotNull List<? extends Location> answer) implements TestGenerator.Test {
+                               @NotNull List<? extends Location> expected) implements TestGenerator.Test {
   }
 
   public FindUsagesTestGenerator(@NotNull Map<@NotNull String, @NotNull String> textsByFile,

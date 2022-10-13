@@ -4,6 +4,7 @@ import org.eclipse.lsp4j.DocumentHighlight;
 import org.eclipse.lsp4j.DocumentHighlightKind;
 import org.eclipse.lsp4j.Position;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -13,7 +14,6 @@ import org.rri.ideals.server.engine.TestEngine;
 import org.rri.ideals.server.generator.TestGenerator;
 
 import java.util.HashSet;
-import java.util.Optional;
 import java.util.Set;
 
 @SuppressWarnings("rawtypes")
@@ -87,7 +87,7 @@ public class DocumentHighlightCommandTest extends ReferencesCommandTestBase {
   }
 
   @Override
-  protected @NotNull Optional<?> getActual(@NotNull Object params) {
-    return Optional.empty();
+  protected @Nullable Object getActuals(@NotNull Object params) {
+    return null;
   }
 }

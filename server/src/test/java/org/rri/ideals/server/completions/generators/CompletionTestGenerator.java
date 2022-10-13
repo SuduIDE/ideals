@@ -82,7 +82,7 @@ public class CompletionTestGenerator extends TestGenerator<CompletionTestGenerat
 
     @Override
     @Nullable
-    public String answer() {
+    public String expected() {
       return expectedText;
     }
 

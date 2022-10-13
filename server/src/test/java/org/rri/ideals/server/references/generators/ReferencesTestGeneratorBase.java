@@ -26,7 +26,7 @@ abstract class ReferencesTestGeneratorBase<T extends ReferencesTestGeneratorBase
     }
 
     @Override
-    public @NotNull List<? extends LocationLink> answer() {
+    public @NotNull List<? extends LocationLink> expected() {
       return answer;
     }
   }

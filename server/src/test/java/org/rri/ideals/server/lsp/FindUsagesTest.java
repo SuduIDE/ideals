@@ -27,7 +27,7 @@ public class FindUsagesTest extends LspServerTestBase {
       final var definitionTests = engine.generateTests();
       for (final var test : definitionTests) {
         final var params = test.params();
-        final var answer = test.answer();
+        final var answer = test.expected();
 
         final var future = server().getTextDocumentService().references(params);
         final var actual = Optional.ofNullable(TestUtil.getNonBlockingEdt(future, 50000));

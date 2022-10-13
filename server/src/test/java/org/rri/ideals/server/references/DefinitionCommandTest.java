@@ -4,6 +4,7 @@ import org.eclipse.lsp4j.DefinitionParams;
 import org.eclipse.lsp4j.LocationLink;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -39,10 +40,11 @@ public class DefinitionCommandTest extends ReferencesCommandTestBase<DefinitionT
   }
 
   @Override
-  protected @NotNull Optional<? extends List<? extends LocationLink>> getActual(@NotNull Object params) {
+  @Nullable
+  protected List<? extends LocationLink> getActuals(@NotNull Object params) {
     final DefinitionParams defParams = (DefinitionParams) params;
     final var path = LspPath.fromLspUri(defParams.getTextDocument().getUri());
     final var future = new FindDefinitionCommand(defParams.getPosition()).runAsync(getProject(), path);
-    return Optional.ofNullable(TestUtil.getNonBlockingEdt(future, 50000)).map(Either::getRight);
+    return Optional.ofNullable(TestUtil.getNonBlockingEdt(future, 50000)).map(Either::getRight).orElse(null);
   }
 }
