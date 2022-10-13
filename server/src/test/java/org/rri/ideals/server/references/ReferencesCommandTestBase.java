@@ -1,15 +1,10 @@
 package org.rri.ideals.server.references;
 
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
-import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
-import org.rri.ideals.server.LspPath;
-import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.engine.IdeaTestFixture;
 import org.rri.ideals.server.engine.TestEngine;
-import org.rri.ideals.server.generator.IdeaOffsetPositionConverter;
 import org.rri.ideals.server.generator.TestGenerator;
-import org.rri.ideals.server.references.engines.DefinitionTestGenerator;
 
 import java.io.IOException;
 import java.nio.file.Path;
