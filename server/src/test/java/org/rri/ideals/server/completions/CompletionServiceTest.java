@@ -49,13 +49,23 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   @Test
   public void testCompletionForStaticImport() {
     final var dirPath = Paths.get(getTestDataPath(), "import-static-project");
-    testWithEngine(new CompletionTestParams(dirPath, completionItem -> true, null, null));
+    testWithEngine(new CompletionTestParams(dirPath, completionItem -> true,
+            new MarkupContent(MarkupKind.MARKDOWN,
+                    """
+                            \s[`ImportClass`](psi_element://ImportClass)
+                            
+                            _@Contract(pure = true)__i_[](inferred.annotations) public static void methodToImport()"""), null));
   }
 
   @Test
   public void testTemplateCompletion() {
     final var dirPath = Paths.get(getTestDataPath(), "template-main-project");
-    runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams(dirPath, completionItem -> true, null, null)));
+    runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams(dirPath, completionItem -> true,
+            new MarkupContent(MarkupKind.MARKDOWN,
+                    """
+                    public static void main(String\\[\\] args){ $END$ }
+                    
+                    main() method declaration"""), null)));
   }
 
   private record CompletionTestParams(@NotNull Path dirPath,
@@ -108,104 +118,43 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   @Test
   public void testCompletionResolveFunctionsWithParameters() {
     final var dirPath = Paths.get(getTestDataPath(), "python-function-with-parameter-project");
-    testWithEngine(new CompletionTestParams(dirPath, completionItem -> Objects.equals(completionItem.getLabel(), "foo"), null, null));
-  }
-
-  @Test
-  public void testCompletionResolveFunctionsWithParameters() {
-    testResolve(
-            """
-                def foo(x):
-                    ""\"
-                    :param x: real human bean
-                    :return: actual real hero
-                    ""\"
-                    foo(x)
-                        
-                foo
-                """,
-            """
-                def foo(x):
-                    ""\"
-                    :param x: real human bean
-                    :return: actual real hero
-                    ""\"
-                    foo(x)
-                     
-                foo($0)
-                """,
-            new Position(7, 3),
-            completionItem -> completionItem.getLabel().equals("foo"), PythonFileType.INSTANCE,
-            """
-                [aaa](psi_element://#module#aaa)\s\s
+    testWithEngine(new CompletionTestParams(dirPath, completionItem -> Objects.equals(completionItem.getLabel(), "foo"),
+            new MarkupContent(MarkupKind.MARKDOWN,
+                """
+                [src.test](psi_element://#module#src.test)\s\s
                 def **foo**(x: Any) -> None
-                            
+
                 Unittest placeholder
-                            
+
                 Params:
-                            
+
                 `x` \u2013 real human bean
-                            
+
                 Returns:
-                            
-                actual real hero"""
-    );
+
+                actual real hero"""), null));
   }
 
   @Test
   public void testCompletionResolveFunctionsWithoutParameters() {
     final var dirPath = Paths.get(getTestDataPath(), "python-function-without-parameter-project");
-    testWithEngine(new CompletionTestParams(dirPath, completionItem -> Objects.equals(completionItem.getLabel(), "foo"), null, null));
-  }
-
-  @Test
-  public void testCompletionResolveFunctionsWithoutParameters() {
-    testResolve(
-            """
-                def foo():
-                    foo()
-                        
-                foo
-                """,
-            """
-                def foo():
-                    foo()
-                     
-                foo()$0
-                """,
-            new Position(3, 3),
-            completionItem -> completionItem.getLabel().equals("foo"), PythonFileType.INSTANCE,
-            """
-                [aaa](psi_element://#module#aaa)\s\s
-                def **foo**() -> None"""
-    );
+    testWithEngine(new CompletionTestParams(dirPath, completionItem -> Objects.equals(completionItem.getLabel(), "foo"),
+            new MarkupContent(MarkupKind.MARKDOWN,
+                """
+                [src.test](psi_element://#module#src.test)\s\s
+                def **foo**() -> None"""), null));
   }
 
   @Test
   public void testPythonLiveTemplate() {
     final var dirPath = Paths.get(getTestDataPath(), "python-live-template-project");
     runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams(dirPath,
-        completionItem -> Objects.equals(completionItem.getLabel(), "iter"), null, null)));
-  }
-
-  @Test
-  public void testPythonLiveTemplate() {
-    CompletionServiceTest.runWithTemplateFlags(
-        () -> testResolve(
-            """
-                iter
-                """,
-            """
-                for  in $0:
-                \s\s\s\s
-                """, new Position(0, 4),
-            completionItem -> completionItem.getLabel().equals("iter"), PythonFileType.INSTANCE,
-            """
+        completionItem -> Objects.equals(completionItem.getLabel(), "iter"),
+            new MarkupContent(MarkupKind.MARKDOWN,
+                """
                 for $VAR$ in $ITERABLE$: $END$
-                                
-                Iterate (for ... in ...)"""
-        )
-    );
+
+                Iterate (for ... in ...)"""), null)));
   }
 
   @Test
@@ -215,78 +164,25 @@ public class CompletionServiceTest extends BasePlatformTestCase {
         completionItem -> Objects.equals(completionItem.getLabel(), "if"), null, null)));
   }
   @Test
-  public void testPythonPostfixTemplate() {
-    CompletionServiceTest.runWithTemplateFlags(
-        () -> testResolve(
-            """
-                x.if
-                """,
-            """
-                if x:
-                \s\s\s\s$0
-                """, new Position(0, 4),
-            completionItem -> completionItem.getLabel().equals("if"), PythonFileType.INSTANCE,
-            null)
-    );
-  }
-  @Test
   public void testJavaLiveTemplate() {
     final var dirPath = Paths.get(getTestDataPath(), "java-live-template-project");
     runWithTemplateFlags( () -> testWithEngine(new CompletionTestParams(dirPath,
-        completionItem -> Objects.equals(completionItem.getLabel(), "fori"), null, null)));
+        completionItem -> Objects.equals(completionItem.getLabel(), "fori"), new MarkupContent(MarkupKind.MARKDOWN,
+            """
+                    for(int $INDEX$ = 0; $INDEX$ < $LIMIT$; $INDEX$++) { $END$ }
+                                    
+                    Create iteration loop"""
+    ), null)));
   }
-  @Test
-  public void testJavaLiveTemplate() {
-    CompletionServiceTest.runWithTemplateFlags(
-        () -> testResolve(
-            """
-                class Templates {
-                    void test() {
-                        fori
-                    }
-                }""",
-            """
-                class Templates {
-                    void test() {
-                        for (int i$0 = 0; i < ; i++) {
-                        \s\s\s\s
-                        }
-                    }
-                }""",
-            new Position(2, 12),
-            completionItem -> completionItem.getLabel().equals("fori"), JavaFileType.INSTANCE,
-            """
-                for(int $INDEX$ = 0; $INDEX$ < $LIMIT$; $INDEX$++) { $END$ }
-                                
-                Create iteration loop"""
-        ));
-  }
+
   @Test
   public void testJavaPostfixTemplate() {
     final var dirPath = Paths.get(getTestDataPath(), "java-postfix-template-project");
-    runWithTemplateFlags(() -> runWithTemplateFlags( () -> testWithEngine(new CompletionTestParams(dirPath,
-        completionItem -> Objects.equals(completionItem.getLabel(), "lambda"), null, null))));
+    runWithTemplateFlags(() -> runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams(dirPath,
+            completionItem -> Objects.equals(completionItem.getLabel(), "lambda"),
+            null, null))));
   }
-  @Test
-  public void testJavaPostfixTemplate() {
-    CompletionServiceTest.runWithTemplateFlags(() -> testResolve(
-            """
-                class Templates {
-                    void test() {
-                        x.l
-                    }
-                }""",
-            """
-                class Templates {
-                    void test() {
-                        () -> x$0
-                    }
-                }""",
-            new Position(2, 11),
-            completionItem -> completionItem.getLabel().equals("lambda"), JavaFileType.INSTANCE, null
-        )
-    );
-  }
+
   private void testWithEngine(@NotNull CompletionTestParams completionTestParams) {
     try {
       final var engine = new TestEngine(completionTestParams.dirPath);
@@ -314,6 +210,8 @@ public class CompletionServiceTest extends BasePlatformTestCase {
 
         if (completionTestParams.documentation != null) {
           assertEquals(completionTestParams.documentation, compItem.getDocumentation().getRight());
+        } else {
+          assertNull(compItem.getDocumentation());
         }
       }
       if (completionTestParams.expectedItems != null) {
@@ -323,84 +221,6 @@ public class CompletionServiceTest extends BasePlatformTestCase {
     } catch (Exception e) {
       throw MiscUtil.wrap(e);
     }
-  }
-  @Test
-  public void testOwnJavadoc() {
-    CompletionServiceTest.runWithTemplateFlags(() -> testResolve(
-        """
-            class Javadoc {
-                /**
-                 * this is a test function
-                 * @param b a test parameter
-                 * @return 1\s
-                 */
-                int test(boolean b) {
-                    test
-                    return 1;
-                }
-            }""",
-        """
-            class Javadoc {
-                /**
-                 * this is a test function
-                 * @param b a test parameter
-                 * @return 1\s
-                 */
-                int test(boolean b) {
-                    test($0)
-                    return 1;
-                }
-            }""",
-        new Position(7, 12),
-        completionItem -> completionItem.getLabel().equals("test"),
-        JavaFileType.INSTANCE,
-        """
-            \s[`Javadoc`](psi_element://Javadoc)
-                        
-            int test(\s\s
-             boolean b\s\s
-            )
-                        
-            this is a test function
-                        
-            Params:
-                        
-            `b` \u2013 a test parameter
-                        
-            Returns:
-                        
-            1"""
-        )
-    );
-  }
-
-  private void testResolve(@NotNull String originalText, @NotNull String expectedText,
-                           @NotNull Position position, @NotNull Function<CompletionItem, Boolean> searchFunction,
-                           @NotNull FileType fileType, @Nullable String expectedDoc) {
-    var psiFile = myFixture.configureByText(
-        fileType,
-        originalText);
-    var completionList = getCompletionListAtPosition(
-        psiFile, position);
-    var targetCompletionItem =
-        completionList.stream()
-            .filter(searchFunction::apply)
-            .findFirst()
-            .orElseThrow(() -> new AssertionError("completion item not found"));
-
-    targetCompletionItem.setData(gson.fromJson(
-        gson.toJson(targetCompletionItem.getData()),
-        JsonObject.class));
-
-    var resolvedCompletionItem = getResolvedCompletionItem(targetCompletionItem);
-    var allEdits = new ArrayList<>(resolvedCompletionItem.getAdditionalTextEdits());
-    allEdits.add(resolvedCompletionItem.getTextEdit().getLeft());
-    if (resolvedCompletionItem.getDocumentation() != null) {
-      Assert.assertEquals(expectedDoc, resolvedCompletionItem.getDocumentation().getRight().getValue());
-    } else {
-      Assert.assertNull(expectedDoc);
-    }
-    Assert.assertEquals(expectedText, TestUtil.applyEdits(originalText, allEdits));
   }
   @Test
   public void testCompletionCancellation() {
