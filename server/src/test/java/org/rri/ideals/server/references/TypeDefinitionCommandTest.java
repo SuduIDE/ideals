@@ -34,7 +34,7 @@ public class TypeDefinitionCommandTest extends ReferencesCommandTestBase {
       final var lexer = new TestLexer(dirPath);
       lexer.initSandbox(new IdeaTestFixture(myFixture));
       final var engine = new TypeDefinitionTestEngine(getProject(), lexer.textsByFile, lexer.markersByFile);
-      final var referencesTests = engine.processMarkers();
+      final var referencesTests = engine.generateTests();
       for (final var test : referencesTests) {
         final var params = test.params();
         final var answer = test.answer();

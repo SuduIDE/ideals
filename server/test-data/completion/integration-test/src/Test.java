@@ -6,6 +6,6 @@ class Test {
   }
 
   void main() {
-    com</cursor>;
+    com</cursor/>;
   }
 }

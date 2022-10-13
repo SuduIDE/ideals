@@ -12,6 +12,7 @@ import org.junit.Assert;
 import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.rri.ideals.server.DefaultTestFixture;
+import org.rri.ideals.server.TestLexer;
 import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.completions.CompletionServiceTestUtil;
 import org.rri.ideals.server.completions.engines.CompletionTestEngine;
@@ -54,13 +55,14 @@ public class CompletionTest extends LspServerTestBase {
     CompletionTestEngine.CompletionTest test;
     try {
       assertNotNull(server().getProject());
-      CompletionTestEngine engine = new CompletionTestEngine(getProjectPath(), server().getProject());
-      test =
-          engine.generateTests(new DefaultTestFixture(getTestDataRoot().resolve("sandbox"))).get(0);
+      var lexer = new TestLexer(getProjectPath());
+      lexer.initSandbox(new DefaultTestFixture(getTestDataRoot().resolve("sandbox"), getProjectPath()));
+      CompletionTestEngine engine = new CompletionTestEngine(server().getProject(), lexer.textsByFile, lexer.markersByFile);
+      test = engine.generateTests().get(0);
     } catch (IOException e) {
       throw MiscUtil.wrap(e);
     }
-    var params = test.getParams();
+    var params = test.params();
     Ref<Either<List<CompletionItem>, CompletionList>> completionResRef = new Ref<>();
 
     Assertions.assertDoesNotThrow(() -> completionResRef.set(
@@ -87,15 +89,9 @@ public class CompletionTest extends LspServerTestBase {
     allEdits.add(resolvedItem.getTextEdit().getLeft());
 
     var insertedText = TestUtil.applyEdits(originalText, allEdits);
-    var expectedText = test.getAnswer();
+    var expectedText = test.answer();
     assertNotNull(expectedText);
     Assertions.assertEquals(expectedText, insertedText);
-    Assertions.assertEquals(
-        """
-        \s[`CompletionExampleTest`](psi_element://CompletionExampleTest)
-        
-        int completionVariant()""",
-        resolvedItem.getDocumentation().getRight().getValue());
     completionItemList.forEach(CompletionServiceTestUtil::removeResolveInfo);
     Assert.assertEquals(expectedCompletionList, new HashSet<>(completionItemList));
   }

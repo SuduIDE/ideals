@@ -1,5 +1,5 @@
 class Test {
   void formula() {
-    for</cursor>
+    for</cursor/>
   }
 }

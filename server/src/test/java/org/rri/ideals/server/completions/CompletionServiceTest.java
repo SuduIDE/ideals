@@ -292,7 +292,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
       lexer.initSandbox(new IdeaTestFixture(myFixture));
       final var engine = new CompletionTestEngine(getProject(), lexer.textsByFile, lexer.markersByFile);
 
-      final var completionTest = engine.processMarkers();
+      final var completionTest = engine.generateTests();
       final var test = completionTest.get(0);
       final var params = test.params();
       final var expectedText = test.answer();

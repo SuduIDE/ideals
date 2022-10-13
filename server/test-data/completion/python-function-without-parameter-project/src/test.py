@@ -1,4 +1,4 @@
 def foo():
     foo()
 
-foo</cursor>
+foo</cursor/>

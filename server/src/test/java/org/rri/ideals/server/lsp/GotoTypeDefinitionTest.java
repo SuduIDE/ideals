@@ -24,7 +24,7 @@ public class GotoTypeDefinitionTest extends LspServerTestBase {
       final var lexer = new TestLexer(dirPath);
       lexer.initSandbox(new DefaultTestFixture(getProjectPath(), dirPath));
       final var engine = new TypeDefinitionTestEngine(server().getProject(), lexer.textsByFile, lexer.markersByFile);
-      final var typeDefinitionTests = engine.processMarkers();
+      final var typeDefinitionTests = engine.generateTests();
       for (final var test : typeDefinitionTests) {
         final var params = test.params();
         final var answer = test.answer();

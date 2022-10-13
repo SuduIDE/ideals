@@ -1,3 +1,3 @@
 class TestInstanceOf {
-    mai</cursor>
+    mai</cursor/>
 }

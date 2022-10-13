@@ -13,11 +13,7 @@ import java.util.*;
 public class FindUsagesTestEngine extends TestEngine<FindUsagesTestEngine.FindUsagesTest> {
   public record FindUsagesTest(@NotNull ReferenceParams params,
                                @NotNull List<? extends Location> answer) implements TestEngine.Test {
-      public FindUsagesTest(@NotNull ReferenceParams params, @NotNull List<? extends Location> answer) {
-        this.params = params;
-        this.answer = answer;
-      }
-    }
+  }
 
   public FindUsagesTestEngine(@NotNull Project project,
                               @NotNull Map<@NotNull String, @NotNull String> textsByFile,
@@ -27,7 +23,7 @@ public class FindUsagesTestEngine extends TestEngine<FindUsagesTestEngine.FindUs
 
   @Override
   @NotNull
-  public List<? extends FindUsagesTest> processMarkers() {
+  public List<? extends FindUsagesTest> generateTests() {
     final HashMap<String, List<ReferenceParams>> paramsInfo = new HashMap<>();
     final HashMap<String, List<Location>> locationInfo = new HashMap<>();
     for (final var entry : markersByFile.entrySet()) {

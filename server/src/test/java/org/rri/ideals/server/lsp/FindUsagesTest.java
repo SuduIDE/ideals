@@ -23,7 +23,7 @@ public class FindUsagesTest extends LspServerTestBase {
   public void findUsages() {
     try {
       final var engine = new FindUsagesTestEngine(server().getProject(), lexer.textsByFile, lexer.markersByFile);
-      final var definitionTests = engine.processMarkers();
+      final var definitionTests = engine.generateTests();
       for (final var test : definitionTests) {
         final var params = test.params();
         final var answer = test.answer();

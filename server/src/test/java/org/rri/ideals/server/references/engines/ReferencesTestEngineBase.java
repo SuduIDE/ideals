@@ -36,7 +36,7 @@ abstract class ReferencesTestEngineBase<T extends ReferencesTestEngineBase.Refer
     super(project, textsByFile, markersByFile);
   }
 
-  public @NotNull List<? extends T> processMarkers() {
+  public @NotNull List<? extends T> generateTests() {
     final Map<String, List<Pair<Range, String>>> originInfos = new HashMap<>();
     final Map<String, List<Pair<Range, String>>> targetInfos = new HashMap<>();
     for (final var entry : markersByFile.entrySet()) {

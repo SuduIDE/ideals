@@ -26,7 +26,7 @@ public class CompletionTestEngine extends TestEngine<CompletionTestEngine.Comple
 
 
   @NotNull
-  public List<? extends CompletionTest> processMarkers() {
+  public List<? extends CompletionTest> generateTests() {
     ArrayList<CompletionTest> ans = new ArrayList<>();
     for (var pathAndMarkers : this.markersByFile.entrySet()) {
       var path = pathAndMarkers.getKey();

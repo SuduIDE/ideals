@@ -24,7 +24,7 @@ public class GotoDefinitionTest extends LspServerTestBase {
       final var lexer = new TestLexer(dirPath);
       lexer.initSandbox(new DefaultTestFixture(getProjectPath(), dirPath));
       final var engine = new DefinitionTestEngine(server().getProject(), lexer.textsByFile, lexer.markersByFile);
-      final var definitionTests = engine.processMarkers();
+      final var definitionTests = engine.generateTests();
       for (final var test : definitionTests) {
         final var params = test.params();
         final var answer = test.answer();

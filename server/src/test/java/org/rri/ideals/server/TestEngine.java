@@ -26,5 +26,5 @@ abstract public class TestEngine<T extends TestEngine.Test> {
     this.markersByFile = markersByFile;
   }
 
-  abstract public @NotNull List<? extends T> processMarkers();
+  abstract public @NotNull List<? extends T> generateTests();
 }
