@@ -30,17 +30,13 @@ public class DefaultTestFixture implements TestFixture {
       }
       this.sandboxPath = sandboxPath;
       try (final var files = Files.newDirectoryStream(sandboxPath)) {
-          files.forEach(path -> {
-            try {
-              if (Files.isDirectory(path)) {
-                FileUtils.deleteDirectory(path.toFile());
-              } else {
-                Files.delete(path);
-              }
-            } catch (IOException e) {
-              throw new RuntimeException(e);
-            }
-          });
+        files.forEach(MiscUtil.toConsumer(path -> {
+          if (Files.isDirectory(path)) {
+            FileUtils.deleteDirectory(path.toFile());
+          } else {
+            Files.delete(path);
+          }
+        }));
       }
     } catch (IOException e) {
       throw MiscUtil.wrap(e);
@@ -48,47 +44,34 @@ public class DefaultTestFixture implements TestFixture {
   }
 
   @Override
-  public void copyDirectoryToProject(@NotNull Path sourceDirectory) throws RuntimeException {
+  public void copyDirectoryToProject(@NotNull Path sourceDirectory) throws IOException {
     try (final var files =  Files.walk(sourceDirectory)) {
-      files.forEach(source -> {
+      files.forEach(MiscUtil.toConsumer(source -> {
         if (!Files.isDirectory(source)) {
           Path target = Paths.get(sandboxPath.toString(), TestUtil.getPathTail(testDataPath, source));
-          try {
-            if (!Files.exists(target.getParent())) {
-              Files.createDirectories(target.getParent());
-            }
-            Files.copy(source, target);
-          } catch (IOException e) {
-            throw new RuntimeException(e);
+
+          if (!Files.exists(target.getParent())) {
+            Files.createDirectories(target.getParent());
           }
+          Files.copy(source, target);
         }
-      });
-    } catch (IOException e) {
-      throw new RuntimeException(e);
+      }));
     }
   }
 
   @Override
-  public void copyFileToProject(@NotNull Path filePath) {
-    try {
-      final var name = filePath.toFile().getName();
-      Files.copy(filePath, Paths.get(sandboxPath.toString(), name));
-    } catch (IOException e) {
-      throw new RuntimeException(e);
-    }
+  public void copyFileToProject(@NotNull Path filePath) throws IOException {
+    final var name = filePath.toFile().getName();
+    Files.copy(filePath, Paths.get(sandboxPath.toString(), name));
   }
 
   @Override
-  public @NotNull LspPath writeFileToProject(@NotNull String filePath, @NotNull String data) {
+  public @NotNull LspPath writeFileToProject(@NotNull String filePath, @NotNull String data) throws IOException {
     final var realPath = Paths.get(sandboxPath.toString(), filePath);
-    try {
-      Files.createDirectories(realPath.getParent());
-      try (final FileWriter writer = new FileWriter(realPath.toString())) {
-        writer.write(data);
-        return LspPath.fromLocalPath(realPath);
-      }
-    } catch (IOException e) {
-      throw new RuntimeException(e);
+    Files.createDirectories(realPath.getParent());
+    try (final FileWriter writer = new FileWriter(realPath.toString())) {
+      writer.write(data);
+      return LspPath.fromLocalPath(realPath);
     }
   }
 }

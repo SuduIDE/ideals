@@ -123,7 +123,8 @@ public class TestEngine {
   private void processPath(@NotNull Path path, @NotNull TestFixture fixture) {
     if (!Files.isDirectory(path)) {
       var text = textsByFile.remove(path.toString());
-      final var newPath = fixture.writeFileToProject(TestUtil.getPathTail(testDataPath, path), text);
+      final var newPath =
+          MiscUtil.uncheckExceptions(() -> fixture.writeFileToProject(TestUtil.getPathTail(testDataPath, path), text));
       final var markers = markersByFile.remove(path.toString());
       markersByFile.put(newPath.toLspUri(), markers);
       textsByFile.put(newPath.toLspUri(), text);
