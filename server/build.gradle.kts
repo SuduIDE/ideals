@@ -14,7 +14,7 @@ repositories {
 }
 
 dependencies {
-  implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:0.14.0")
+  implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:0.15.0")
   implementation("io.github.furstenheim:copy_down:1.1")
 }
 
@@ -73,8 +73,7 @@ tasks {
     }
   }
 
-  getByName("runIde") {
-    this as RunIdeTask
+  getByName<RunIdeTask>("runIde") {
     maxHeapSize = "4G"
     args = listOf("lsp-server", "tcp", "8989")
     systemProperty("java.awt.headless", true)
