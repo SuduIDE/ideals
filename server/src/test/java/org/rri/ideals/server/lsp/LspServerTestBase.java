@@ -6,15 +6,12 @@ import org.eclipse.lsp4j.ClientCapabilities;
 import org.eclipse.lsp4j.InitializeParams;
 import org.eclipse.lsp4j.WorkspaceFolder;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 import org.junit.After;
 import org.junit.Before;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.rri.ideals.server.LspServer;
 import org.rri.ideals.server.TestUtil;
-import org.rri.ideals.server.engine.DefaultTestFixture;
-import org.rri.ideals.server.engine.TestEngine;
 import org.rri.ideals.server.mocks.MockLanguageClient;
 
 import java.nio.file.Path;
@@ -83,20 +80,8 @@ public abstract class LspServerTestBase extends HeavyPlatformTestCase {
     TestUtil.getNonBlockingEdt(server.initialize(initializeParams), 30000);
   }
 
-  protected @Nullable Path getTargetProjectPath() {
-    return null;
-  }
-
-  protected TestEngine engine;
-
   @Before
   public void setupServer() {
-    final var dirPath = getTargetProjectPath();
-    if (dirPath != null) {
-      engine = new TestEngine(dirPath);
-      engine.initSandbox(new DefaultTestFixture(getProjectPath(), dirPath));
-    }
-
     server = new LspServer();
     client = new MockLanguageClient();
     server.connect(client);

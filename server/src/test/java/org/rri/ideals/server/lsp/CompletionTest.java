@@ -14,20 +14,25 @@ import org.junit.jupiter.api.Assertions;
 import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.completions.CompletionServiceTestUtil;
 import org.rri.ideals.server.completions.generators.CompletionTestGenerator;
-import org.rri.ideals.server.engine.DefaultTestFixture;
-import org.rri.ideals.server.engine.TestEngine;
 import org.rri.ideals.server.generator.IdeaOffsetPositionConverter;
 
+import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
 import java.util.Set;
 
-public class CompletionTest extends LspServerTestBase {
+public class CompletionTest extends LspServerTestWithEngineBase {
 
   @Override
   protected String getProjectRelativePath() {
     return "completion/integration-test";
+  }
+
+
+  @Override
+  protected @NotNull Path getTargetProjectPath() {
+    return getTestDataRoot().resolve("sandbox");
   }
 
   @Test
@@ -54,9 +59,7 @@ public class CompletionTest extends LspServerTestBase {
     CompletionTestGenerator.CompletionTest test;
 
     assertNotNull(server().getProject());
-    var engine = new TestEngine(getProjectPath());
-    engine.initSandbox(new DefaultTestFixture(getTestDataRoot().resolve("sandbox"), getProjectPath()));
-    CompletionTestGenerator generator = new CompletionTestGenerator(engine.getTextsByFile(), engine.getMarkersByFile(), new IdeaOffsetPositionConverter(server().getProject()));
+    CompletionTestGenerator generator = new CompletionTestGenerator(getEngine().getTextsByFile(), getEngine().getMarkersByFile(), new IdeaOffsetPositionConverter(server().getProject()));
     test = generator.generateTests().get(0);
 
     var params = test.params();
