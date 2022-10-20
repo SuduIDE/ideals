@@ -5,14 +5,11 @@ import org.jetbrains.annotations.NotNull;
 import org.rri.ideals.server.engine.TestEngine;
 import org.rri.ideals.server.generator.TestGenerator;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
 
 public class FindUsagesTestGenerator extends TestGenerator<FindUsagesTestGenerator.FindUsagesTest> {
   public record FindUsagesTest(@NotNull ReferenceParams params,
-                               @NotNull List<? extends Location> expected) implements TestGenerator.Test {
+                               @NotNull HashSet<? extends Location> expected) implements TestGenerator.Test {
   }
 
   public FindUsagesTestGenerator(@NotNull Map<@NotNull String, @NotNull String> textsByFile,
@@ -53,7 +50,7 @@ public class FindUsagesTestGenerator extends TestGenerator<FindUsagesTestGenerat
     }
     List<FindUsagesTest> tests = new ArrayList<>();
     for (final var entry : paramsInfo.entrySet()) {
-      final var locs = locationInfo.get(entry.getKey());
+      final var locs = new HashSet<>(locationInfo.get(entry.getKey()));
       entry.getValue().forEach(param -> tests.add(new FindUsagesTest(param, locs)));
     }
     return tests;

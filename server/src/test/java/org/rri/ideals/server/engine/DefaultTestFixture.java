@@ -3,7 +3,6 @@ package org.rri.ideals.server.engine;
 import org.apache.commons.io.FileUtils;
 import org.jetbrains.annotations.NotNull;
 import org.rri.ideals.server.LspPath;
-import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.util.MiscUtil;
 
 import java.io.FileWriter;
@@ -48,7 +47,7 @@ public class DefaultTestFixture implements TestFixture {
     try (final var files =  Files.walk(sourceDirectory)) {
       files.forEach(MiscUtil.toConsumer(source -> {
         if (!Files.isDirectory(source)) {
-          Path target = Paths.get(sandboxPath.toString(), TestUtil.getPathTail(testDataPath, source));
+          Path target = Paths.get(sandboxPath.toString(), testDataPath.relativize(source).toString());
 
           if (!Files.exists(target.getParent())) {
             Files.createDirectories(target.getParent());

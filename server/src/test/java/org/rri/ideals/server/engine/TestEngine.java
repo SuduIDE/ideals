@@ -3,7 +3,6 @@ package org.rri.ideals.server.engine;
 
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
-import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.util.MiscUtil;
 
 import java.io.BufferedReader;
@@ -133,7 +132,7 @@ public class TestEngine {
     if (!Files.isDirectory(path)) {
       var text = textsByFile.remove(path.toString());
       final var newPath =
-          MiscUtil.uncheckExceptions(() -> fixture.writeFileToProject(TestUtil.getPathTail(testDataPath, path), text));
+          MiscUtil.uncheckExceptions(() -> fixture.writeFileToProject(testDataPath.relativize(path).toString(), text));
       final var markers = markersByFile.remove(path.toString());
       markersByFile.put(newPath.toLspUri(), markers);
       textsByFile.put(newPath.toLspUri(), text);

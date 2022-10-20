@@ -12,7 +12,6 @@ import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.jetbrains.annotations.NotNull;
 import org.rri.ideals.server.util.MiscUtil;
 
-import java.nio.file.Path;
 import java.util.ArrayList;
 import java.util.Collection;
 import java.util.Comparator;
@@ -109,17 +108,6 @@ public class TestUtil {
         throw new IllegalArgumentException("position doesn't match text");
     }
     return hereIndex;
-  }
-
-  public static String getPathTail(Path directoryPath, Path path) {
-    StringBuilder builder = new StringBuilder();
-    for (int i = directoryPath.getNameCount(); i < path.getNameCount(); i++) {
-      builder.append(path.getName(i).toFile().getName());
-      if (i != path.getNameCount() - 1) {
-        builder.append('/');
-      }
-    }
-    return builder.toString();
   }
 
   public static class DumbCancelChecker implements CancelChecker {

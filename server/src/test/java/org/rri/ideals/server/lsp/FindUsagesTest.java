@@ -7,6 +7,7 @@ import org.rri.ideals.server.generator.IdeaOffsetPositionConverter;
 import org.rri.ideals.server.references.generators.FindUsagesTestGenerator;
 
 import java.nio.file.Path;
+import java.util.HashSet;
 import java.util.Optional;
 
 public class FindUsagesTest extends LspServerTestBase {
@@ -33,7 +34,7 @@ public class FindUsagesTest extends LspServerTestBase {
         final var actual = Optional.ofNullable(TestUtil.getNonBlockingEdt(future, 50000));
 
         assertTrue(actual.isPresent());
-        assertEquals(answer, actual.get());
+        assertEquals(answer, new HashSet<>(actual.get()));
       }
     } catch (RuntimeException e) {
       e.printStackTrace();

@@ -13,6 +13,7 @@ import org.rri.ideals.server.generator.IdeaOffsetPositionConverter;
 import org.rri.ideals.server.references.generators.FindUsagesTestGenerator;
 
 import java.nio.file.Paths;
+import java.util.HashSet;
 
 @RunWith(JUnit4.class)
 public class FindUsagesCommandTest extends ReferencesCommandTestBase<FindUsagesTestGenerator> {
@@ -38,6 +39,6 @@ public class FindUsagesCommandTest extends ReferencesCommandTestBase<FindUsagesT
     final ReferenceParams refParams = (ReferenceParams) params;
     final var path = LspPath.fromLspUri(refParams.getTextDocument().getUri());
     final var future = new FindUsagesCommand(refParams.getPosition()).runAsync(getProject(), path);
-    return TestUtil.getNonBlockingEdt(future, 50000);
+    return new HashSet<>(TestUtil.getNonBlockingEdt(future, 50000));
   }
 }

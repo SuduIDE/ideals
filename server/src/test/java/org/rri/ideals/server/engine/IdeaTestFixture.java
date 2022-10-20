@@ -3,7 +3,6 @@ package org.rri.ideals.server.engine;
 import com.intellij.testFramework.fixtures.CodeInsightTestFixture;
 import org.jetbrains.annotations.NotNull;
 import org.rri.ideals.server.LspPath;
-import org.rri.ideals.server.TestUtil;
 
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -23,12 +22,12 @@ public class IdeaTestFixture implements TestFixture {
 
   @Override
   public void copyDirectoryToProject(@NotNull Path sourceDirectory) {
-    fixture.copyDirectoryToProject(TestUtil.getPathTail(baseDirPath, sourceDirectory), "");
+    fixture.copyDirectoryToProject(baseDirPath.relativize(sourceDirectory).toString(), "");
   }
 
   @Override
   public void copyFileToProject(@NotNull Path filePath) {
-    fixture.copyFileToProject(TestUtil.getPathTail(baseDirPath, filePath));
+    fixture.copyFileToProject(baseDirPath.relativize(filePath).toString());
   }
 
   @Override
