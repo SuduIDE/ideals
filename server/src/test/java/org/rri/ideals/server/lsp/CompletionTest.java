@@ -56,7 +56,7 @@ public class CompletionTest extends LspServerTestBase {
     assertNotNull(server().getProject());
     var engine = new TestEngine(getProjectPath());
     engine.initSandbox(new DefaultTestFixture(getTestDataRoot().resolve("sandbox"), getProjectPath()));
-    CompletionTestGenerator generator = new CompletionTestGenerator(engine.textsByFile, engine.markersByFile, new IdeaOffsetPositionConverter(server().getProject()));
+    CompletionTestGenerator generator = new CompletionTestGenerator(engine.getTextsByFile(), engine.getMarkersByFile(), new IdeaOffsetPositionConverter(server().getProject()));
     test = generator.generateTests().get(0);
 
     var params = test.params();

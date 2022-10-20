@@ -18,16 +18,25 @@ public class TestEngine {
   private final Path testDataPath;
 
   @NotNull
-  public final Map<@NotNull String, @NotNull String> textsByFile; // <Path, Text>
+  private final Map<@NotNull String, @NotNull String> textsByFile; // <Path, Text>
 
   @NotNull
-  public final Map<@NotNull String, @NotNull List<@NotNull Marker>> markersByFile; // <Path, List<Marker>>
+  private final Map<@NotNull String, @NotNull List<@NotNull Marker>> markersByFile; // <Path, List<Marker>>
 
   public TestEngine(@NotNull Path testDataPath) {
     this.testDataPath = testDataPath;
     this.textsByFile = new HashMap<>();
     this.markersByFile = new HashMap<>();
-    preprocessFiles();
+  }
+
+  @NotNull
+  public Map<String, String> getTextsByFile() {
+    return textsByFile;
+  }
+
+  @NotNull
+  public Map<String, List<Marker>> getMarkersByFile() {
+    return markersByFile;
   }
 
   private void preprocessFiles() {
@@ -132,6 +141,7 @@ public class TestEngine {
   }
 
   public void initSandbox(@NotNull TestFixture fixture) {
+    preprocessFiles();
     try (final var stream = Files.newDirectoryStream(testDataPath)) {
       for (final var path : stream) {
         final var name = path.toFile().getName();

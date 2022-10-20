@@ -185,7 +185,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   private void testWithEngine(@NotNull CompletionTestParams completionTestParams) {
     final var engine = new TestEngine(completionTestParams.dirPath);
     engine.initSandbox(new IdeaTestFixture(myFixture));
-    final var generator = new CompletionTestGenerator(engine.textsByFile, engine.markersByFile, new IdeaOffsetPositionConverter(getProject()));
+    final var generator = new CompletionTestGenerator(engine.getTextsByFile(), engine.getMarkersByFile(), new IdeaOffsetPositionConverter(getProject()));
 
     final var completionTest = generator.generateTests();
     final var test = completionTest.get(0);

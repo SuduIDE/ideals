@@ -23,7 +23,7 @@ public class FindUsagesTest extends LspServerTestBase {
   @Test
   public void findUsages() {
     try {
-      final var engine = new FindUsagesTestGenerator(this.engine.textsByFile, this.engine.markersByFile, new IdeaOffsetPositionConverter(server().getProject()));
+      final var engine = new FindUsagesTestGenerator(this.engine.getTextsByFile(), this.engine.getMarkersByFile(), new IdeaOffsetPositionConverter(server().getProject()));
       final var definitionTests = engine.generateTests();
       for (final var test : definitionTests) {
         final var params = test.params();

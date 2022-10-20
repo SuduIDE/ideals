@@ -22,7 +22,7 @@ public class GotoTypeDefinitionTest extends LspServerTestBase {
     final var dirPath =  getTestDataRoot().resolve("references/java/project-type-definition-integration");
     final var engine = new TestEngine(dirPath);
     engine.initSandbox(new DefaultTestFixture(getProjectPath(), dirPath));
-    final var generator = new TypeDefinitionTestGenerator(engine.textsByFile, engine.markersByFile, new IdeaOffsetPositionConverter(server().getProject()));
+    final var generator = new TypeDefinitionTestGenerator(engine.getTextsByFile(), engine.getMarkersByFile(), new IdeaOffsetPositionConverter(server().getProject()));
     final var typeDefinitionTests = generator.generateTests();
     for (final var test : typeDefinitionTests) {
       final var params = test.params();

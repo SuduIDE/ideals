@@ -30,7 +30,7 @@ public class FindUsagesCommandTest extends ReferencesCommandTestBase<FindUsagesT
 
   @Override
   protected @NotNull FindUsagesTestGenerator getGenerator(@NotNull TestEngine engine) {
-    return new FindUsagesTestGenerator(engine.textsByFile, engine.markersByFile, new IdeaOffsetPositionConverter(getProject()));
+    return new FindUsagesTestGenerator(engine.getTextsByFile(), engine.getMarkersByFile(), new IdeaOffsetPositionConverter(getProject()));
   }
 
   @Override

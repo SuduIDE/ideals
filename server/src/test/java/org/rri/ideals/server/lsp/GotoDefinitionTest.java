@@ -22,7 +22,7 @@ public class GotoDefinitionTest extends LspServerTestBase {
     final var dirPath =  getTestDataRoot().resolve("references/java/project-definition-integration");
     final var engine = new TestEngine(dirPath);
     engine.initSandbox(new DefaultTestFixture(getProjectPath(), dirPath));
-    final var generator = new DefinitionTestGenerator(engine.textsByFile, engine.markersByFile, new IdeaOffsetPositionConverter(server().getProject()));
+    final var generator = new DefinitionTestGenerator(engine.getTextsByFile(), engine.getMarkersByFile(), new IdeaOffsetPositionConverter(server().getProject()));
     final var definitionTests = generator.generateTests();
     for (final var test : definitionTests) {
       final var params = test.params();

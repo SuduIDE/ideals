@@ -33,7 +33,7 @@ public class TypeDefinitionCommandTest extends ReferencesCommandTestBase<TypeDef
 
   @Override
   protected @NotNull TypeDefinitionTestGenerator getGenerator(@NotNull TestEngine engine) {
-    return new TypeDefinitionTestGenerator(engine.textsByFile, engine.markersByFile, new IdeaOffsetPositionConverter(getProject()));
+    return new TypeDefinitionTestGenerator(engine.getTextsByFile(), engine.getMarkersByFile(), new IdeaOffsetPositionConverter(getProject()));
   }
 
   @Override

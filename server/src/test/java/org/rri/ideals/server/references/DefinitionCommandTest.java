@@ -36,7 +36,7 @@ public class DefinitionCommandTest extends ReferencesCommandTestBase<DefinitionT
 
   @Override
   protected @NotNull DefinitionTestGenerator getGenerator(@NotNull TestEngine engine) {
-    return new DefinitionTestGenerator(engine.textsByFile, engine.markersByFile, new IdeaOffsetPositionConverter(getProject()));
+    return new DefinitionTestGenerator(engine.getTextsByFile(), engine.getMarkersByFile(), new IdeaOffsetPositionConverter(getProject()));
   }
 
   @Override
