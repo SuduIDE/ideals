@@ -31,10 +31,9 @@ abstract class ReferencesTestGeneratorBase<T extends ReferencesTestGeneratorBase
     }
   }
 
-  public ReferencesTestGeneratorBase(@NotNull Map<@NotNull String, @NotNull String> textsByFile,
-                                     @NotNull Map<@NotNull String, @NotNull List<TestEngine.Marker>> markersByFile,
+  public ReferencesTestGeneratorBase(@NotNull TestEngine engine,
                                      @NotNull OffsetPositionConverter converter) {
-    super(textsByFile, markersByFile, converter);
+    super(engine, converter);
   }
 
   public @NotNull List<? extends T> generateTests() {

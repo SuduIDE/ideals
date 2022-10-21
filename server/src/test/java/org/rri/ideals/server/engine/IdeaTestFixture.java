@@ -19,8 +19,8 @@ public class IdeaTestFixture extends TestFixture {
 
 
   @Override
-  public void copyDirectoryToProject(@NotNull Path relativeSourceDirectory) {
-    fixture.copyDirectoryToProject(relativeSourceDirectory.toString(), "");
+  public void copyDirectoryToProject(@NotNull Path relativeDirectoryPath) {
+    fixture.copyDirectoryToProject(relativeDirectoryPath.toString(), "");
   }
 
   @Override
@@ -29,8 +29,8 @@ public class IdeaTestFixture extends TestFixture {
   }
 
   @Override
-  public @NotNull LspPath writeFileToProject(@NotNull String filePath, @NotNull String data) {
-    final var file = Optional.ofNullable(fixture.addFileToProject(filePath, data))
+  public @NotNull LspPath writeFileToProject(@NotNull String fileRelativePath, @NotNull String data) {
+    final var file = Optional.ofNullable(fixture.addFileToProject(fileRelativePath, data))
         .orElseThrow(() -> new RuntimeException("Fixture can't create file"));
     return LspPath.fromVirtualFile(file.getVirtualFile());
   }

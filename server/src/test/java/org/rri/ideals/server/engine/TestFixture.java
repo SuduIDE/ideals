@@ -14,12 +14,12 @@ public abstract class TestFixture {
     this.testDataPath = testDataPath;
   }
 
-  abstract void copyDirectoryToProject(@NotNull Path sourceDirectory) throws IOException;
+  abstract void copyDirectoryToProject(@NotNull Path relativeDirectoryPath) throws IOException;
 
-  abstract void copyFileToProject(@NotNull Path filePath) throws IOException;
+  abstract void copyFileToProject(@NotNull Path relativeFilePath) throws IOException;
 
   @NotNull
-  abstract LspPath writeFileToProject(@NotNull String filePath, @NotNull String data) throws IOException;
+  abstract LspPath writeFileToProject(@NotNull String fileRelativePath, @NotNull String data) throws IOException;
 
   @NotNull
   public Path getTestDataPath() {

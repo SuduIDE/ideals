@@ -17,11 +17,10 @@ abstract public class TestGenerator<T extends TestGenerator.Test> {
   protected final OffsetPositionConverter converter;
 
   protected TestGenerator(
-          @NotNull Map<@NotNull String, @NotNull String> textsByFile,
-          @NotNull Map<@NotNull String, @NotNull List<TestEngine.Marker>> markersByFile,
+          @NotNull TestEngine engine,
           @NotNull OffsetPositionConverter converter){
-    this.textsByFile = textsByFile;
-    this.markersByFile = markersByFile;
+    this.textsByFile = engine.getTextsByFile();
+    this.markersByFile = engine.getMarkersByFile();
     this.converter = converter;
   }
 

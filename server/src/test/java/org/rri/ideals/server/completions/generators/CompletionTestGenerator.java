@@ -13,16 +13,14 @@ import org.rri.ideals.server.util.MiscUtil;
 
 import java.util.ArrayList;
 import java.util.List;
-import java.util.Map;
 
 public class CompletionTestGenerator extends TestGenerator<CompletionTestGenerator.CompletionTest> {
   protected static final Logger LOG = Logger.getInstance(CompletionTestGenerator.class);
 
   public CompletionTestGenerator(
-          @NotNull Map<@NotNull String, @NotNull String> textsByFile,
-          @NotNull Map<@NotNull String, @NotNull List<TestEngine.Marker>> markersByFile,
+          @NotNull TestEngine engine,
           @NotNull OffsetPositionConverter converter) {
-    super(textsByFile, markersByFile, converter);
+    super(engine, converter);
   }
 
 

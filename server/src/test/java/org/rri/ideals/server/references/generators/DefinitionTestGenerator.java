@@ -8,7 +8,6 @@ import org.jetbrains.annotations.NotNull;
 import org.rri.ideals.server.engine.TestEngine;
 
 import java.util.List;
-import java.util.Map;
 
 public class DefinitionTestGenerator extends ReferencesTestGeneratorBase<DefinitionTestGenerator.DefinitionTest> {
   public static class DefinitionTest extends ReferencesTestGeneratorBase.ReferencesTestBase {
@@ -26,10 +25,9 @@ public class DefinitionTestGenerator extends ReferencesTestGeneratorBase<Definit
     }
   }
 
-  public DefinitionTestGenerator(@NotNull Map<@NotNull String, @NotNull String> textsByFile,
-                                 @NotNull Map<@NotNull String, @NotNull List<TestEngine.Marker>> markersByFile,
+  public DefinitionTestGenerator(@NotNull TestEngine engine,
                                  @NotNull OffsetPositionConverter converter) {
-    super(textsByFile, markersByFile, converter);
+    super(engine, converter);
   }
 
   protected @NotNull DefinitionTest createReferencesTest(@NotNull String uri, @NotNull Position pos, @NotNull List<? extends LocationLink> locLinks) {

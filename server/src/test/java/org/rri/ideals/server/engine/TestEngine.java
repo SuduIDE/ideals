@@ -43,8 +43,8 @@ public class TestEngine {
     return fixture.getTestDataPath();
   }
 
-  private void preprocessFiles() {
-    try (final var stream = Files.newDirectoryStream(getTestDataPath())) {
+  private void preprocessFiles(Path pathToTestProject) {
+    try (final var stream = Files.newDirectoryStream(pathToTestProject)) {
       for(final var path : stream) {
         final var name = path.toFile().getName();
         if (name.equals(".idea") || name.contains(".iml")) {
@@ -145,8 +145,9 @@ public class TestEngine {
   }
 
   public void initSandbox(@NotNull String relativePathToTestProject) {
-    preprocessFiles();
-    try (final var stream = Files.newDirectoryStream(getTestDataPath().resolve(relativePathToTestProject))) {
+    var pathToTestProject = getTestDataPath().resolve(relativePathToTestProject);
+    preprocessFiles(pathToTestProject);
+    try (final var stream = Files.newDirectoryStream(pathToTestProject)) {
       for (final var path : stream) {
         final var name = path.toFile().getName();
         if (Objects.equals(name, ".idea")) {
