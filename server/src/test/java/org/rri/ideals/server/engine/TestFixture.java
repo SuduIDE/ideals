@@ -6,10 +6,23 @@ import org.rri.ideals.server.LspPath;
 import java.io.IOException;
 import java.nio.file.Path;
 
-public interface TestFixture {
-  void copyDirectoryToProject(@NotNull Path sourceDirectory) throws IOException;
+public abstract class TestFixture {
+  @NotNull
+  private final Path testDataPath;
 
-  void copyFileToProject(@NotNull Path filePath) throws IOException;
+  protected TestFixture(@NotNull Path testDataPath) {
+    this.testDataPath = testDataPath;
+  }
 
-  @NotNull LspPath writeFileToProject(@NotNull String filePath, @NotNull String data) throws IOException;
+  abstract void copyDirectoryToProject(@NotNull Path sourceDirectory) throws IOException;
+
+  abstract void copyFileToProject(@NotNull Path filePath) throws IOException;
+
+  @NotNull
+  abstract LspPath writeFileToProject(@NotNull String filePath, @NotNull String data) throws IOException;
+
+  @NotNull
+  public Path getTestDataPath() {
+    return testDataPath;
+  }
 }

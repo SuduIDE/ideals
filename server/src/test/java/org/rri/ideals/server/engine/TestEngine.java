@@ -14,7 +14,7 @@ import java.util.*;
 
 public class TestEngine {
   @NotNull
-  private final Path testDataPath;
+  private final TestFixture fixture;
 
   @NotNull
   private final Map<@NotNull String, @NotNull String> textsByFile; // <Path, Text>
@@ -22,8 +22,8 @@ public class TestEngine {
   @NotNull
   private final Map<@NotNull String, @NotNull List<@NotNull Marker>> markersByFile; // <Path, List<Marker>>
 
-  public TestEngine(@NotNull Path testDataPath) {
-    this.testDataPath = testDataPath;
+  public TestEngine(@NotNull TestFixture fixture) {
+    this.fixture = fixture;
     this.textsByFile = new HashMap<>();
     this.markersByFile = new HashMap<>();
   }
@@ -38,8 +38,13 @@ public class TestEngine {
     return markersByFile;
   }
 
+  @NotNull
+  private Path getTestDataPath() {
+    return fixture.getTestDataPath();
+  }
+
   private void preprocessFiles() {
-    try (final var stream = Files.newDirectoryStream(testDataPath)) {
+    try (final var stream = Files.newDirectoryStream(getTestDataPath())) {
       for(final var path : stream) {
         final var name = path.toFile().getName();
         if (name.equals(".idea") || name.contains(".iml")) {
@@ -132,23 +137,23 @@ public class TestEngine {
     if (!Files.isDirectory(path)) {
       var text = textsByFile.remove(path.toString());
       final var newPath =
-          MiscUtil.uncheckExceptions(() -> fixture.writeFileToProject(testDataPath.relativize(path).toString(), text));
+          MiscUtil.uncheckExceptions(() -> fixture.writeFileToProject(getTestDataPath().relativize(path).toString(), text));
       final var markers = markersByFile.remove(path.toString());
       markersByFile.put(newPath.toLspUri(), markers);
       textsByFile.put(newPath.toLspUri(), text);
     }
   }
 
-  public void initSandbox(@NotNull TestFixture fixture) {
+  public void initSandbox(@NotNull String relativePathToTestProject) {
     preprocessFiles();
-    try (final var stream = Files.newDirectoryStream(testDataPath)) {
+    try (final var stream = Files.newDirectoryStream(getTestDataPath().resolve(relativePathToTestProject))) {
       for (final var path : stream) {
         final var name = path.toFile().getName();
         if (Objects.equals(name, ".idea")) {
-          fixture.copyDirectoryToProject(path);
+          fixture.copyDirectoryToProject(getTestDataPath().relativize(path));
           continue;
         } else if (name.matches(".*\\.iml")) {
-          fixture.copyFileToProject(path);
+          fixture.copyFileToProject(getTestDataPath().relativize(path));
           continue;
         }
         if (Files.isDirectory(path)) {

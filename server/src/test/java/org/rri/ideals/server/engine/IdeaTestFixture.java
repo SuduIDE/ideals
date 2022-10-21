@@ -8,26 +8,24 @@ import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Optional;
 
-public class IdeaTestFixture implements TestFixture {
+public class IdeaTestFixture extends TestFixture {
   @NotNull
   private final CodeInsightTestFixture fixture;
-  @NotNull
-  private final Path baseDirPath;
 
   public IdeaTestFixture(@NotNull CodeInsightTestFixture fixture) {
+    super(Paths.get(fixture.getTestDataPath()));
     this.fixture = fixture;
-    baseDirPath = Paths.get(fixture.getTestDataPath());
   }
 
 
   @Override
-  public void copyDirectoryToProject(@NotNull Path sourceDirectory) {
-    fixture.copyDirectoryToProject(baseDirPath.relativize(sourceDirectory).toString(), "");
+  public void copyDirectoryToProject(@NotNull Path relativeSourceDirectory) {
+    fixture.copyDirectoryToProject(relativeSourceDirectory.toString(), "");
   }
 
   @Override
-  public void copyFileToProject(@NotNull Path filePath) {
-    fixture.copyFileToProject(baseDirPath.relativize(filePath).toString());
+  public void copyFileToProject(@NotNull Path relativeFilePath) {
+    fixture.copyFileToProject(relativeFilePath.toString());
   }
 
   @Override
