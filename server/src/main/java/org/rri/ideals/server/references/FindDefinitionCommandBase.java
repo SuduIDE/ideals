@@ -53,9 +53,14 @@ abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extend
           .filter(Objects::nonNull)
           .map(targetElem -> {
             if (targetElem.getContainingFile() == null) { return null; }
-            Document targetDoc = targetElem.getContainingFile().equals(file)
-                ? doc : MiscUtil.getDocument(targetElem.getContainingFile());
-            return MiscUtil.psiElementToLocationLink(targetElem, targetDoc, originalRange);
+            final var loc = MiscUtil.sourceLocationIfPossible(targetElem, ctx.getProject());
+            if (loc != null) {
+              return new LocationLink(loc.getUri(), loc.getRange(), originalRange, originalRange);
+            } else {
+              Document targetDoc = targetElem.getContainingFile().equals(file)
+                  ? doc : MiscUtil.getDocument(targetElem.getContainingFile());
+              return MiscUtil.psiElementToLocationLink(targetElem, targetDoc, originalRange);
+            }
           })
           .filter(Objects::nonNull)
           .collect(Collectors.toList());
