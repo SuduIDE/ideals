@@ -13,7 +13,6 @@ import com.intellij.openapi.components.Service;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
-import com.intellij.openapi.util.NlsContexts;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.PsiElement;
@@ -22,8 +21,10 @@ import com.intellij.ui.JBColor;
 import com.intellij.util.Function;
 import com.intellij.util.indexing.DumbModeAccessType;
 import io.github.furstenheim.CopyDown;
+import org.eclipse.lsp4j.ParameterInformation;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.SignatureHelp;
+import org.eclipse.lsp4j.SignatureInformation;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
@@ -55,6 +56,7 @@ final public class SignatureHelpService implements Disposable {
                                             @NotNull Position position,
                                             @NotNull CancelChecker cancelChecker) {
     LOG.info("start signature help");
+    var disposable = Disposer.newDisposable();
     try {
       var virtualFile = path.findVirtualFile();
       if (virtualFile == null) {
@@ -75,7 +77,6 @@ final public class SignatureHelpService implements Disposable {
       final Language language = ReadAction.compute(() -> PsiUtilCore.getLanguageAtOffset(psiFile, offset));
       final ParameterInfoHandler<PsiElement, Object>[] handlers =
           ShowParameterInfoHandler.getHandlers(project, language, psiFile.getViewProvider().getBaseLanguage());
-      var disposable = Disposer.newDisposable();
 
       var editor = WriteAction.computeAndWait(() -> EditorUtil.createEditor(disposable, psiFile, position));
 
@@ -88,7 +89,7 @@ final public class SignatureHelpService implements Disposable {
           false,
           false
       );
-
+      // todo in model we have info about current (aka current parameter index) and highlighted signature (current sig item)
       WriteAction.runAndWait(() -> {
         DumbModeAccessType.RELIABLE_DATA_ONLY.ignoreDumbMode(() -> {
           for (ParameterInfoHandler<PsiElement, Object> handler : handlers) {
@@ -98,11 +99,40 @@ final public class SignatureHelpService implements Disposable {
                 if (element.isValid()) {
                   handler.showParameterInfo(element, context);
                   ParameterInfoControllerBase controller = ParameterInfoControllerBase.createParameterInfoController(
-                      project, editor, offset, context.getItemsToShow(), false, element, handler, true, false);;
-                  var o = controller.getObjects()[0];
+                      project, editor, offset, context.getItemsToShow(), false, element, handler, true, false);
+                  ;
                   var modelContext = new MyParameterContext(false, element);
-                  DumbModeAccessType.RELIABLE_DATA_ONLY.ignoreDumbMode(() -> handler.updateUI(o, modelContext));
-                  LOG.warn(modelContext.model.signatures.toString());
+                  for (int i = 0; i < controller.getObjects().length; i++) {
+                    var descriptor = controller.getObjects()[i];
+                    modelContext.i = i;
+                    if (descriptor.equals(controller.getHighlighted())) {
+                      modelContext.model.highlightedSignature = i;
+                    }
+
+                    DumbModeAccessType.RELIABLE_DATA_ONLY.ignoreDumbMode(() -> handler.updateUI(descriptor, modelContext));
+                  }
+                  ans.setActiveSignature(modelContext.model.highlightedSignature);
+                  ans.setSignatures(modelContext.signatureItems.stream().map(signatureIdeaItem -> {
+                    var signatureInformation = new SignatureInformation();
+                    var parametersInformation = new ArrayList<ParameterInformation>();
+                    for (int i = 0; i < signatureIdeaItem.startOffsets.size(); i++) {
+                      int startOffset = signatureIdeaItem.startOffsets.get(i);
+                      int endOffset = signatureIdeaItem.endOffsets.get(i);
+                      parametersInformation.add(
+                          MiscUtil.with(new ParameterInformation(),
+                              parameterInformation ->
+                                  parameterInformation.setLabel(signatureIdeaItem.text.substring(startOffset, endOffset))
+                          ));
+                    }
+                    int labelEndOffset =
+                        signatureIdeaItem.startOffsets.isEmpty() ? signatureIdeaItem.text.length() : signatureIdeaItem.startOffsets.get(0);
+
+                    signatureInformation.setParameters(parametersInformation);
+                    signatureInformation.setActiveParameter(modelContext.model.current);
+                    signatureInformation.setLabel(signatureIdeaItem.text);
+                    return signatureInformation;
+                  }).toList());
+                  ans.setActiveSignature(modelContext.model.highlightedSignature);
                 }
               });
             }
@@ -112,15 +142,18 @@ final public class SignatureHelpService implements Disposable {
       });
       return ans;
     } finally {
+      WriteAction.runAndWait(() -> Disposer.dispose(disposable));
       cancelChecker.checkCanceled();
     }
   }
 
-  private class MyParameterContext implements ParameterInfoUIContextEx {
+  private static class MyParameterContext implements ParameterInfoUIContextEx {
     private final boolean mySingleParameterInfo;
     private int i;
     private final ParameterInfoControllerBase.Model model = new ParameterInfoControllerBase.Model();
-    private PsiElement parameterOwner;
+
+    private final ArrayList<ParameterInfoControllerBase.SignatureItem> signatureItems = new ArrayList<>();
+    private final PsiElement parameterOwner;
 
     private MyParameterContext(boolean singleParameterInfo, PsiElement parameterOwner) {
       mySingleParameterInfo = singleParameterInfo;
@@ -128,7 +161,7 @@ final public class SignatureHelpService implements Disposable {
     }
 
     @Override
-    public String setupUIComponentPresentation(@NlsContexts.Label String text,
+    public String setupUIComponentPresentation(@NotNull String text,
                                                int highlightStartOffset,
                                                int highlightEndOffset,
                                                boolean isDisabled,
@@ -156,17 +189,20 @@ final public class SignatureHelpService implements Disposable {
       }
       ParameterInfoControllerBase.SignatureItem item = new ParameterInfoControllerBase.SignatureItem(plainLine.toString(), strikeout, isDisabled,
           startOffsets, endOffsets);
-      model.signatures.add(item);
+      signatureItems.add(item);
 
       return text;
     }
 
     @Override
-    public void setupRawUIComponentPresentation(@NlsContexts.Label String htmlText) {
+    public void setupRawUIComponentPresentation(String htmlText) {
+      // todo search ways where it is called
+      // I found only by ctrl+up/down with completion hint settings enabled by now
       ParameterInfoControllerBase.RawSignatureItem item = new ParameterInfoControllerBase.RawSignatureItem(htmlText);
 
       model.current = getCurrentParameterIndex();
       model.signatures.add(item);
+      // I skip this element, because it is not covered by lsp as it is in IDEA
     }
 
     @Override
@@ -185,10 +221,6 @@ final public class SignatureHelpService implements Disposable {
 
     @Override
     public void setUIComponentEnabled(boolean enabled) {
-    }
-
-    public boolean isLastParameterOwner() {
-      return false;
     }
 
     @Override
@@ -210,11 +242,6 @@ final public class SignatureHelpService implements Disposable {
     public boolean isSingleParameterInfo() {
       return mySingleParameterInfo;
     }
-
-    private boolean isHighlighted() {
-      return false;
-    }
-
     @Override
     public Color getDefaultParameterColor() {
       return JBColor.MAGENTA;
