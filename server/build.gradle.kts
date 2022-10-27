@@ -14,7 +14,7 @@ repositories {
 }
 
 dependencies {
-  implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:0.15.0")
+  implementation("org.eclipse.lsp4j:org.eclipse.lsp4j:0.17.0")
   implementation("io.github.furstenheim:copy_down:1.1")
 }
 
