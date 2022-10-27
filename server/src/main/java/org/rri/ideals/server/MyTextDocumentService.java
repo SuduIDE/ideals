@@ -58,12 +58,12 @@ public class MyTextDocumentService implements TextDocumentService {
 
   @Override
   public void didChange(DidChangeTextDocumentParams params) {
-//    final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
+    final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
 
-//    Metrics.run(() -> "didChange: " + path, () -> {
-//      documents().updateDocument(params);
-//      diagnostics().launchDiagnostics(path);
-//    });
+    Metrics.run(() -> "didChange: " + path, () -> {
+      documents().updateDocument(params);
+      diagnostics().launchDiagnostics(path);
+    });
   }
 
   @Override

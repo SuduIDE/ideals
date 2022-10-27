@@ -17,6 +17,7 @@ import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.util.PsiUtilCore;
+import com.intellij.testFramework.utils.parameterInfo.MockUpdateParameterInfoContext;
 import com.intellij.ui.JBColor;
 import com.intellij.util.Function;
 import com.intellij.util.indexing.DumbModeAccessType;
@@ -98,9 +99,17 @@ final public class SignatureHelpService implements Disposable {
               return (Runnable)() -> DumbModeAccessType.RELIABLE_DATA_ONLY.ignoreDumbMode(() -> {
                 if (element.isValid()) {
                   handler.showParameterInfo(element, context);
+                  MockUpdateParameterInfoContext updateContext = new MockUpdateParameterInfoContext(
+                      editor, psiFile
+                  );
                   ParameterInfoControllerBase controller = ParameterInfoControllerBase.createParameterInfoController(
-                      project, editor, offset, context.getItemsToShow(), false, element, handler, true, false);
-                  ;
+                      project, editor, offset, context.getItemsToShow(), context.getHighlightedElement(), element, handler, true, false);
+                  var o = handler.findElementForUpdatingParameterInfo(updateContext);
+                  assert o != null;
+                  DumbModeAccessType.RELIABLE_DATA_ONLY.ignoreDumbMode(() -> handler.updateParameterInfo(o, updateContext));
+
+                  controller.showHint(false, false); // todo
+                  controller.updateComponent();
                   var modelContext = new MyParameterContext(false, element);
                   for (int i = 0; i < controller.getObjects().length; i++) {
                     var descriptor = controller.getObjects()[i];
@@ -111,7 +120,6 @@ final public class SignatureHelpService implements Disposable {
 
                     DumbModeAccessType.RELIABLE_DATA_ONLY.ignoreDumbMode(() -> handler.updateUI(descriptor, modelContext));
                   }
-                  ans.setActiveSignature(modelContext.model.highlightedSignature);
                   ans.setSignatures(modelContext.signatureItems.stream().map(signatureIdeaItem -> {
                     var signatureInformation = new SignatureInformation();
                     var parametersInformation = new ArrayList<ParameterInformation>();
@@ -128,11 +136,11 @@ final public class SignatureHelpService implements Disposable {
                         signatureIdeaItem.startOffsets.isEmpty() ? signatureIdeaItem.text.length() : signatureIdeaItem.startOffsets.get(0);
 
                     signatureInformation.setParameters(parametersInformation);
-                    signatureInformation.setActiveParameter(modelContext.model.current);
+                    signatureInformation.setActiveParameter(modelContext.model.current == -1 ? null : modelContext.model.current);
                     signatureInformation.setLabel(signatureIdeaItem.text);
                     return signatureInformation;
                   }).toList());
-                  ans.setActiveSignature(modelContext.model.highlightedSignature);
+                  ans.setActiveSignature(modelContext.model.highlightedSignature == -1 ? null : modelContext.model.highlightedSignature);
                 }
               });
             }
