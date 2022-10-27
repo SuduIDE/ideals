@@ -21,22 +21,17 @@ public class FindUsagesTest extends LspServerTestWithEngineBase {
 
   @Test
   public void findUsages() {
-    try {
-      final var generator = new FindUsagesTestGenerator(getEngine(), new IdeaOffsetPositionConverter(server().getProject()));
-      final var definitionTests = generator.generateTests();
-      for (final var test : definitionTests) {
-        final var params = test.params();
-        final var answer = test.expected();
+    final var generator = new FindUsagesTestGenerator(getEngine(), new IdeaOffsetPositionConverter(server().getProject()));
+    final var definitionTests = generator.generateTests();
+    for (final var test : definitionTests) {
+      final var params = test.params();
+      final var answer = test.expected();
 
-        final var future = server().getTextDocumentService().references(params);
-        final var actual = Optional.ofNullable(TestUtil.getNonBlockingEdt(future, 50000));
+      final var future = server().getTextDocumentService().references(params);
+      final var actual = Optional.ofNullable(TestUtil.getNonBlockingEdt(future, 50000));
 
-        assertTrue(actual.isPresent());
-        assertEquals(answer, new HashSet<>(actual.get()));
-      }
-    } catch (RuntimeException e) {
-      e.printStackTrace();
-      fail();
+      assertTrue(actual.isPresent());
+      assertEquals(answer, new HashSet<>(actual.get()));
     }
   }
 }
