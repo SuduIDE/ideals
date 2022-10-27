@@ -29,7 +29,7 @@ public class CompletionTest extends LspServerTestWithEngineBase {
   }
 
   @Override
-  protected @NotNull String getMarkedTestProjectRelativePath() {
+  protected @NotNull String getTestDataRelativePath() {
     return "completion/integration-test";
   }
 

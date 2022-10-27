@@ -11,7 +11,7 @@ import java.util.Optional;
 
 public class FindUsagesTest extends LspServerTestWithEngineBase {
   @Override
-  protected @NotNull String getMarkedTestProjectRelativePath() {
+  protected @NotNull String getTestDataRelativePath() {
     return "references/java/project-find-usages-integration";
   }
   @Override

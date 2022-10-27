@@ -6,13 +6,13 @@ import org.rri.ideals.server.engine.TestEngine;
 
 public abstract class LspServerTestWithEngineBase extends LspServerTestBase {
   private final TestEngine engine =
-      new TestEngine(new DefaultTestFixture(getProjectPath(), getTestDataRoot().resolve(getMarkedTestProjectRelativePath())));
+      new TestEngine(new DefaultTestFixture(getProjectPath(), getTestDataRoot().resolve(getTestDataRelativePath())));
 
   public TestEngine getEngine() {
     return engine;
   }
 
-  protected abstract @NotNull String getMarkedTestProjectRelativePath();
+  protected abstract @NotNull String getTestDataRelativePath();
 
   @Override
   public void setupServer() {

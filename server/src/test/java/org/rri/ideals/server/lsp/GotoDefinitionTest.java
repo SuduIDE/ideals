@@ -19,7 +19,7 @@ public class GotoDefinitionTest extends LspServerTestWithEngineBase {
 
   @Override
   @NotNull
-  protected String getMarkedTestProjectRelativePath() {
+  protected String getTestDataRelativePath() {
     return "references/java/project-definition-integration";
   }
 
