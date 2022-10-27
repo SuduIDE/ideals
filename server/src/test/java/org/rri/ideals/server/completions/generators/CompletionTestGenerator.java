@@ -26,7 +26,7 @@ public class CompletionTestGenerator extends TestGenerator<CompletionTestGenerat
 
   @NotNull
   public List<? extends CompletionTest> generateTests() {
-    ArrayList<CompletionTest> ans = new ArrayList<>();
+    List<CompletionTest> ans = new ArrayList<>();
     for (var pathAndMarkers : this.markersByFile.entrySet()) {
       var path = pathAndMarkers.getKey();
       var markers = pathAndMarkers.getValue();

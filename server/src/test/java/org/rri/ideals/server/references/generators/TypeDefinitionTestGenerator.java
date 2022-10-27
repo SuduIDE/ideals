@@ -7,13 +7,13 @@ import org.eclipse.lsp4j.TypeDefinitionParams;
 import org.jetbrains.annotations.NotNull;
 import org.rri.ideals.server.engine.TestEngine;
 
-import java.util.List;
+import java.util.Set;
 
 public class TypeDefinitionTestGenerator extends ReferencesTestGeneratorBase<TypeDefinitionTestGenerator.TypeDefinitionTest> {
   public static class TypeDefinitionTest extends ReferencesTestGeneratorBase.ReferencesTestBase {
     private final TypeDefinitionParams params;
 
-    private TypeDefinitionTest(TypeDefinitionParams params, List<? extends LocationLink> answer) {
+    private TypeDefinitionTest(TypeDefinitionParams params, Set<? extends LocationLink> answer) {
       super(answer);
       this.params = params;
     }
@@ -29,7 +29,7 @@ public class TypeDefinitionTestGenerator extends ReferencesTestGeneratorBase<Typ
     super(engine, converter);
   }
 
-  protected @NotNull TypeDefinitionTest createReferencesTest(@NotNull String uri, @NotNull Position pos, @NotNull List<? extends LocationLink> locLinks) {
+  protected @NotNull TypeDefinitionTest createReferencesTest(@NotNull String uri, @NotNull Position pos, @NotNull Set<? extends LocationLink> locLinks) {
     return new TypeDefinitionTest(new TypeDefinitionParams(new TextDocumentIdentifier(uri), pos), locLinks);
   }
 }

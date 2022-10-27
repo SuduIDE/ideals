@@ -10,23 +10,21 @@ import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.engine.TestEngine;
 import org.rri.ideals.server.generator.TestGenerator;
 
-import java.util.ArrayList;
-import java.util.HashMap;
-import java.util.List;
-import java.util.Map;
+import java.util.*;
+import java.util.stream.Collectors;
 
 abstract class ReferencesTestGeneratorBase<T extends ReferencesTestGeneratorBase.ReferencesTestBase> extends TestGenerator<T> {
 
   protected abstract static class ReferencesTestBase implements Test {
     @NotNull
-    private final List<? extends LocationLink> answer;
+    private final Set<? extends LocationLink> answer;
 
-    protected ReferencesTestBase(@NotNull List<? extends LocationLink> answer) {
+    protected ReferencesTestBase(@NotNull Set<? extends LocationLink> answer) {
       this.answer = answer;
     }
 
     @Override
-    public @NotNull List<? extends LocationLink> expected() {
+    public @NotNull Set<? extends LocationLink> expected() {
       return answer;
     }
   }
@@ -62,7 +60,7 @@ abstract class ReferencesTestGeneratorBase<T extends ReferencesTestGeneratorBase
         final var uri = LspPath.fromLspUri(pair.getSecond()).toLspUri();
         final var locLinks = locations.stream()
             .map(loc -> new LocationLink(loc.getUri(), loc.getRange(), loc.getRange(), pair.getFirst()))
-            .toList();
+            .collect(Collectors.toSet());
         final var test = createReferencesTest(uri, pair.getFirst().getStart(), locLinks);
         result.add(test);
       });
@@ -70,5 +68,5 @@ abstract class ReferencesTestGeneratorBase<T extends ReferencesTestGeneratorBase
     return result;
   }
 
-  abstract protected @NotNull T createReferencesTest(@NotNull String uri, @NotNull Position pos, @NotNull List<? extends LocationLink> locLinks);
+  abstract protected @NotNull T createReferencesTest(@NotNull String uri, @NotNull Position pos, @NotNull Set<? extends LocationLink> locLinks);
 }

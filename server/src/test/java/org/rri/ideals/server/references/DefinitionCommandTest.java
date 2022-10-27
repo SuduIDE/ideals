@@ -2,7 +2,6 @@ package org.rri.ideals.server.references;
 
 import org.eclipse.lsp4j.DefinitionParams;
 import org.eclipse.lsp4j.LocationLink;
-import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
@@ -14,8 +13,8 @@ import org.rri.ideals.server.engine.TestEngine;
 import org.rri.ideals.server.generator.IdeaOffsetPositionConverter;
 import org.rri.ideals.server.references.generators.DefinitionTestGenerator;
 
-import java.util.List;
-import java.util.Optional;
+import java.util.HashSet;
+import java.util.Set;
 
 
 @RunWith(JUnit4.class)
@@ -38,10 +37,14 @@ public class DefinitionCommandTest extends ReferencesCommandTestBase<DefinitionT
 
   @Override
   @Nullable
-  protected List<? extends LocationLink> getActuals(@NotNull Object params) {
+  protected Set<? extends LocationLink> getActuals(@NotNull Object params) {
     final DefinitionParams defParams = (DefinitionParams) params;
     final var path = LspPath.fromLspUri(defParams.getTextDocument().getUri());
     final var future = new FindDefinitionCommand(defParams.getPosition()).runAsync(getProject(), path);
-    return Optional.ofNullable(TestUtil.getNonBlockingEdt(future, 50000)).map(Either::getRight).orElse(null);
+    var actual = TestUtil.getNonBlockingEdt(future, 50000);
+    if (actual == null) {
+      return null;
+    }
+    return new HashSet<>(actual.getRight());
   }
 }

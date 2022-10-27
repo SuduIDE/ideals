@@ -7,14 +7,14 @@ import org.eclipse.lsp4j.TextDocumentIdentifier;
 import org.jetbrains.annotations.NotNull;
 import org.rri.ideals.server.engine.TestEngine;
 
-import java.util.List;
+import java.util.Set;
 
 public class DefinitionTestGenerator extends ReferencesTestGeneratorBase<DefinitionTestGenerator.DefinitionTest> {
   public static class DefinitionTest extends ReferencesTestGeneratorBase.ReferencesTestBase {
     @NotNull
     private final DefinitionParams params;
 
-    private DefinitionTest(@NotNull DefinitionParams params, @NotNull List<? extends LocationLink> answer) {
+    private DefinitionTest(@NotNull DefinitionParams params, @NotNull Set<? extends LocationLink> answer) {
       super(answer);
       this.params = params;
     }
@@ -30,7 +30,7 @@ public class DefinitionTestGenerator extends ReferencesTestGeneratorBase<Definit
     super(engine, converter);
   }
 
-  protected @NotNull DefinitionTest createReferencesTest(@NotNull String uri, @NotNull Position pos, @NotNull List<? extends LocationLink> locLinks) {
+  protected @NotNull DefinitionTest createReferencesTest(@NotNull String uri, @NotNull Position pos, @NotNull Set<? extends LocationLink> locLinks) {
     return new DefinitionTest(new DefinitionParams(new TextDocumentIdentifier(uri), pos), locLinks);
   }
 }

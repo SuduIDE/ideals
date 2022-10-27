@@ -1,13 +1,12 @@
 package org.rri.ideals.server.lsp;
 
-import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.generator.IdeaOffsetPositionConverter;
 import org.rri.ideals.server.references.generators.DefinitionTestGenerator;
 
-import java.util.Optional;
+import java.util.HashSet;
 
 public class GotoDefinitionTest extends LspServerTestWithEngineBase {
 
@@ -32,10 +31,9 @@ public class GotoDefinitionTest extends LspServerTestWithEngineBase {
       final var answer = test.expected();
 
       final var future = server().getTextDocumentService().definition(params);
-      final var actual = Optional.ofNullable(TestUtil.getNonBlockingEdt(future, 50000)).map(Either::getRight);
-
-      assertTrue(actual.isPresent());
-      assertEquals(answer, actual.get());
+      final var actual = TestUtil.getNonBlockingEdt(future, 50000);
+      assertNotNull(actual);
+      assertEquals(answer, new HashSet<>(actual.getRight()));
     }
   }
 

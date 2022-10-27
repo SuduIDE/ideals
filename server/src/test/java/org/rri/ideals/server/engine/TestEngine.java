@@ -7,6 +7,7 @@ import org.rri.ideals.server.util.MiscUtil;
 
 import java.io.BufferedReader;
 import java.io.IOException;
+import java.io.StringReader;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
@@ -45,7 +46,7 @@ public class TestEngine {
 
   private void preprocessFiles(Path pathToTestProject) {
     try (final var stream = Files.newDirectoryStream(pathToTestProject)) {
-      for(final var path : stream) {
+      for (final var path : stream) {
         final var name = path.toFile().getName();
         if (name.equals(".idea") || name.contains(".iml")) {
           continue;
@@ -58,8 +59,7 @@ public class TestEngine {
           preprocessFile(path);
         }
       }
-    }
-    catch (IOException e) {
+    } catch (IOException e) {
       throw MiscUtil.wrap(e);
     }
   }
@@ -70,34 +70,49 @@ public class TestEngine {
     }
 
     try (BufferedReader reader = Files.newBufferedReader(path)) {
-      int num;
+
+      final StringBuilder normalisedTextBuilder = new StringBuilder();
+      var lines = new ArrayList<>(reader.lines().toList());
+      var linesCount = lines.size();
+      for (int i = 0; i < linesCount; i++) {
+        var line = lines.get(i);
+        normalisedTextBuilder.append(line);
+        if (i != linesCount - 1) {
+          normalisedTextBuilder.append('\n');
+        }
+      }
+      var normalisedText = normalisedTextBuilder.toString();
+
       int offset = 0;
-      final StringBuilder builder = new StringBuilder();
-      final StringBuilder labelBuilder = new StringBuilder();
       final List<Marker> markers = new ArrayList<>();
       final Stack<Label> labels = new Stack<>();
-      while((num = reader.read()) != -1) {
+
+      final StringBuilder testDataBuilder = new StringBuilder();
+      final StringBuilder labelBuilder = new StringBuilder();
+      final StringReader normalisedReader = new StringReader(normalisedText);
+      int num;
+      while ((num = normalisedReader.read()) != -1) {
         char c = (char) num;
         if (c == '<') {
-          c = (char) reader.read();
+          c = (char) normalisedReader.read();
           if (c == '/') {
             labelBuilder.setLength(0);
-            while((c = (char) reader.read()) != '>') {
+            while ((c = (char) normalisedReader.read()) != '>') {
               labelBuilder.append(c);
             }
             final var label = new Label(labelBuilder.toString(), offset);
             String insertText = getInsertTextFromLabelIfExist(label);
             if (insertText != null) {
-              builder.append(insertText);
+              testDataBuilder.append(insertText);
             } else {
               if (label.isCloseLabel()) {
                 var openLabel = labels.pop();
                 assert openLabel.name != null;
-                var srcText = builder.toString();
+                var srcText = testDataBuilder.toString();
                 Marker marker = new Marker(
-                        openLabel.name,
-                        srcText.substring(openLabel.offset, label.offset),
-                        new RangeAsOffsets(openLabel.offset, label.offset));
+                    openLabel.name,
+                    srcText.substring(openLabel.offset, label.offset),
+                    new RangeAsOffsets(openLabel.offset, label.offset));
                 marker.additionalData.putAll(openLabel.additionalData);
                 marker.additionalData.putAll(label.additionalData);
                 markers.add(marker);
@@ -111,16 +126,17 @@ public class TestEngine {
               }
             }
           } else {
-            builder.append('<');
-            builder.append(c);
+            testDataBuilder.append('<');
+            testDataBuilder.append(c);
             offset += 2;
           }
         } else {
-          builder.append(c);
+          testDataBuilder.append(c);
           offset++;
         }
       }
-      textsByFile.put(path.toString(), builder.toString());
+
+      textsByFile.put(path.toString(), testDataBuilder.toString());
       markersByFile.put(path.toString(), markers);
     }
   }
@@ -136,8 +152,9 @@ public class TestEngine {
   private void processPath(@NotNull Path path, @NotNull TestFixture fixture) {
     if (!Files.isDirectory(path)) {
       var text = textsByFile.remove(path.toString());
+      var fileInSandboxPath = getTestDataPath().relativize(path).toString();
       final var newPath =
-          MiscUtil.uncheckExceptions(() -> fixture.writeFileToProject(getTestDataPath().relativize(path).toString(), text));
+          MiscUtil.uncheckExceptions(() -> fixture.writeFileToProject(fileInSandboxPath, text));
       final var markers = markersByFile.remove(path.toString());
       markersByFile.put(newPath.toLspUri(), markers);
       textsByFile.put(newPath.toLspUri(), text);
@@ -165,19 +182,23 @@ public class TestEngine {
           processPath(path, fixture);
         }
       }
-    }
-    catch (IOException e) {
+    } catch (IOException e) {
       throw MiscUtil.wrap(e);
     }
   }
 
-  public record RangeAsOffsets(int startOffset, int endOffset) {}
+  public record RangeAsOffsets(int startOffset, int endOffset) {
+  }
 
   public static class Marker {
-    @NotNull public final String name;
-    @NotNull public final RangeAsOffsets range;
-    @Nullable public final String content;
-    @NotNull public final Map<String, String> additionalData = new HashMap<>();
+    @NotNull
+    public final String name;
+    @NotNull
+    public final RangeAsOffsets range;
+    @Nullable
+    public final String content;
+    @NotNull
+    public final Map<String, String> additionalData = new HashMap<>();
 
     public Marker(@NotNull String name, @Nullable String content, @NotNull RangeAsOffsets range) {
       this.name = name;
@@ -187,11 +208,14 @@ public class TestEngine {
   }
 
   private static class Label {
-    @NotNull final String labelContent;
-    @Nullable final String name;
+    @NotNull
+    final String labelContent;
+    @Nullable
+    final String name;
     final int offset;
     final boolean isSingleLabel;
-    @NotNull final Map<String, String> additionalData = new HashMap<>();
+    @NotNull
+    final Map<String, String> additionalData = new HashMap<>();
 
     private Label(@NotNull String labelContent, int offset) {
       this.offset = offset;
@@ -202,7 +226,7 @@ public class TestEngine {
         return;
       }
       if (labelContent.length() > 0 && labelContent.charAt(labelContent.length() - 1) == '/') {
-        labelContent = labelContent.substring(0, labelContent.length()-1);
+        labelContent = labelContent.substring(0, labelContent.length() - 1);
         this.isSingleLabel = true;
       } else {
         this.isSingleLabel = false;
