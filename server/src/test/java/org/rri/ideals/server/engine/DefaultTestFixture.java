@@ -15,13 +15,10 @@ public class DefaultTestFixture extends TestFixture {
 
   @NotNull
   private final Path sandboxPath;
-  @NotNull
-  private final Path testDataPath;
 
   public DefaultTestFixture(@NotNull Path sandboxPath, @NotNull Path testDataPath) {
     super(testDataPath);
     try {
-      this.testDataPath = testDataPath;
       if (!Files.exists(sandboxPath)) {
         Files.createDirectories(sandboxPath);
       }
@@ -48,7 +45,7 @@ public class DefaultTestFixture extends TestFixture {
     try (final var files =  Files.walk(getTestDataPath().resolve(relativeDirectoryPath))) {
       files.forEach(MiscUtil.toConsumer(source -> {
         if (!Files.isDirectory(source)) {
-          Path target = Paths.get(sandboxPath.toString(), testDataPath.relativize(source).toString());
+          Path target = Paths.get(sandboxPath.toString(), this.getTestDataPath().relativize(source).toString());
 
           if (!Files.exists(target.getParent())) {
             Files.createDirectories(target.getParent());
