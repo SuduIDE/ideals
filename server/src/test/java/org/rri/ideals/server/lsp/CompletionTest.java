@@ -23,10 +23,6 @@ import java.util.Set;
 
 public class CompletionTest extends LspServerTestWithEngineBase {
 
-  @Override
-  protected String getProjectRelativePath() {
-    return "sandbox";
-  }
 
   @Override
   protected @NotNull String getTestDataRelativePath() {

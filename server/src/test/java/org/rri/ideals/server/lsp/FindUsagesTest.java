@@ -14,10 +14,6 @@ public class FindUsagesTest extends LspServerTestWithEngineBase {
   protected @NotNull String getTestDataRelativePath() {
     return "references/java/project-find-usages-integration";
   }
-  @Override
-  protected String getProjectRelativePath() {
-    return "sandbox";
-  }
 
   @Test
   public void findUsages() {

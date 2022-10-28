@@ -13,10 +13,6 @@ public class GotoTypeDefinitionTest extends LspServerTestWithEngineBase {
   protected @NotNull String getTestDataRelativePath() {
     return "references/java/project-type-definition-integration";
   }
-  @Override
-  protected String getProjectRelativePath() {
-    return "sandbox";
-  }
 
   @Test
   public void typeDefinition() {

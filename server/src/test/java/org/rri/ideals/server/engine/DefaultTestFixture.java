@@ -1,6 +1,5 @@
 package org.rri.ideals.server.engine;
 
-import org.apache.commons.io.FileUtils;
 import org.jetbrains.annotations.NotNull;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.util.MiscUtil;
@@ -13,31 +12,13 @@ import java.nio.file.Paths;
 
 public class DefaultTestFixture extends TestFixture {
 
+
   @NotNull
   private final Path sandboxPath;
 
   public DefaultTestFixture(@NotNull Path sandboxPath, @NotNull Path testDataPath) {
     super(testDataPath);
-    try {
-      if (!Files.exists(sandboxPath)) {
-        Files.createDirectories(sandboxPath);
-      }
-      if (!Files.isDirectory(sandboxPath)) {
-        throw new RuntimeException("Path is not a directory. Path: " + sandboxPath);
-      }
-      this.sandboxPath = sandboxPath;
-      try (final var files = Files.newDirectoryStream(sandboxPath)) {
-        files.forEach(MiscUtil.toConsumer(path -> {
-          if (Files.isDirectory(path)) {
-            FileUtils.deleteDirectory(path.toFile());
-          } else {
-            Files.delete(path);
-          }
-        }));
-      }
-    } catch (IOException e) {
-      throw MiscUtil.wrap(e);
-    }
+    this.sandboxPath = sandboxPath;
   }
 
   @Override

@@ -10,11 +10,6 @@ import java.util.HashSet;
 
 public class GotoDefinitionTest extends LspServerTestWithEngineBase {
 
-  @Override
-  @NotNull
-  protected String getProjectRelativePath() {
-    return "sandbox";
-  }
 
   @Override
   @NotNull
