@@ -4,6 +4,8 @@ build/
 !**/src/main/**/build/
 !**/src/test/**/build/
 
+/test-data/sandbox/
+
 ### IntelliJ IDEA ###
 .idea/modules.xml
 .idea/jarRepositories.xml
@@ -11,6 +13,7 @@ build/
 .idea/libraries/
 *.iws
 *.iml
+!test-data/**/*iml
 *.ipr
 out/
 !**/src/main/**/out/
