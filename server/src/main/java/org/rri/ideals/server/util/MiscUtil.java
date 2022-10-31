@@ -27,6 +27,7 @@ import java.util.Arrays;
 import java.util.concurrent.Callable;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.function.Supplier;
 import java.util.stream.Stream;
 
 public class MiscUtil {
@@ -203,5 +204,38 @@ public class MiscUtil {
   @NotNull
   public static <T> Stream<T> streamOf(T @Nullable [] array) {
     return array != null ? Arrays.stream(array) : Stream.empty();
+  }
+
+  public interface ThrowingConsumer<T> {
+    void accept(T t) throws Exception;
+  }
+
+  @NotNull
+  public static <T> Consumer<T> toConsumer(@NotNull ThrowingConsumer<T> block) {
+    return t -> {
+      try {
+        block.accept(t);
+      } catch (Exception e) {
+        throw wrap(e);
+      }
+    };
+  }
+
+  public interface ThrowingSupplier<T> {
+    T get() throws Exception;
+  }
+
+  public static <T> Supplier<T> toSupplier(@NotNull ThrowingSupplier<T> block) {
+    return () -> {
+      try {
+        return block.get();
+      } catch (Exception e) {
+        throw wrap(e);
+      }
+    };
+  }
+
+  public static <T> T uncheckExceptions(@NotNull ThrowingSupplier<T> block) {
+    return toSupplier(block).get();
   }
 }

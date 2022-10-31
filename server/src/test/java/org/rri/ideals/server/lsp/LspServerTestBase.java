@@ -37,7 +37,7 @@ public abstract class LspServerTestBase extends HeavyPlatformTestCase {
   }
 
   @NotNull
-  protected Path getProjectPath() {
+  final protected Path getProjectPath() {
     return getTestDataRoot().resolve(getProjectRelativePath());
   }
 

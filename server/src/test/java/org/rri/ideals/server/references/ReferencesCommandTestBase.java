@@ -1,43 +1,36 @@
 package org.rri.ideals.server.references;
 
-import com.intellij.openapi.vfs.VirtualFile;
 import com.intellij.testFramework.fixtures.BasePlatformTestCase;
-import org.eclipse.lsp4j.Location;
-import org.eclipse.lsp4j.LocationLink;
-import org.eclipse.lsp4j.Position;
-import org.eclipse.lsp4j.Range;
 import org.jetbrains.annotations.NotNull;
-import org.rri.ideals.server.LspPath;
-import org.rri.ideals.server.TestUtil;
+import org.jetbrains.annotations.Nullable;
+import org.rri.ideals.server.engine.IdeaTestFixture;
+import org.rri.ideals.server.engine.TestEngine;
+import org.rri.ideals.server.generator.TestGenerator;
 
 import java.nio.file.Paths;
-import java.util.HashSet;
-import java.util.Set;
 
-public abstract class ReferencesCommandTestBase extends BasePlatformTestCase {
-  protected VirtualFile projectFile;
-  protected final String PREFIX_FILE = "temp:///src/";
-
+public abstract class ReferencesCommandTestBase<E extends TestGenerator<? extends TestGenerator.Test>> extends BasePlatformTestCase {
   @Override
   protected String getTestDataPath() {
     return Paths.get("test-data/references").toAbsolutePath().toString();
   }
 
-  @NotNull
-  protected Location location(@NotNull String uri, @NotNull Range targetRange) {
-    return new Location(uri, targetRange);
-  }
+  protected abstract @NotNull E getGenerator(@NotNull final TestEngine engine);
 
-  @NotNull
-  protected LocationLink locationLink(@NotNull String uri, @NotNull Range targetRange, @NotNull Range originalRange) {
-    return new LocationLink(uri, targetRange, targetRange, originalRange);
-  }
+  protected abstract @Nullable Object getActuals(@NotNull final Object params);
 
-  protected void check(@NotNull Set<@NotNull Location> answers, @NotNull Position pos, @NotNull LspPath path) {
-    final var future = new FindUsagesCommand(pos).runAsync(getProject(), path);
-    final var lst = TestUtil.getNonBlockingEdt(future, 50000);
-    assertNotNull(lst);
-    final var result = new HashSet<>(lst);
-    assertEquals(answers, result);
+  protected void checkReferencesByDirectory(@NotNull String testProjectRelativePath) {
+      final var engine = new TestEngine(new IdeaTestFixture(myFixture));
+      engine.initSandbox(testProjectRelativePath);
+      final var generator = getGenerator(engine);
+      final var referencesTests = generator.generateTests();
+      for (final var test : referencesTests) {
+        final var params = test.params();
+        final var expected = test.expected();
+
+        final var actual = getActuals(params);
+
+        assertEquals(expected, actual);
+      }
   }
 }

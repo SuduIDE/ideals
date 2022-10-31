@@ -4,15 +4,19 @@ import org.eclipse.lsp4j.DocumentHighlight;
 import org.eclipse.lsp4j.DocumentHighlightKind;
 import org.eclipse.lsp4j.Position;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.TestUtil;
+import org.rri.ideals.server.engine.TestEngine;
+import org.rri.ideals.server.generator.TestGenerator;
 
 import java.util.HashSet;
 import java.util.Set;
 
+@SuppressWarnings("rawtypes")
 @RunWith(JUnit4.class)
 public class DocumentHighlightCommandTest extends ReferencesCommandTestBase {
   @Test
@@ -72,5 +76,18 @@ public class DocumentHighlightCommandTest extends ReferencesCommandTestBase {
     final var lst = TestUtil.getNonBlockingEdt(future, 50000);
     assertNotNull(lst);
     assertEquals(answers, new HashSet<>(lst));
+  }
+
+
+  @SuppressWarnings("ConstantConditions")
+  @NotNull
+  @Override
+  protected TestGenerator<? extends TestGenerator.Test> getGenerator(@NotNull TestEngine engine) {
+    return null;
+  }
+
+  @Override
+  protected @Nullable Object getActuals(@NotNull Object params) {
+    return null;
   }
 }

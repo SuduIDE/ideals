@@ -67,7 +67,7 @@ public class TestUtil {
     final var sortedEdits = edits.stream()
         .sorted(Comparator.
             <TextEdit>comparingInt(it -> it.getRange().getStart().getLine())
-            .thenComparingInt(it -> it.getRange().getStart().getLine())).toList();
+            .thenComparingInt(it -> it.getRange().getStart().getCharacter())).toList();
 
     final var ranges = new ArrayList<TextRange>(sortedEdits.size());
 
@@ -109,6 +109,8 @@ public class TestUtil {
     }
     return hereIndex;
   }
+
+
 
   public static class DumbCancelChecker implements CancelChecker {
 
