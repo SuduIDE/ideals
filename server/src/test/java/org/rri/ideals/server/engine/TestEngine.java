@@ -149,15 +149,24 @@ public class TestEngine {
     };
   }
 
-  private void processPath(@NotNull Path path, @NotNull TestFixture fixture) {
+  private void processPath(
+      @NotNull Path path,
+      @NotNull TestFixture fixture,
+      @NotNull Map<String, String> attached) {
     if (!Files.isDirectory(path)) {
       var text = textsByFile.remove(path.toString());
-      var fileInSandboxPath = getTestDataPath().relativize(path).toString();
-      final var newPath =
-          MiscUtil.uncheckExceptions(() -> fixture.writeFileToProject(fileInSandboxPath, text));
-      final var markers = markersByFile.remove(path.toString());
-      markersByFile.put(newPath.toLspUri(), markers);
-      textsByFile.put(newPath.toLspUri(), text);
+      var markers = markersByFile.remove(path.toString());
+      var attachMarker =
+          markers.stream().filter(marker -> marker.name.equals("attached")).findFirst().orElse(null);
+      if (attachMarker == null) {
+        var fileInSandboxPath = getTestDataPath().relativize(path).toString();
+        final var newPath =
+            MiscUtil.uncheckExceptions(() -> fixture.writeFileToProject(fileInSandboxPath, text));
+        markersByFile.put(newPath.toLspUri(), markers);
+        textsByFile.put(newPath.toLspUri(), text);
+      } else {
+        attached.put(attachMarker.additionalData.get("targetId"), text);
+      }
     }
   }
 
@@ -165,6 +174,8 @@ public class TestEngine {
     var pathToTestProject = getTestDataPath().resolve(relativePathToTestProject);
     preprocessFiles(pathToTestProject);
     try (final var stream = Files.newDirectoryStream(pathToTestProject)) {
+      // attach target id -> file text we want to attach
+      var attachedTexts = new HashMap<String, String>();
       for (final var path : stream) {
         final var name = path.toFile().getName();
         if (Objects.equals(name, ".idea")) {
@@ -176,10 +187,24 @@ public class TestEngine {
         }
         if (Files.isDirectory(path)) {
           try (final var filesStream = Files.walk(path)) {
-            filesStream.forEach(curPath -> processPath(curPath, fixture));
+            filesStream.forEach(curPath -> processPath(curPath, fixture, attachedTexts));
           }
         } else {
-          processPath(path, fixture);
+          processPath(path, fixture, attachedTexts);
+        }
+      }
+      for (var targetIdAndText : attachedTexts.entrySet()) {
+        var targetId = targetIdAndText.getKey();
+        var attachedText = targetIdAndText.getValue();
+        for (var pathAndMarkers: this.markersByFile.entrySet()) {
+          var markers = pathAndMarkers.getValue();
+          var attachTargetMarkers = markers.stream().filter(marker -> marker.name.equals(
+              "attachTarget")).toList();
+          for (var attachMarker : attachTargetMarkers) {
+            if (attachMarker.additionalData.get("id").equals(targetId)) {
+              attachMarker.additionalData.put("attachedText", attachedText);
+            }
+          }
         }
       }
     } catch (IOException e) {

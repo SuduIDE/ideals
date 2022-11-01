@@ -1,4 +1,4 @@
-import ImportClass;
+</attachTarget id=main/>import ImportClass;
 
 public class TestClass {
   {

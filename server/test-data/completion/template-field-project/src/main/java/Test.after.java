@@ -1,4 +1,4 @@
-class Test {
+</attached targetId=main/>class Test {
 
     private int x;
 

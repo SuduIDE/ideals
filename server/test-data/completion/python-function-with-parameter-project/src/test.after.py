@@ -4,5 +4,5 @@ def foo(x):
     :return: actual real hero
     """
     foo(x)
-
+</attached targetId=main/>
 foo($0)

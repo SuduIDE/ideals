@@ -30,30 +30,23 @@ public class CompletionTestGenerator extends TestGenerator<CompletionTestGenerat
     for (var pathAndMarkers : this.markersByFile.entrySet()) {
       var path = pathAndMarkers.getKey();
       var markers = pathAndMarkers.getValue();
-      if (markers.size() == 1) {
-        var cursorMarker = markers.get(0);
-        var callPos = converter.offsetToPosition(cursorMarker.range.startOffset(), path);
-
-        var test = new CompletionTest(
-            new TextDocumentIdentifier(LspPath.fromLspUri(path).toLspUri()),
-            callPos, textsByFile.get(path));
-        var splitByComa = path.split("\\.");
-        var afterPathBuilder = new StringBuilder();
-        for (int i = 0; i < splitByComa.length - 1; i++) {
-          afterPathBuilder.append(splitByComa[i]);
-          afterPathBuilder.append('.');
-        }
-        afterPathBuilder.append("after.");
-        afterPathBuilder.append(splitByComa[splitByComa.length - 1]);
-        String pathToFile = afterPathBuilder.toString();
-        var expected = this.textsByFile.get(pathToFile);
-        if (expected != null) {
-          test.setExpectedText(expected);
-        }
-        ans.add(test);
-      } else if (markers.size() > 1) {
-        LOG.warn("To many markers in " + path);
+      var cursorMarker =
+          markers.stream().filter(marker -> marker.name.equals("cursor")).findFirst().orElse(null);
+      if (cursorMarker == null) {
+        continue;
       }
+      var callPos = converter.offsetToPosition(cursorMarker.range.startOffset(), path);
+
+      var test = new CompletionTest(
+          new TextDocumentIdentifier(LspPath.fromLspUri(path).toLspUri()),
+          callPos, textsByFile.get(path));
+      markers
+          .stream()
+          .filter(marker -> marker.name.equals("attachTarget"))
+          .findAny().ifPresent(
+              attachMarker -> test.setExpectedText(attachMarker.additionalData.get("attachedText")));
+      ans.add(test);
+
     }
 
     return ans;

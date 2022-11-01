@@ -1,4 +1,4 @@
-class Test {
+</attachTarget id=main/>class Test {
   void completionVariant(int x) {
   }
 
