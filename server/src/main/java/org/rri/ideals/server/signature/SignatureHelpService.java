@@ -17,7 +17,6 @@ import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.util.text.StringUtil;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.util.PsiUtilCore;
-import com.intellij.testFramework.utils.parameterInfo.MockUpdateParameterInfoContext;
 import com.intellij.ui.JBColor;
 import com.intellij.util.Function;
 import com.intellij.util.indexing.DumbModeAccessType;
@@ -99,24 +98,13 @@ final public class SignatureHelpService implements Disposable {
               return (Runnable)() -> DumbModeAccessType.RELIABLE_DATA_ONLY.ignoreDumbMode(() -> {
                 if (element.isValid()) {
                   handler.showParameterInfo(element, context);
-                  MockUpdateParameterInfoContext updateContext = new MockUpdateParameterInfoContext(
-                      editor, psiFile
-                  );
-                  ParameterInfoControllerBase controller = ParameterInfoControllerBase.createParameterInfoController(
-                      project, editor, offset, context.getItemsToShow(), context.getHighlightedElement(), element, handler, true, false);
-                  var o = handler.findElementForUpdatingParameterInfo(updateContext);
-                  assert o != null;
-                  DumbModeAccessType.RELIABLE_DATA_ONLY.ignoreDumbMode(() -> handler.updateParameterInfo(o, updateContext));
-
-                  controller.showHint(false, false); // todo
-                  controller.updateComponent();
                   var modelContext = new MyParameterContext(false, element);
-                  for (int i = 0; i < controller.getObjects().length; i++) {
-                    var descriptor = controller.getObjects()[i];
+                  for (int i = 0; i < context.getItemsToShow().length; i++) {
+                    var descriptor = context.getItemsToShow()[i];
                     modelContext.i = i;
-                    if (descriptor.equals(controller.getHighlighted())) {
-                      modelContext.model.highlightedSignature = i;
-                    }
+//                    if (descriptor.equals()) {
+//                      modelContext.model.highlightedSignature = i;
+//                    }
 
                     DumbModeAccessType.RELIABLE_DATA_ONLY.ignoreDumbMode(() -> handler.updateUI(descriptor, modelContext));
                   }
@@ -224,7 +212,7 @@ final public class SignatureHelpService implements Disposable {
 
     @Override
     public boolean isUIComponentEnabled() {
-      return false;
+      return true;
     }
 
     @Override
