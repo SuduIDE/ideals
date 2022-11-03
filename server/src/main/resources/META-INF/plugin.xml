@@ -37,6 +37,7 @@
                         serviceInterface="com.intellij.openapi.fileEditor.FileDocumentManager"
                         serviceImplementation="com.intellij.openapi.fileEditor.impl.FileDocumentManagerImpl"
                         testServiceImplementation="org.rri.ideals.server.components.TestFileDocumentManager"/>
+    <codeInsight.parameterInfo.listener implementation="org.rri.ideals.server.signature.MyParameterInfoListener"/>
 
 
   </extensions>

@@ -1,6 +1,7 @@
 package org.rri.ideals.server.signature;
 
 import com.intellij.codeInsight.hint.ParameterInfoControllerBase;
+import com.intellij.codeInsight.hint.ParameterInfoListener;
 import com.intellij.codeInsight.hint.ShowParameterInfoContext;
 import com.intellij.codeInsight.hint.ShowParameterInfoHandler;
 import com.intellij.lang.Language;
@@ -15,11 +16,11 @@ import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.util.text.StringUtil;
+import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.util.PsiUtilCore;
 import com.intellij.ui.JBColor;
 import com.intellij.util.Function;
-import com.intellij.util.indexing.DumbModeAccessType;
 import io.github.furstenheim.CopyDown;
 import org.eclipse.lsp4j.ParameterInformation;
 import org.eclipse.lsp4j.Position;
@@ -54,7 +55,7 @@ final public class SignatureHelpService implements Disposable {
   @Nullable
   public SignatureHelp computeSignatureHelp(@NotNull LspPath path,
                                             @NotNull Position position,
-                                            @NotNull CancelChecker cancelChecker) {
+                                            CancelChecker cancelChecker) {
     LOG.info("start signature help");
     var disposable = Disposer.newDisposable();
     try {
@@ -90,52 +91,51 @@ final public class SignatureHelpService implements Disposable {
           false
       );
       // todo in model we have info about current (aka current parameter index) and highlighted signature (current sig item)
-      WriteAction.runAndWait(() -> {
-        DumbModeAccessType.RELIABLE_DATA_ONLY.ignoreDumbMode(() -> {
-          for (ParameterInfoHandler<PsiElement, Object> handler : handlers) {
-            PsiElement element = handler.findElementForParameterInfo(context);
-            if (element != null) {
-              return (Runnable)() -> DumbModeAccessType.RELIABLE_DATA_ONLY.ignoreDumbMode(() -> {
-                if (element.isValid()) {
-                  handler.showParameterInfo(element, context);
-                  var modelContext = new MyParameterContext(false, element);
-                  for (int i = 0; i < context.getItemsToShow().length; i++) {
-                    var descriptor = context.getItemsToShow()[i];
-                    modelContext.i = i;
-//                    if (descriptor.equals()) {
-//                      modelContext.model.highlightedSignature = i;
-//                    }
-
-                    DumbModeAccessType.RELIABLE_DATA_ONLY.ignoreDumbMode(() -> handler.updateUI(descriptor, modelContext));
-                  }
-                  ans.setSignatures(modelContext.signatureItems.stream().map(signatureIdeaItem -> {
-                    var signatureInformation = new SignatureInformation();
-                    var parametersInformation = new ArrayList<ParameterInformation>();
-                    for (int i = 0; i < signatureIdeaItem.startOffsets.size(); i++) {
-                      int startOffset = signatureIdeaItem.startOffsets.get(i);
-                      int endOffset = signatureIdeaItem.endOffsets.get(i);
-                      parametersInformation.add(
-                          MiscUtil.with(new ParameterInformation(),
-                              parameterInformation ->
-                                  parameterInformation.setLabel(signatureIdeaItem.text.substring(startOffset, endOffset))
-                          ));
-                    }
-                    int labelEndOffset =
-                        signatureIdeaItem.startOffsets.isEmpty() ? signatureIdeaItem.text.length() : signatureIdeaItem.startOffsets.get(0);
-
-                    signatureInformation.setParameters(parametersInformation);
-                    signatureInformation.setActiveParameter(modelContext.model.current == -1 ? null : modelContext.model.current);
-                    signatureInformation.setLabel(signatureIdeaItem.text);
-                    return signatureInformation;
-                  }).toList());
-                  ans.setActiveSignature(modelContext.model.highlightedSignature == -1 ? null : modelContext.model.highlightedSignature);
-                }
-              });
+//      WriteAction.runAndWait(() -> {
+//        DumbModeAccessType.RELIABLE_DATA_ONLY.ignoreDumbMode(() -> {
+      ReadAction.run(() -> {
+        for (ParameterInfoHandler<PsiElement, Object> handler : handlers) {
+          PsiElement element = handler.findElementForParameterInfo(context);
+          if (element != null) {
+            if (element.isValid()) {
+              handler.showParameterInfo(element, context);
             }
+            break;
           }
-          return (Runnable) () -> {};
-        }).run();
+        }
       });
+      WriteAction.runAndWait(() -> PsiDocumentManager.getInstance(project).commitAllDocuments());
+      for (var listener : ParameterInfoListener.EP_NAME.getExtensionList()) {
+        if (listener instanceof MyParameterInfoListener myListener) {
+          while (myListener.getCurrentResultRef().get() == null) {
+            cancelChecker.checkCanceled();
+          }
+          var model = myListener.getCurrentResultRef().get();
+          ans.setSignatures(model.signatures.stream().map(signatureIdeaItemModel -> {
+                var signatureItem = (ParameterInfoControllerBase.SignatureItem)signatureIdeaItemModel;
+                var signatureInformation = new SignatureInformation();
+                var parametersInformation = new ArrayList<ParameterInformation>();
+                for (int i = 0; i < signatureItem.startOffsets.size(); i++) {
+                  int startOffset = signatureItem.startOffsets.get(i);
+                  int endOffset = signatureItem.endOffsets.get(i);
+                  parametersInformation.add(
+                      MiscUtil.with(new ParameterInformation(),
+                          parameterInformation ->
+                          {
+                            parameterInformation.setLabel(signatureItem.text.substring(startOffset,
+                                endOffset));
+                          }
+                      ));
+                }
+                signatureInformation.setParameters(parametersInformation);
+                signatureInformation.setActiveParameter(model.current);
+                signatureInformation.setLabel(signatureItem.text);
+                return signatureInformation;
+              }).toList());
+          ans.setActiveSignature(model.highlightedSignature);
+          break;
+        }
+      }
       return ans;
     } finally {
       WriteAction.runAndWait(() -> Disposer.dispose(disposable));

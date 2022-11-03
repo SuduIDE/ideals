@@ -190,8 +190,7 @@ public class MyTextDocumentService implements TextDocumentService {
   public CompletableFuture<SignatureHelp> signatureHelp(SignatureHelpParams params) {
     final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
     return CompletableFutures.computeAsync(AppExecutorUtil.getAppExecutorService(),
-        cancelChecker -> signature().computeSignatureHelp(path, params.getPosition(), cancelChecker)
-    );
+        cancelChecker -> signature().computeSignatureHelp(path, params.getPosition(), cancelChecker));
   }
 
 
