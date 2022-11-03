@@ -13,6 +13,9 @@ abstract public class TestGenerator<T extends TestGenerator.Test> {
   protected final Map<String, String> textsByFile; // <Path, Text>
   @NotNull
   protected final Map<String, List<TestEngine.Marker>> markersByFile; // <Path, List<Marker>>
+
+  @NotNull
+  protected final Map<String, String> textByIgnoredFile;
   @NotNull
   protected final OffsetPositionConverter converter;
 
@@ -21,6 +24,7 @@ abstract public class TestGenerator<T extends TestGenerator.Test> {
           @NotNull OffsetPositionConverter converter){
     this.textsByFile = engine.getTextsByFile();
     this.markersByFile = engine.getMarkersByFile();
+    this.textByIgnoredFile = engine.getTextByIgnoredFile();
     this.converter = converter;
   }
 
