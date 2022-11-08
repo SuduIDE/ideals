@@ -2,10 +2,6 @@
 <project version="4">
   <component name="ProjectModuleManager">
     <modules>
-      <module fileurl="file://$PROJECT_DIR$/import-static-project/import-static-project.iml"
-              filepath="$PROJECT_DIR$/import-static-project/import-static-project.iml" />
-      <module fileurl="file://$PROJECT_DIR$/import-static-project/templates-project.iml"
-              filepath="$PROJECT_DIR$/import-static-project/templates-project.iml" />
     </modules>
   </component>
 </project>

@@ -65,11 +65,9 @@ final public class SignatureHelpService implements Disposable {
       final var offset = MiscUtil.positionToOffset(doc, position);
 
       final Language language = ReadAction.compute(() -> PsiUtilCore.getLanguageAtOffset(psiFile, offset));
-      
-      // This assignment taken from ShowParameterInfoHandler, IDEA 203.5981.155
-      @SuppressWarnings("unchecked") 
-      final ParameterInfoHandler<PsiElement, Object>[] handlers =
-              ShowParameterInfoHandler.getHandlers(project, language, psiFile.getViewProvider().getBaseLanguage());
+      // This assignment came from ShowParameterInfoHandler, IDEA 203.5981.155
+      @SuppressWarnings("unchecked") final ParameterInfoHandler<PsiElement, Object>[] handlers =
+          ShowParameterInfoHandler.getHandlers(project, language, psiFile.getViewProvider().getBaseLanguage());
 
       var editor = WriteAction.computeAndWait(() -> EditorUtil.createEditor(disposable, psiFile, position));
 
@@ -82,7 +80,9 @@ final public class SignatureHelpService implements Disposable {
             signatureHelp -> signatureHelp.setSignatures(new ArrayList<>()));
       }
       WriteAction.runAndWait(() -> PsiDocumentManager.getInstance(project).commitAllDocuments());
-      return ProgressManager.getInstance().runProcess(() -> createSignatureHelpFromListener(cancelChecker), new LspProgressIndicator(cancelChecker));
+
+      return ProgressManager.getInstance().runProcess(
+          SignatureHelpService::createSignatureHelpFromListener, new LspProgressIndicator(cancelChecker));
     } finally {
       WriteAction.runAndWait(() -> Disposer.dispose(disposable));
       cancelChecker.checkCanceled();
@@ -102,14 +102,16 @@ final public class SignatureHelpService implements Disposable {
     });
   }
 
-  private static SignatureHelp createSignatureHelpFromListener(CancelChecker cancelChecker) {
+  private static SignatureHelp createSignatureHelpFromListener() {
     SignatureHelp ans = new SignatureHelp();
     for (var listener : ParameterInfoListener.EP_NAME.getExtensionList()) {
       if (listener instanceof MyParameterInfoListener myListener) {
-        while (myListener.getCurrentResultRef().get() == null) {
-          cancelChecker.checkCanceled();
+        ParameterInfoControllerBase.Model model;
+        try {
+          model = myListener.queue.take();
+        } catch (InterruptedException e) {
+          throw MiscUtil.wrap(e);
         }
-        var model = myListener.getCurrentResultRef().get();
         ans.setSignatures(model.signatures.stream().map(signatureIdeaItemModel -> {
               var signatureItem = (ParameterInfoControllerBase.SignatureItem)signatureIdeaItemModel;
               var signatureInformation = new SignatureInformation();
@@ -124,11 +126,11 @@ final public class SignatureHelpService implements Disposable {
                     ));
               }
           signatureInformation.setParameters(parametersInformation);
-          signatureInformation.setActiveParameter(model.current);
+          signatureInformation.setActiveParameter(model.current == -1 ? null : model.current);
           signatureInformation.setLabel(signatureItem.text);
           return signatureInformation;
         }).toList());
-        ans.setActiveSignature(model.highlightedSignature);
+        ans.setActiveSignature(model.highlightedSignature == -1 ? null : model.highlightedSignature);
         break;
       }
     }
