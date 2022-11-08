@@ -13,7 +13,7 @@ public class MyParameterInfoListener implements ParameterInfoListener {
   private final AtomicReference<ParameterInfoControllerBase.Model> currentResultRef = new AtomicReference<>();
   @Override
   public void hintUpdated(ParameterInfoControllerBase.@NotNull Model result) {
-    LOG.warn("yeeeeeeeeeeeeeeeeeeeeeah");
+    LOG.info("parameter info set");
     currentResultRef.set(result);
   }
 
@@ -23,7 +23,7 @@ public class MyParameterInfoListener implements ParameterInfoListener {
 
   @Override
   public void hintHidden(@NotNull Project project) {
-    LOG.warn("oh noooooooooooooooo");
+    LOG.info("parameter info delete");
     currentResultRef.set(null);
   }
 }
