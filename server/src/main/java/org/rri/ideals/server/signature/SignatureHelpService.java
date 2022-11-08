@@ -7,6 +7,7 @@ import com.intellij.codeInsight.hint.ShowParameterInfoHandler;
 import com.intellij.lang.Language;
 import com.intellij.lang.parameterInfo.ParameterInfoHandler;
 import com.intellij.openapi.Disposable;
+import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.application.WriteAction;
 import com.intellij.openapi.components.Service;
@@ -25,6 +26,7 @@ import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.eclipse.lsp4j.jsonrpc.messages.Tuple;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.jetbrains.annotations.TestOnly;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.util.EditorUtil;
 import org.rri.ideals.server.util.LspProgressIndicator;
@@ -37,6 +39,9 @@ final public class SignatureHelpService implements Disposable {
   private static final Logger LOG = Logger.getInstance(SignatureHelpService.class);
   @NotNull
   private final Project project;
+
+  @Nullable
+  private Runnable flushRunnable = null;
 
   public SignatureHelpService(@NotNull Project project) {
     this.project = project;
@@ -80,7 +85,9 @@ final public class SignatureHelpService implements Disposable {
             signatureHelp -> signatureHelp.setSignatures(new ArrayList<>()));
       }
       WriteAction.runAndWait(() -> PsiDocumentManager.getInstance(project).commitAllDocuments());
-
+      if (ApplicationManager.getApplication().isUnitTestMode() && flushRunnable != null) {
+        flushRunnable.run();
+      }
       return ProgressManager.getInstance().runProcess(
           SignatureHelpService::createSignatureHelpFromListener, new LspProgressIndicator(cancelChecker));
     } finally {
@@ -135,5 +142,10 @@ final public class SignatureHelpService implements Disposable {
       }
     }
     return ans;
+  }
+
+  @TestOnly
+  public void setEdtFlushRunnable(Runnable runnable) {
+    this.flushRunnable = runnable;
   }
 }

@@ -22,7 +22,6 @@ public class MyParameterInfoListener implements ParameterInfoListener {
   @Override
   public void hintHidden(@NotNull Project project) {
     LOG.info("parameter info delete");
-    assert !queue.isEmpty();
     queue.poll();
   }
 }
