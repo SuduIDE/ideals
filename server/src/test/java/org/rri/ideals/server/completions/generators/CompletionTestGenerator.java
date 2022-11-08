@@ -37,19 +37,7 @@ public class CompletionTestGenerator extends TestGenerator<CompletionTestGenerat
         var test = new CompletionTest(
             new TextDocumentIdentifier(LspPath.fromLspUri(path).toLspUri()),
             callPos, textsByFile.get(path));
-        var splitByComa = path.split("\\.");
-        var afterPathBuilder = new StringBuilder();
-        for (int i = 0; i < splitByComa.length - 1; i++) {
-          afterPathBuilder.append(splitByComa[i]);
-          afterPathBuilder.append('.');
-        }
-        afterPathBuilder.append("after.");
-        afterPathBuilder.append(splitByComa[splitByComa.length - 1]);
-        String pathToFile = afterPathBuilder.toString();
-        var expected = this.textsByFile.get(pathToFile);
-        if (expected != null) {
-          test.setExpectedText(expected);
-        }
+        textByIgnoredFile.values().stream().findAny().ifPresent(test::setExpectedText);
         ans.add(test);
       } else if (markers.size() > 1) {
         LOG.warn("To many markers in " + path);
