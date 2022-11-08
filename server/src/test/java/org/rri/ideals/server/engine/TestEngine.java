@@ -18,15 +18,18 @@ public class TestEngine {
   private final TestFixture fixture;
 
   @NotNull
-  private final Map<@NotNull String, @NotNull String> textsByFile; // <Path, Text>
+  // <Path, Text>
+  private final Map<@NotNull String, @NotNull String> textsByFile = new HashMap<>();
 
   @NotNull
-  private final Map<@NotNull String, @NotNull List<@NotNull Marker>> markersByFile; // <Path, List<Marker>>
+  // <Path, List<Marker>>
+  private final Map<@NotNull String, @NotNull List<@NotNull Marker>> markersByFile = new HashMap<>();
+
+  @NotNull
+  private final Map<String, String> textByIgnoredFile = new HashMap<>();
 
   public TestEngine(@NotNull TestFixture fixture) {
     this.fixture = fixture;
-    this.textsByFile = new HashMap<>();
-    this.markersByFile = new HashMap<>();
   }
 
   @NotNull
@@ -42,6 +45,11 @@ public class TestEngine {
   @NotNull
   private Path getTestDataPath() {
     return fixture.getTestDataPath();
+  }
+
+  @NotNull
+  public Map<String, String> getTextByIgnoredFile() {
+    return textByIgnoredFile;
   }
 
   private void preprocessFiles(Path pathToTestProject) {
@@ -152,10 +160,15 @@ public class TestEngine {
   private void processPath(@NotNull Path path, @NotNull TestFixture fixture) {
     if (!Files.isDirectory(path)) {
       var text = textsByFile.remove(path.toString());
+      final var markers = markersByFile.remove(path.toString());
+      var splitByDot = path.toString().split("\\.");
+      if (splitByDot[splitByDot.length - 2].equals("after")) {
+        textByIgnoredFile.put(path.toString(), text);
+        return;
+      }
       var fileInSandboxPath = getTestDataPath().relativize(path).toString();
       final var newPath =
           MiscUtil.uncheckExceptions(() -> fixture.writeFileToProject(fileInSandboxPath, text));
-      final var markers = markersByFile.remove(path.toString());
       markersByFile.put(newPath.toLspUri(), markers);
       textsByFile.put(newPath.toLspUri(), text);
     }
