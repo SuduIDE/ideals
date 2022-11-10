@@ -54,7 +54,7 @@ final public class SignatureHelpService implements Disposable {
   @Nullable
   public SignatureHelp computeSignatureHelp(@NotNull LspPath path,
                                             @NotNull Position position,
-                                            CancelChecker cancelChecker) {
+                                            @NotNull CancelChecker cancelChecker) {
     LOG.info("start signature help");
     var disposable = Disposer.newDisposable();
     try {
