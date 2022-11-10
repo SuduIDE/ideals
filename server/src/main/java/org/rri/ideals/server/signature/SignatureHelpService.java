@@ -96,7 +96,9 @@ final public class SignatureHelpService implements Disposable {
     }
   }
 
-  private static Boolean findAndUseValidHandler(ParameterInfoHandler<PsiElement, Object>[] handlers, ShowParameterInfoContext context) {
+  private static boolean findAndUseValidHandler(
+      @NotNull ParameterInfoHandler<PsiElement, Object>[] handlers,
+      @NotNull ShowParameterInfoContext context) {
     return ReadAction.compute(() -> {
       for (ParameterInfoHandler<PsiElement, Object> handler : handlers) {
         PsiElement element = handler.findElementForParameterInfo(context);
@@ -109,6 +111,7 @@ final public class SignatureHelpService implements Disposable {
     });
   }
 
+  @NotNull
   private static SignatureHelp createSignatureHelpFromListener() {
     SignatureHelp ans = new SignatureHelp();
     for (var listener : ParameterInfoListener.EP_NAME.getExtensionList()) {
@@ -120,18 +123,18 @@ final public class SignatureHelpService implements Disposable {
           throw MiscUtil.wrap(e);
         }
         ans.setSignatures(model.signatures.stream().map(signatureIdeaItemModel -> {
-              var signatureItem = (ParameterInfoControllerBase.SignatureItem)signatureIdeaItemModel;
-              var signatureInformation = new SignatureInformation();
-              var parametersInformation = new ArrayList<ParameterInformation>();
-              for (int i = 0; i < signatureItem.startOffsets.size(); i++) {
-                int startOffset = signatureItem.startOffsets.get(i);
-                int endOffset = signatureItem.endOffsets.get(i);
-                parametersInformation.add(
-                    MiscUtil.with(new ParameterInformation(),
-                        parameterInformation ->
-                            parameterInformation.setLabel(Tuple.two(startOffset, endOffset))
-                    ));
-              }
+          var signatureItem = (ParameterInfoControllerBase.SignatureItem) signatureIdeaItemModel;
+          var signatureInformation = new SignatureInformation();
+          var parametersInformation = new ArrayList<ParameterInformation>();
+          for (int i = 0; i < signatureItem.startOffsets.size(); i++) {
+            int startOffset = signatureItem.startOffsets.get(i);
+            int endOffset = signatureItem.endOffsets.get(i);
+            parametersInformation.add(
+                MiscUtil.with(new ParameterInformation(),
+                    parameterInformation ->
+                        parameterInformation.setLabel(Tuple.two(startOffset, endOffset))
+                ));
+          }
           signatureInformation.setParameters(parametersInformation);
           signatureInformation.setActiveParameter(model.current == -1 ? null : model.current);
           signatureInformation.setLabel(signatureItem.text);
@@ -145,7 +148,7 @@ final public class SignatureHelpService implements Disposable {
   }
 
   @TestOnly
-  public void setEdtFlushRunnable(Runnable runnable) {
+  public void setEdtFlushRunnable(@NotNull Runnable runnable) {
     this.flushRunnable = runnable;
   }
 }
