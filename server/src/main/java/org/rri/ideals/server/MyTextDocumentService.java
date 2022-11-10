@@ -15,6 +15,7 @@ import org.rri.ideals.server.formatting.FormattingCommand;
 import org.rri.ideals.server.formatting.OnTypeFormattingCommand;
 import org.rri.ideals.server.references.*;
 import org.rri.ideals.server.rename.RenameCommand;
+import org.rri.ideals.server.signature.SignatureHelpService;
 import org.rri.ideals.server.symbol.DocumentSymbolCommand;
 import org.rri.ideals.server.util.Metrics;
 
@@ -80,13 +81,13 @@ public class MyTextDocumentService implements TextDocumentService {
   @Override
   public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> definition(DefinitionParams params) {
     return new FindDefinitionCommand(params.getPosition())
-            .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
+        .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
   }
 
   @Override
   public CompletableFuture<Either<List<? extends Location>, List<? extends LocationLink>>> typeDefinition(TypeDefinitionParams params) {
     return new FindTypeDefinitionCommand(params.getPosition())
-            .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
+        .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
   }
 
   @Override
@@ -98,13 +99,13 @@ public class MyTextDocumentService implements TextDocumentService {
   @Override
   public CompletableFuture<List<? extends Location>> references(ReferenceParams params) {
     return new FindUsagesCommand(params.getPosition())
-            .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
+        .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
   }
 
   @Override
   public CompletableFuture<List<? extends DocumentHighlight>> documentHighlight(DocumentHighlightParams params) {
     return new DocumentHighlightCommand(params.getPosition())
-            .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
+        .runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
   }
 
   @SuppressWarnings("deprecation")
@@ -158,6 +159,11 @@ public class MyTextDocumentService implements TextDocumentService {
     return session.getProject().getService(CompletionService.class);
   }
 
+  @NotNull
+  private SignatureHelpService signature() {
+    return session.getProject().getService(SignatureHelpService.class);
+  }
+
   @Override
   @NotNull
   public CompletableFuture<CompletionItem> resolveCompletionItem(@NotNull CompletionItem unresolved) {
@@ -178,6 +184,15 @@ public class MyTextDocumentService implements TextDocumentService {
             Either.forLeft(completions().computeCompletions(path, params.getPosition(), cancelChecker))
     );
   }
+
+  @Override
+  @NotNull
+  public CompletableFuture<SignatureHelp> signatureHelp(SignatureHelpParams params) {
+    final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
+    return CompletableFutures.computeAsync(AppExecutorUtil.getAppExecutorService(),
+        cancelChecker -> signature().computeSignatureHelp(path, params.getPosition(), cancelChecker));
+  }
+
 
   @Override
   public CompletableFuture<List<? extends TextEdit>> formatting(@NotNull DocumentFormattingParams params) {
