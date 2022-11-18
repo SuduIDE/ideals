@@ -418,6 +418,9 @@ final public class CompletionService implements Disposable {
       //noinspection OverrideOnly
       DocumentationResultData res = FutureKt.asCompletableFuture(ImplKt.computeDocumentationAsync(cs,
           target.createPointer())).get();
+      if (res == null) {
+        return Either.forRight(null);
+      }
       var html = res.getHtml();
       var htmlToMarkdownConverter = new CopyDown();
       var ans = htmlToMarkdownConverter.convert(html);
