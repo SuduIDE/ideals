@@ -2,7 +2,6 @@ package org.rri.ideals.server.references;
 
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
-import com.intellij.openapi.editor.ScrollType;
 import com.intellij.openapi.fileEditor.FileEditor;
 import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx;
 import com.intellij.openapi.fileEditor.ex.FileEditorProviderManager;
@@ -102,40 +101,43 @@ abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extend
     if (location == null) {
       return null;
     }
+    var disposable = Disposer.newDisposable();
+    try {
+      final var editor = newEditorComposite(file.getVirtualFile(), project);
+      if (editor == null) {
+        return null;
+      }
 
-    final var editor = newEditorComposite(file.getVirtualFile(), project);
-    if (editor == null) {
-      return null;
-    }
+      final var psiAwareEditor = EditorFileSwapper.findSinglePsiAwareEditor(editor.getAllEditors().toArray(new FileEditor[0]));
+      if (psiAwareEditor == null) {
+        return location;
+      }
+      psiAwareEditor.getEditor().getCaretModel().moveToOffset(MiscUtil.positionToOffset(doc, location.getRange().getStart()));
 
-    final var psiAwareEditor = EditorFileSwapper.findSinglePsiAwareEditor(editor.getAllEditors().toArray(new FileEditor[0]));
-    if (psiAwareEditor == null) {
-      return location;
-    }
-    psiAwareEditor.getEditor().getCaretModel().moveToOffset(MiscUtil.positionToOffset(doc, location.getRange().getStart()));
-    psiAwareEditor.getEditor().getScrollingModel().scrollToCaret(ScrollType.CENTER);
+      final var newFilePair = EditorFileSwapper.EP_NAME.getExtensionList().stream()
+              .map(fileSwapper -> fileSwapper.getFileToSwapTo(project, editor))
+              .filter(Objects::nonNull)
+              .findFirst();
 
-    final var newFilePair = EditorFileSwapper.EP_NAME.getExtensionList().stream()
-            .map(fileSwapper -> fileSwapper.getFileToSwapTo(project, editor))
-            .filter(Objects::nonNull)
-            .findFirst();
+      if (newFilePair.isEmpty() || newFilePair.get().first == null) {
+        return location;
+      }
 
-    if (newFilePair.isEmpty() || newFilePair.get().first == null) {
-      return location;
+      final var sourcePsiFile = MiscUtil.resolvePsiFile(project, LspPath.fromVirtualFile(newFilePair.get().first));
+      if (sourcePsiFile == null) {
+        return location;
+      }
+      final var sourceDoc = MiscUtil.getDocument(sourcePsiFile);
+      if (sourceDoc == null) {
+        return location;
+      }
+      final var virtualFile = newFilePair.get().first;
+      final var offset = newFilePair.get().first != null ? newFilePair.get().second : 0;
+      return new Location(LspPath.fromVirtualFile(virtualFile).toLspUri(),
+              new Range(MiscUtil.offsetToPosition(sourceDoc, offset), MiscUtil.offsetToPosition(sourceDoc, offset)));
+    } finally {
+      Disposer.dispose(disposable);
     }
-
-    final var sourcePsiFile = MiscUtil.resolvePsiFile(project, LspPath.fromVirtualFile(newFilePair.get().first));
-    if (sourcePsiFile == null) {
-      return location;
-    }
-    final var sourceDoc = MiscUtil.getDocument(sourcePsiFile);
-    if (sourceDoc == null) {
-      return location;
-    }
-    final var virtualFile = newFilePair.get().first;
-    final var offset = newFilePair.get().first != null ? newFilePair.get().second : 0;
-    return new Location(LspPath.fromVirtualFile(virtualFile).toLspUri(),
-            new Range(MiscUtil.offsetToPosition(sourceDoc, offset), MiscUtil.offsetToPosition(sourceDoc, offset)));
   }
 
   @Nullable
