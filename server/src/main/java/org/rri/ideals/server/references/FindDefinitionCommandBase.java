@@ -12,6 +12,7 @@ import com.intellij.openapi.fileEditor.ex.FileEditorWithProvider;
 import com.intellij.openapi.fileEditor.impl.EditorComposite;
 import com.intellij.openapi.fileEditor.impl.EditorFileSwapper;
 import com.intellij.openapi.fileEditor.impl.EditorHistoryManager;
+import com.intellij.openapi.fileEditor.impl.EditorWithProviderComposite;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -111,7 +112,6 @@ abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extend
       return null;
     }
 
-    final var swappers = EditorFileSwapper.EP_NAME.getExtensionList();
     final var psiAwareEditor = EditorFileSwapper.findSinglePsiAwareEditor(editor.getAllEditors().toArray(new FileEditor[0]));
     if (psiAwareEditor == null) {
       return location;
@@ -119,8 +119,8 @@ abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extend
     psiAwareEditor.getEditor().getCaretModel().moveToOffset(MiscUtil.positionToOffset(doc, location.getRange().getStart()));
     psiAwareEditor.getEditor().getScrollingModel().scrollToCaret(ScrollType.CENTER);
 
-    final var newFilePair = swappers.stream()
-            .map(each -> each.getFileToSwapTo(project, editor))
+    final var newFilePair = EditorFileSwapper.EP_NAME.getExtensionList().stream()
+            .map(fileSwapper -> fileSwapper.getFileToSwapTo(project, editor))
             .filter(Objects::nonNull)
             .findFirst();
 
@@ -147,8 +147,7 @@ abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extend
     if (file == null) {
       return null;
     }
-    final var editorProviderManager = FileEditorProviderManager.getInstance();
-    final var providers = editorProviderManager.getProviders(project, file);
+    final var providers = FileEditorProviderManager.getInstance().getProviders(project, file);
     if (providers.length == 0) {
       return null;
     }
@@ -162,45 +161,21 @@ abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extend
       assert editor.isValid();
     }
     final var fileEditorManager = (FileEditorManagerEx) FileEditorManagerEx.getInstance(project);
-    final var newComposite = newEditorCompositeInstance(file, editors, providers, fileEditorManager);
-    final var editorHistoryManager = EditorHistoryManager.getInstance(project);
-    for (int i = 0; i < editors.length; ++i) {
-      final var editor = editors[i];
-      final var provider = providers[i];
-      final var state = editorHistoryManager.getState(file, provider);
-      if (state != null) {
-        editor.setState(state);
-      }
-    }
-    return newComposite;
-  }
-  @Nullable
-  private static Constructor<EditorComposite> sConstructor = null;
-  @Nullable
-  private static EditorComposite newEditorCompositeInstance(@NotNull final VirtualFile file,
-                                                            @NotNull FileEditor @NotNull [] editors,
-                                                            @NotNull FileEditorProvider @NotNull [] providers,
-                                                            @NotNull FileEditorManagerEx fileEditorManager) {
-    try {
-      final var cached = sConstructor;
 
-      final Constructor<EditorComposite> ctor;
-      if (cached == null) {
-        ctor = EditorComposite.class.getDeclaredConstructor(VirtualFile.class, List.class, FileEditorManagerEx.class);
-        ctor.setAccessible(true);
-        sConstructor = ctor;
-      } else {
-        ctor = cached;
-      }
-      final var editorsWithProviders = IntStream.range(0, providers.length)
-              .filter(i -> editors[i] != null && providers[i] != null)
-              .mapToObj(i -> new FileEditorWithProvider(editors[i], providers[i]))
-              .toList();
-      return ctor.newInstance(file, editorsWithProviders, fileEditorManager);
-    } catch (Throwable e) {
-      e.printStackTrace();
+    final var editorsWithProviders = IntStream.range(0, providers.length)
+            .filter(i -> editors[i] != null && providers[i] != null)
+            .mapToObj(i -> new FileEditorWithProvider(editors[i], providers[i]))
+            .toList();
+    return new MyEditorComposite(file, editorsWithProviders, fileEditorManager);
+  }
+
+  @SuppressWarnings("deprecation")
+  private static class MyEditorComposite extends EditorWithProviderComposite {
+    public MyEditorComposite(@NotNull VirtualFile file,
+                                          @NotNull List<FileEditorWithProvider> editorsWithProviders,
+                                          @NotNull FileEditorManagerEx fileEditorManager) {
+      super(file, editorsWithProviders, fileEditorManager);
     }
-    return null;
   }
 
   @NotNull
