@@ -107,6 +107,7 @@ abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extend
       if (editor == null) {
         return null;
       }
+      Disposer.register(disposable, editor);
 
       final var psiAwareEditor = EditorFileSwapper.findSinglePsiAwareEditor(editor.getAllEditors().toArray(new FileEditor[0]));
       if (psiAwareEditor == null) {
