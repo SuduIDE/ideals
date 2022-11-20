@@ -1,5 +1,6 @@
 package org.rri.ideals.server.references;
 
+import com.intellij.pom.java.LanguageLevel;
 import com.intellij.testFramework.LightProjectDescriptor;
 import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase;
 import org.eclipse.lsp4j.Position;
@@ -17,10 +18,16 @@ import java.util.Set;
 
 @RunWith(JUnit4.class)
 public class DefinitionInJDKSourcesTest extends LightJavaCodeInsightFixtureTestCase {
+  static protected LightProjectDescriptor pd = new ProjectDescriptor(LanguageLevel.JDK_11).withRepositoryLibrary("com.squareup:javapoet:1.13.0");
+
+  @Override
+  protected void setUp() throws Exception {
+    super.setUp();
+  }
 
   @Override
   protected @NotNull LightProjectDescriptor getProjectDescriptor() {
-    return JAVA_LATEST_WITH_LATEST_JDK;
+    return pd;
   }
 
   @Override
