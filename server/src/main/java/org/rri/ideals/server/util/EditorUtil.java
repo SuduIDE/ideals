@@ -31,7 +31,11 @@ public class EditorUtil {
         Editor created = editorFactory.createEditor(doc, file.getProject());
         created.getCaretModel().moveToLogicalPosition(new LogicalPosition(position.getLine(), position.getCharacter()));
 
-        Disposer.register(context, () -> editorFactory.releaseEditor(created));
+        Disposer.register(context, () -> {
+            if (!created.isDisposed()) {
+                editorFactory.releaseEditor(created);
+            }
+        });
 
         return created;
     }
