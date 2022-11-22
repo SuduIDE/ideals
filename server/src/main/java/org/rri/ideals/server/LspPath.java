@@ -20,13 +20,22 @@ public class LspPath {
   @NotNull
   private final String normalizedUri;
 
+  private LspPath(@NotNull String uri, @Nullable String scheme) {
+    this.normalizedUri = normalizeUri(uri, scheme);
+  }
+
   private LspPath(@NotNull String uri) {
-    this.normalizedUri = normalizeUri(uri);
+    this(uri, null);
   }
 
   @NotNull
   public static LspPath fromLocalPath(@NotNull Path localPath) {
     return new LspPath(localPath.toUri().toString());
+  }
+
+  @NotNull
+  public static LspPath fromLocalPath(@NotNull Path localPath, @NotNull String scheme) {
+    return new LspPath(localPath.toUri().toString(), scheme);
   }
 
   @NotNull
@@ -82,6 +91,7 @@ public class LspPath {
   }
 
   private static final Pattern protocolRegex = Pattern.compile("^file:/+");
+  private static final Pattern defaultSchemeRegex = Pattern.compile("file");
   private static final Pattern driveLetterRegex = Pattern.compile("file:///([A-Z]:)/.*");
 
   /**
@@ -92,10 +102,13 @@ public class LspPath {
    * Package visible for tests. Shall not be used directly.
    */
   @NotNull
-  static String normalizeUri(@NotNull String uri) {
+  static String normalizeUri(@NotNull String uri, @Nullable String scheme) {
     var decodedUri = URLDecoder.decode(uri, StandardCharsets.UTF_8);
     decodedUri = StringUtil.trimTrailing(decodedUri, '/');
     decodedUri = protocolRegex.matcher(decodedUri).replaceFirst("file:///");
+    if (scheme != null) {
+      decodedUri = defaultSchemeRegex.matcher(decodedUri).replaceFirst(scheme);
+    }
     decodedUri = decodedUri.replace("\\", "/");
 
     // lsp-mode expects paths to match with exact case.
@@ -110,5 +123,10 @@ public class LspPath {
     }
 
     return decodedUri;
+  }
+
+  @NotNull
+  static String normalizeUri(@NotNull String uri) {
+    return normalizeUri(uri, null);
   }
 }
