@@ -4,7 +4,7 @@
   "displayName": "RRI IdeaLS Client",
   "description": "test extension",
   "version": "0.0.1",
-  "repository": "https://github.com/serganch/ideals",
+  "repository": "https://github.com/SuduIDE/ideals",
   "engines": {
     "vscode": "^1.67.0"
   },
