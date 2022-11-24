@@ -17,7 +17,8 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class EditorUtil {
-  private EditorUtil() { }
+  private EditorUtil() {
+  }
 
   @NotNull
   public static Editor createEditor(@NotNull Disposable context,
@@ -30,7 +31,11 @@ public class EditorUtil {
     Editor created = editorFactory.createEditor(doc, file.getProject());
     created.getCaretModel().moveToLogicalPosition(new LogicalPosition(position.getLine(), position.getCharacter()));
 
-    Disposer.register(context, () -> editorFactory.releaseEditor(created));
+    Disposer.register(context, () -> {
+      if (!created.isDisposed()) {
+        editorFactory.releaseEditor(created);
+      }
+    });
 
     return created;
   }

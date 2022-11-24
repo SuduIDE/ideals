@@ -81,9 +81,7 @@ public class LspPath {
     return Objects.hash(normalizedUri);
   }
 
-  private static final Pattern protocolRegex = Pattern.compile("^file:/+");
-  private static final Pattern driveLetterRegex = Pattern.compile("file:///([A-Z]:)/.*");
-
+  private static final Pattern schemeRegex = Pattern.compile("^(\\w[\\w+-.]+):/+");
   /**
    * Converts URIs to have forward slashes and ensures the protocol has three slashes.
    * <p>
@@ -92,23 +90,26 @@ public class LspPath {
    * Package visible for tests. Shall not be used directly.
    */
   @NotNull
-  static String normalizeUri(@NotNull String uri) {
-    var decodedUri = URLDecoder.decode(uri, StandardCharsets.UTF_8);
-    decodedUri = StringUtil.trimTrailing(decodedUri, '/');
-    decodedUri = protocolRegex.matcher(decodedUri).replaceFirst("file:///");
-    decodedUri = decodedUri.replace("\\", "/");
+  static String normalizeUri(@NotNull String uriString) {
+    uriString = uriString.replace("\\", "/");
+    uriString = StringUtil.trimTrailing(uriString, '/');
+
+    Matcher matcher = schemeRegex.matcher(uriString);
+    if(!matcher.find())
+      throw new IllegalArgumentException("URI must have schema: " + uriString);
+
+    var schemePlusColonPlusSlashes = matcher.group(0);
+
+    // get rid of url-encoded parts like %20 etc.
+    var rest = URLDecoder.decode(uriString.substring(schemePlusColonPlusSlashes.length()), StandardCharsets.UTF_8);
 
     // lsp-mode expects paths to match with exact case.
     // This includes the Windows drive letter if the system is Windows.
     // So, always lowercase the drive letter to avoid any differences.
-    Matcher matcher = driveLetterRegex.matcher(decodedUri);
-    if (matcher.find()) {
-      var replacement = matcher.group(1).toLowerCase();
-      var matchStart = matcher.start(1);
-      var matchEnd = matcher.end(1);
-      decodedUri = decodedUri.substring(0, matchStart) + replacement + decodedUri.substring(matchEnd);
+    if(rest.length() > 1 && rest.charAt(1) == ':') {
+      rest = Character.toString(Character.toLowerCase(rest.charAt(0))) + ':' + rest.substring(2);
     }
 
-    return decodedUri;
+    return StringUtil.trimTrailing(schemePlusColonPlusSlashes, '/') + "///" + rest;
   }
 }
