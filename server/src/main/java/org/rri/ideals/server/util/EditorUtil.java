@@ -17,54 +17,54 @@ import java.util.function.Consumer;
 import java.util.function.Function;
 
 public class EditorUtil {
-    private EditorUtil() {
+  private EditorUtil() {
+  }
+
+  @NotNull
+  public static Editor createEditor(@NotNull Disposable context,
+                                    @NotNull PsiFile file,
+                                    @NotNull Position position) {
+    Document doc = MiscUtil.getDocument(file);
+    EditorFactory editorFactory = EditorFactory.getInstance();
+
+    assert doc != null;
+    Editor created = editorFactory.createEditor(doc, file.getProject());
+    created.getCaretModel().moveToLogicalPosition(new LogicalPosition(position.getLine(), position.getCharacter()));
+
+    Disposer.register(context, () -> {
+      if (!created.isDisposed()) {
+        editorFactory.releaseEditor(created);
+      }
+    });
+
+    return created;
+  }
+
+
+  public static void withEditor(@NotNull Disposable context,
+                                @NotNull PsiFile file,
+                                @NotNull Position position,
+                                @NotNull Consumer<Editor> callback) {
+    computeWithEditor(context, file, position, editor -> {
+      callback.accept(editor);
+      return null;
+    });
+  }
+
+  public static <T> T computeWithEditor(@NotNull Disposable context,
+                                        @NotNull PsiFile file,
+                                        @NotNull Position position,
+                                        @NotNull Function<Editor, T> callback) {
+    Editor editor = createEditor(context, file, position);
+
+    try {
+      return callback.apply(editor);
+    } catch (Exception e) {
+      throw MiscUtil.wrap(e);
     }
+  }
 
-    @NotNull
-    public static Editor createEditor(@NotNull Disposable context,
-                                      @NotNull PsiFile file,
-                                      @NotNull Position position) {
-        Document doc = MiscUtil.getDocument(file);
-        EditorFactory editorFactory = EditorFactory.getInstance();
-
-        assert doc != null;
-        Editor created = editorFactory.createEditor(doc, file.getProject());
-        created.getCaretModel().moveToLogicalPosition(new LogicalPosition(position.getLine(), position.getCharacter()));
-
-        Disposer.register(context, () -> {
-            if (!created.isDisposed()) {
-                editorFactory.releaseEditor(created);
-            }
-        });
-
-        return created;
-    }
-
-
-    public static void withEditor(@NotNull Disposable context,
-                                  @NotNull PsiFile file,
-                                  @NotNull Position position,
-                                  @NotNull Consumer<Editor> callback) {
-        computeWithEditor(context, file, position, editor -> {
-            callback.accept(editor);
-            return null;
-        });
-    }
-
-    public static <T> T computeWithEditor(@NotNull Disposable context,
-                                          @NotNull PsiFile file,
-                                          @NotNull Position position,
-                                          @NotNull Function<Editor, T> callback) {
-        Editor editor = createEditor(context, file, position);
-
-        try {
-            return callback.apply(editor);
-        } catch (Exception e) {
-            throw MiscUtil.wrap(e);
-        }
-    }
-
-    public static @Nullable PsiElement findTargetElement(@NotNull Editor editor) {
-        return TargetElementUtil.findTargetElement(editor, TargetElementUtil.getInstance().getAllAccepted());
-    }
+  public static @Nullable PsiElement findTargetElement(@NotNull Editor editor) {
+    return TargetElementUtil.findTargetElement(editor, TargetElementUtil.getInstance().getAllAccepted());
+  }
 }

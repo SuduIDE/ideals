@@ -65,7 +65,7 @@ abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extend
           .filter(Objects::nonNull)
           .map(targetElem -> {
             if (targetElem.getContainingFile() == null) { return null; }
-            final var loc = sourceLocationIfPossible(targetElem, ctx.getProject());
+            final var loc = findSourceLocation(ctx.getProject(), targetElem);
             if (loc != null) {
               return new LocationLink(loc.getUri(), loc.getRange(), loc.getRange(), originalRange);
             } else {
@@ -86,11 +86,11 @@ abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extend
   /**
    * Tries to find the corresponding source file location for this element.
    * <p>
-   * Depends on the element being contained in a library's class file and there being a corresponding Sources JAR attached
+   * Depends on the element contained in a library's class file and the corresponding sources jar/zip attached
    * to the library.
    */
   @Nullable
-  private static Location sourceLocationIfPossible(@NotNull PsiElement element, @NotNull Project project) {
+  private static Location findSourceLocation(@NotNull Project project, @NotNull PsiElement element) {
     final var file = element.getContainingFile();
     final var doc = MiscUtil.getDocument(file);
     if (doc == null) {
@@ -103,7 +103,7 @@ abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extend
     }
     var disposable = Disposer.newDisposable();
     try {
-      final var editor = newEditorComposite(file.getVirtualFile(), project);
+      final var editor = newEditorComposite(project, file.getVirtualFile());
       if (editor == null) {
         return null;
       }
@@ -142,7 +142,7 @@ abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extend
   }
 
   @Nullable
-  private static EditorComposite newEditorComposite(@Nullable final VirtualFile file, @NotNull final Project project) {
+  private static EditorComposite newEditorComposite(@NotNull final Project project, @Nullable final VirtualFile file) {
     if (file == null) {
       return null;
     }

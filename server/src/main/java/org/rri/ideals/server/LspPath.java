@@ -8,8 +8,6 @@ import org.jetbrains.annotations.Nullable;
 
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URLDecoder;
-import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
@@ -20,22 +18,13 @@ public class LspPath {
   @NotNull
   private final String normalizedUri;
 
-  private LspPath(@NotNull String uri, @Nullable String scheme) {
-    this.normalizedUri = normalizeUri(uri, scheme);
-  }
-
   private LspPath(@NotNull String uri) {
-    this(uri, null);
+    this.normalizedUri = normalizeUri(uri);
   }
 
   @NotNull
   public static LspPath fromLocalPath(@NotNull Path localPath) {
     return new LspPath(localPath.toUri().toString());
-  }
-
-  @NotNull
-  public static LspPath fromLocalPath(@NotNull Path localPath, @NotNull String scheme) {
-    return new LspPath(localPath.toUri().toString(), scheme);
   }
 
   @NotNull
@@ -90,9 +79,8 @@ public class LspPath {
     return Objects.hash(normalizedUri);
   }
 
-  private static final Pattern protocolRegex = Pattern.compile("^file:/+");
-  private static final Pattern defaultSchemeRegex = Pattern.compile("file");
-  private static final Pattern driveLetterRegex = Pattern.compile("file:///([A-Z]:)/.*");
+  private static final Pattern protocolRegex = Pattern.compile("^(\\w[\\w+-.]+):/+");
+  private static final Pattern driveLetterRegex = Pattern.compile("^\\w[\\w+-.]+:///([A-Z]:)/.*");
 
   /**
    * Converts URIs to have forward slashes and ensures the protocol has three slashes.
@@ -102,31 +90,22 @@ public class LspPath {
    * Package visible for tests. Shall not be used directly.
    */
   @NotNull
-  static String normalizeUri(@NotNull String uri, @Nullable String scheme) {
-    var decodedUri = URLDecoder.decode(uri, StandardCharsets.UTF_8);
-    decodedUri = StringUtil.trimTrailing(decodedUri, '/');
-    decodedUri = protocolRegex.matcher(decodedUri).replaceFirst("file:///");
-    if (scheme != null) {
-      decodedUri = defaultSchemeRegex.matcher(decodedUri).replaceFirst(scheme);
-    }
-    decodedUri = decodedUri.replace("\\", "/");
+  static String normalizeUri(@NotNull String uri) {
+    uri = StringUtil.trimTrailing(uri, '/');
+    uri = protocolRegex.matcher(uri).replaceFirst("$1:///");
+    uri = uri.replace("\\", "/");
 
     // lsp-mode expects paths to match with exact case.
     // This includes the Windows drive letter if the system is Windows.
     // So, always lowercase the drive letter to avoid any differences.
-    Matcher matcher = driveLetterRegex.matcher(decodedUri);
+    Matcher matcher = driveLetterRegex.matcher(uri);
     if (matcher.find()) {
       var replacement = matcher.group(1).toLowerCase();
       var matchStart = matcher.start(1);
       var matchEnd = matcher.end(1);
-      decodedUri = decodedUri.substring(0, matchStart) + replacement + decodedUri.substring(matchEnd);
+      uri = uri.substring(0, matchStart) + replacement + uri.substring(matchEnd);
     }
 
-    return decodedUri;
-  }
-
-  @NotNull
-  static String normalizeUri(@NotNull String uri) {
-    return normalizeUri(uri, null);
+    return uri;
   }
 }
