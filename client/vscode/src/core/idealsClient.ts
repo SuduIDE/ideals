@@ -7,9 +7,9 @@ import {LanguageClientOptions, RevealOutputChannelOn,} from "vscode-languageclie
 
 import {LanguageClient, ServerOptions, State, StreamInfo,} from "vscode-languageclient/node";
 
-const outputChannel = vscode.window.createOutputChannel("RRI IdeaLS Client");
+const outputChannel = vscode.window.createOutputChannel("IdeaLS Client");
 
-export class RriIntellijClient {
+export class IdealsClient {
   private languageClient?: LanguageClient;
   private context?: vscode.ExtensionContext;
 
@@ -23,8 +23,8 @@ export class RriIntellijClient {
       let serverOptions: ServerOptions = this.getServerOptions();
 
       //creating the language client.
-      let clientId = "rri-ideals-client";
-      let clientName = "RRI IdeaLS Client";
+      let clientId = "ideals-client";
+      let clientName = "IdeaLS Client";
       let clientOptions: LanguageClientOptions = {
         documentSelector: [{pattern: "**/*" /* scheme: "file", language: "java" */}],
         outputChannel: outputChannel,
@@ -105,4 +105,4 @@ export class RriIntellijClient {
   }
 }
 
-export const lspClient = new RriIntellijClient();
+export const lspClient = new IdealsClient();

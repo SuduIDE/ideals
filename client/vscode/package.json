@@ -1,8 +1,8 @@
 {
   "name": "ideals-vscode",
-  "publisher": "rri",
-  "displayName": "RRI IdeaLS Client",
-  "description": "test extension",
+  "publisher": "SuduIDE",
+  "displayName": "IdeaLS Client",
+  "description": "A client extension to IdeaLS language server",
   "version": "0.0.1",
   "repository": "https://github.com/SuduIDE/ideals",
   "engines": {

@@ -4,7 +4,7 @@ import * as vscode from 'vscode';
 import {JAR_CONTENT_SCHEME, ZIP_CONTENT_SCHEME} from './jar-content-provider/Jar';
 import JarDocumentContentProvider from './jar-content-provider/JarDocumentContentProvider';
 
-import {lspClient} from './core/rriIntellijClient';
+import {lspClient} from './core/idealsClient';
 
 // this method is called when your extension is activated
 // your extension is activated the very first time the command is executed
