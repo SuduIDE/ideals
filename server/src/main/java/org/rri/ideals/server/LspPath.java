@@ -41,7 +41,7 @@ public class LspPath {
 
   @NotNull
   public String toLspUri() {
-    return normalizedUri.replace("%20", " ");
+    return normalizedUri;
   }
 
   @NotNull
@@ -86,12 +86,10 @@ public class LspPath {
    * Converts URIs to have forward slashes and ensures the protocol has three slashes.
    * <p>
    * Important for testing URIs for equality across platforms.
-   * <p>
-   * Package visible for tests. Shall not be used directly.
    */
   @NotNull
-  static String normalizeUri(@NotNull String uriString) {
-    uriString = uriString.replace("\\", "/");
+  private static String normalizeUri(@NotNull String uriString) {
+    uriString = uriString.replace('\\', '/');
     uriString = StringUtil.trimTrailing(uriString, '/');
 
     Matcher matcher = schemeRegex.matcher(uriString);
