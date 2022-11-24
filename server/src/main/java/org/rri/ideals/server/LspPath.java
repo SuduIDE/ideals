@@ -8,6 +8,8 @@ import org.jetbrains.annotations.Nullable;
 
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.net.URLDecoder;
+import java.nio.charset.StandardCharsets;
 import java.nio.file.Path;
 import java.nio.file.Paths;
 import java.util.Objects;
@@ -79,9 +81,7 @@ public class LspPath {
     return Objects.hash(normalizedUri);
   }
 
-  private static final Pattern protocolRegex = Pattern.compile("^(\\w[\\w+-.]+):/+");
-  private static final Pattern driveLetterRegex = Pattern.compile("^\\w[\\w+-.]+:///([A-Z]:)/.*");
-
+  private static final Pattern schemeRegex = Pattern.compile("^(\\w[\\w+-.]+):/+");
   /**
    * Converts URIs to have forward slashes and ensures the protocol has three slashes.
    * <p>
@@ -90,22 +90,26 @@ public class LspPath {
    * Package visible for tests. Shall not be used directly.
    */
   @NotNull
-  static String normalizeUri(@NotNull String uri) {
-    uri = StringUtil.trimTrailing(uri, '/');
-    uri = protocolRegex.matcher(uri).replaceFirst("$1:///");
-    uri = uri.replace("\\", "/");
+  static String normalizeUri(@NotNull String uriString) {
+    uriString = uriString.replace("\\", "/");
+    uriString = StringUtil.trimTrailing(uriString, '/');
+
+    Matcher matcher = schemeRegex.matcher(uriString);
+    if(!matcher.find())
+      throw new IllegalArgumentException("URI must have schema: " + uriString);
+
+    var schemePlusColonPlusSlashes = matcher.group(0);
+
+    // get rid of url-encoded parts like %20 etc.
+    var rest = URLDecoder.decode(uriString.substring(schemePlusColonPlusSlashes.length()), StandardCharsets.UTF_8);
 
     // lsp-mode expects paths to match with exact case.
     // This includes the Windows drive letter if the system is Windows.
     // So, always lowercase the drive letter to avoid any differences.
-    Matcher matcher = driveLetterRegex.matcher(uri);
-    if (matcher.find()) {
-      var replacement = matcher.group(1).toLowerCase();
-      var matchStart = matcher.start(1);
-      var matchEnd = matcher.end(1);
-      uri = uri.substring(0, matchStart) + replacement + uri.substring(matchEnd);
+    if(rest.length() > 1 && rest.charAt(1) == ':') {
+      rest = Character.toString(Character.toLowerCase(rest.charAt(0))) + ':' + rest.substring(2);
     }
 
-    return uri;
+    return StringUtil.trimTrailing(schemePlusColonPlusSlashes, '/') + "///" + rest;
   }
 }

@@ -16,7 +16,7 @@ public class LspPathTest {
         Stream.of(
             LspPath.normalizeUri("file:/e:/Program Files/test.txt"),
             LspPath.normalizeUri("file://e:\\Program Files\\test.txt"),
-            LspPath.normalizeUri("file:///e:/Program Files/test.txt")
+            LspPath.normalizeUri("file:///e:/Program%20Files/test.txt")
         ).map(it -> () -> assertEquals(expected, it))
     );
   }
