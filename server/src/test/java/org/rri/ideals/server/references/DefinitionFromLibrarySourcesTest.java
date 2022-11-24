@@ -8,7 +8,6 @@ import com.intellij.testFramework.fixtures.LightJavaCodeInsightFixtureTestCase;
 import org.eclipse.lsp4j.LocationLink;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
-import org.jetbrains.annotations.NotNull;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
@@ -53,24 +52,20 @@ public class DefinitionFromLibrarySourcesTest extends LightJavaCodeInsightFixtur
       var actual = TestUtil.getNonBlockingEdt(future, 5000);
 
       assertNotNull(actual);
-      var uri = LspPath.fromLocalPath(
-          Paths.get(getTestDataPath()).resolve("libs/test-library.jar!/test/ideals/TestLibClass.class"), "jar").toLspUri();
+      var uri = LspPath.fromLspUri(
+          Paths.get(getTestDataPath()).toUri().toString().replaceFirst("file:", "jar:") + "libs/test-library.jar!/test/ideals/TestLibClass.class").toLspUri();
       assertEquals(
           Set.of(
               new LocationLink(
-                  removeAuthority(uri),
+                  uri,
                   new Range(new Position(6, 13), new Position(6, 25)),
                   new Range(new Position(6, 13), new Position(6, 25)),
-                  new Range(new Position(3, 8), new Position(3, 20))
+                  new Range(new Position(3, 4), new Position(3, 16))
               )
           ),
           new HashSet<>(actual.getRight()));
     } finally {
       Disposer.dispose(disposable);
     }
-  }
-  @NotNull
-  private static String removeAuthority(@NotNull String uri) { // I don't know why Idea gives us uri without authority field
-    return uri.replaceFirst("/", "");
   }
 }
