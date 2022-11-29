@@ -16,6 +16,25 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "IdeaLS",
+      "properties": {
+        "ideals.startup.ideaExecutablePath": {
+          "type": "string",
+          "default": null,
+          "markdownDescription": "Path to idea executable"
+        },
+        "ideals.startup.transport": {
+          "type": "string",
+          "default": "STDIO",
+          "enum": ["TCP", "STDIO"],
+          "enumDescriptions": [
+            "Server wil be connected by socket",
+            "Server will be connected by STDIO"
+          ]
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
