@@ -24,10 +24,6 @@
           "default": null,
           "markdownDescription": "Path to idea executable"
         },
-        "ideals.startup.isIdeaInstalledViaToolBox": {
-          "type": "boolean",
-          "default": false
-        },
         "ideals.startup.transport": {
           "type": "string",
           "default": "STDIO",

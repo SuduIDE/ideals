@@ -96,19 +96,17 @@ export class IdealsClient {
     if (!ideaExecutablePath) {
       throw new Error("Path to IntelliJ IDEA executable must be specified in environment variable IDEALS_IJ_PATH");
     }
-    let isToolBox = vscode.workspace.getConfiguration('ideals').get('startup.isIdeaInstalledViaToolBox');
-    var content : string;
-    var vmoptionsPath : string; 
-    if (isToolBox) {
-      var ideaVersionDir = path.normalize(path.dirname(path.dirname(ideaExecutablePath)));
-      var ideaVersion = path.basename(ideaVersionDir);
-      var dirWithVmOptions = path.dirname(ideaVersionDir);
-      vmoptionsPath = path.join(dirWithVmOptions, path.basename(ideaVersion) + ".vmoptions");
-    } else {
-      var parent = path.normalize(path.dirname(ideaExecutablePath));
-      vmoptionsPath = path.join(parent, path.basename(ideaExecutablePath) + ".vmoptions");
+
+    var ideaVersionDir = path.normalize(path.dirname(path.dirname(ideaExecutablePath)));
+    var ideaVersion = path.basename(ideaVersionDir);
+    var dirWithVmOptions = path.dirname(ideaVersionDir);
+    var vmoptionsPath = path.join(dirWithVmOptions, path.basename(ideaVersion) + ".vmoptions");
+    
+    if (!fs.existsSync(vmoptionsPath)) {
+      vmoptionsPath = ideaExecutablePath + ".vmoptions";
     }
-    content = fs.readFileSync(vmoptionsPath).toString();
+
+    var content = fs.readFileSync(vmoptionsPath).toString();
     content += "\n-Djava.awt.headless=true"; 
 
     const tmpdir = os.tmpdir();
