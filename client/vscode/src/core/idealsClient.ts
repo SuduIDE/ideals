@@ -65,14 +65,14 @@ export class IdealsClient {
 
   //Create a command to be run to start the LS java process.
   getServerOptions() {
-    let transportEnv : string | undefined = vscode.workspace.getConfiguration('ideals').get('startup.transport');
-
-    if (transportEnv?.toLowerCase() === "tcp") {
+    let transportEnv: string | undefined =
+      vscode.workspace.getConfiguration('ideals').get('startup.transport') || process.env.IDEALS_TRANSPORT;
+  if (transportEnv?.toLowerCase() === "tcp") {
       // Connect to language server via socket
-      let portEnv = process.env.IDEALS_TCP_PORT;
+      let accessiblePort = vscode.workspace.getConfiguration('ideals').get('startup.port') || process.env.IDEALS_TCP_PORT || 8989;
 
       let connectionInfo = {
-        port: +(portEnv || 8989)
+        port: +(accessiblePort)
       };
 
       return () => {
@@ -91,7 +91,8 @@ export class IdealsClient {
       };
     }
 
-    let ideaExecutablePath : string | undefined = vscode.workspace.getConfiguration('ideals').get('startup.ideaExecutablePath');
+    let ideaExecutablePath: string | undefined =
+      vscode.workspace.getConfiguration('ideals').get('startup.ideaExecutablePath') || process.env.IDEALS_IJ_PATH;
 
     if (!ideaExecutablePath) {
       throw new Error("Path to IntelliJ IDEA executable must be specified in environment variable IDEALS_IJ_PATH");

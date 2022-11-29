@@ -26,12 +26,17 @@
         },
         "ideals.startup.transport": {
           "type": "string",
-          "default": "STDIO",
+          "default": null,
           "enum": ["TCP", "STDIO"],
           "enumDescriptions": [
-            "Server wil be connected by socket",
+            "Server wil be connected by TCP",
             "Server will be connected by STDIO"
           ]
+        },
+        "ideals.startup.port": {
+          "type": "number",
+          "default": 8989,
+          "markdownDescription": "Port for TCP connection"
         }
       }
     }
