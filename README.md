@@ -54,7 +54,7 @@ The project was heavily inspired by [intellij-lsp-server](https://github.com/Rui
 ## Feature list
 
 | Name                          | Method                               |                    | VSCode Action                                         |
-|-------------------------------|--------------------------------------|--------------------|-------------------------------------------------------|
+| ----------------------------- | ------------------------------------ | ------------------ | ----------------------------------------------------- |
 | Workspace Symbols             | `workspace/symbol`                   | :heavy_check_mark: | `Ctrl + T`                                            |
 | Execute Command               | `workspace/executeCommand`           | :x:                |                                                       |
 | Diagnostics                   | `textDocument/publishDiagnostics`    | :heavy_check_mark: | N/A                                                   |
@@ -95,24 +95,6 @@ The project was heavily inspired by [intellij-lsp-server](https://github.com/Rui
 
 ## Installation
 
-### Trying it out
-Autoconfiguration of IDEA project is not implemented yet,
-So, before launching IDEA as a language server you have to start IDEA in normal mode
-and configure your project manually (setup SDK, modules, dependencies, install required plugins etc.).
-As a result the `.idea` directory should be present in the project root.
-
-Run `runIde` gradle task to open a testing instance of IDEA.
-After that you will need to run the client extension, that is described in *Running client* section  
-
-### Installing plugin
-1. Run `:clean :buildPlugin` gradle tasks to create the plugin distribution.
-2. In IDEA, go to `File -> Plugins -> Install plugin from disk...` and select the `.zip` file that was output inside `build/distributions`.
-
-### Running server
-For running as language server IDEA must be configured to be executed in headless mode (no GUI).
-Add line `-Djava.awt.headless=true` into `idea.vmoptions` (can be found inside the `bin` directory in the IDEA installation root).
-(we're working on making this part less cumbersome)
-
 Server can be executed in two modes: STDIO and TCP.
 
 In STDIO mode the server must be run from the client as a child process,
@@ -121,17 +103,65 @@ and they communicate with each other through the standard input/output channels.
 In TCP mode the server must be started before the client, which can communicate with the server through a TCP connection.
 Note, that even in TCP mode both the client and the server must run on the same machine as they share the same file system.
 
-For STDIO mode the command line should be `idea lsp-server` on Windows or `idea.sh lsp-server` on Unix.
 
-For TCP mode run `idea[.sh] lsp-server tcp [<port number>]` where `<port number>` is the port to listen, 8989 by default.
+### Trying it out
+Autoconfiguration of IDEA project is not implemented yet,
+so, before launching IDEA as a language server, you have to start IDEA in normal mode
+and configure your project manually (setup SDK, modules, dependencies, install required plugins etc.).
+As a result the `.idea` directory should be present in the project root.
+
+Run `runIde` gradle task to open a testing instance of IDEA. This instance will be run by TCP in headless mode, you don't need to do things from **Running server** section.
+After that you will need to run the client extension, that is described in **Running client** section 
+
+
+### Installing plugin
+If you want to use plugin in your locally installed Idea:
+
+1. Run `:clean :buildPlugin` gradle tasks to create the plugin distribution.
+2. In IDEA, go to `File -> Plugins -> Install plugin from disk...` and select the `.zip` file that was output inside `build/distributions`.
+
+### Running server
+If you want to use server by STDIO in vscode or you are building your server by gradle task, you can skip this step. For another cases you should read this section
+
+For running as language server IDEA must be configured to be executed in headless mode (no GUI).
+
+You need to add `-Djava.awt.headless=true` to a `*.vmoptions` file that your Idea uses. [More information about these files you can read here](https://www.jetbrains.com/help/idea/tuning-the-ide.html#configure-jvm-options). 
+
+In our vscode extension we create in OS `tmp` directory `<process_pid>.vmoptions` file, that coppies options from `*.vmoptions` file, that idea executable uses, and then adds `-Djava.awt.headless=true` to the end. After that we run idea executable with `IDEA_VM_OPTIONS` environment variable set as the path we obtained above (`<OS tmp dir>/<process_pid>.vmoptions`). You can do something similar in your own extension for other client.
+
+For TCP mode you should run `[<idea executable path> | <idea script path>] lsp-server tcp [<port number>]` where `<port number>` is the port to listen. 8989 is set by default.
+
+For STDIO mode the command line should be `[<idea executable path> | <idea script path>] lsp-server`.
 
 ### Running client
-You need to build vscode extension, that is placed in `client/vscode` folder.
+You can run vscode extension that is placed in `client/vscode` folder in a debug mode or you can build it.
+
+[Extension implementing guide](https://code.visualstudio.com/api/language-extensions/language-server-extension-guide#lsp-sample-a-simple-language-server-for-plain-text-files)
+
 [Extension building guide](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#packaging-extensions)
 
-In vscode go to Extensions -> Install from VSIX... and choose built extension.
 
-Note, that you need to enable extension before, not after the server has started.
+If you decided to build it: after you created vsix file, in vscode you need to go to Extensions -> Install from VSIX... and choose built extension.
+
+After first client launch nothing happens. 
+
+If you want to configure only our vscode extension, you need to:
+
+1. Open user settings (ctrl + shift + p => Open User Settings)
+2. Find extension configurations (Extensions => IdeaLS)
+3. Select what type of connection do you want, STDIO or TCP
+4. * Paste a path to the Idea executable if you selected STDIO on a previous step (etc. C:\blabla\bin\idea64.exe)
+   * Type TCP port if you selected TCP on a previous step. 8989 is by default
+
+If you want to configure extensions by environment variables, you can set these variables:
+
+| Variable name    | Description                     | Expected values |
+| ---------------- | ------------------------------- | --------------- |
+| IDEALS_TRANSPORT | What kind of transport you want | TCP, STDIO      |
+| IDEALS_TCP_PORT  | Port for TCP connection         | Free port       |
+| IDEALS_IJ_PATH   | Idea executable path            |                 |
+
+After vscode restart all things must be okay.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
