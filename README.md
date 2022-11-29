@@ -127,7 +127,9 @@ For running as language server IDEA must be configured to be executed in headles
 
 You need to add `-Djava.awt.headless=true` to a `*.vmoptions` file that your Idea uses. [More information about these files you can read here](https://www.jetbrains.com/help/idea/tuning-the-ide.html#configure-jvm-options). 
 
-In our vscode extension we create in OS `tmp` directory `<process_pid>.vmoptions` file, that coppies options from `*.vmoptions` file, that idea executable uses, and then adds `-Djava.awt.headless=true` to the end. After that we run idea executable with `IDEA_VM_OPTIONS` environment variable set as the path we obtained above (`<OS tmp dir>/<process_pid>.vmoptions`). You can do something similar in your own extension for other client.
+In our vscode extension we create in OS `tmp` directory `<process_pid>.vmoptions` file. It is a copy of options from `*.vmoptions` file, that idea executable uses. And then we add `-Djava.awt.headless=true` to the end of this temporary file. After that we run idea executable with `IDEA_VM_OPTIONS` environment variable set as the path we obtained above (`<OS tmp dir>/<process_pid>.vmoptions`). You can do something similar in your own extension for other client.
+
+After that you can run server.
 
 For TCP mode you should run `[<idea executable path> | <idea script path>] lsp-server tcp [<port number>]` where `<port number>` is the port to listen. 8989 is set by default.
 
