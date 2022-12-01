@@ -3,7 +3,7 @@ import * as vscode from "vscode";
 
 import * as net from 'net';
 
-import {LanguageClientOptions, RevealOutputChannelOn,} from "vscode-languageclient";
+import {integer, LanguageClientOptions, RevealOutputChannelOn,} from "vscode-languageclient";
 
 import {LanguageClient, ServerOptions, State, StreamInfo,} from "vscode-languageclient/node";
 import path = require("path");
@@ -65,14 +65,14 @@ export class IdealsClient {
 
   //Create a command to be run to start the LS java process.
   getServerOptions() {
-    let transportEnv: string | undefined =
-      vscode.workspace.getConfiguration('ideals').get('startup.transport') || process.env.IDEALS_TRANSPORT;
-  if (transportEnv?.toLowerCase() === "tcp") {
+    let configuredTransport: String =
+      vscode.workspace.getConfiguration('ideals').get('startup.transport') || process.env.IDEALS_TRANSPORT || "STDIO";
+  if (configuredTransport.toUpperCase() === "TCP") {
       // Connect to language server via socket
-      let accessiblePort = vscode.workspace.getConfiguration('ideals').get('startup.port') || process.env.IDEALS_TCP_PORT || 8989;
+      let configuredPort: String | integer = vscode.workspace.getConfiguration('ideals').get('startup.port') || process.env.IDEALS_TCP_PORT || 8989;
 
       let connectionInfo = {
-        port: +(accessiblePort)
+        port: +configuredPort
       };
 
       return () => {
@@ -95,19 +95,19 @@ export class IdealsClient {
       vscode.workspace.getConfiguration('ideals').get('startup.ideaExecutablePath') || process.env.IDEALS_IJ_PATH;
 
     if (!ideaExecutablePath) {
-      throw new Error("Path to IntelliJ IDEA executable must be specified in environment variable IDEALS_IJ_PATH");
+      throw new Error("Path to IntelliJ IDEA executable must be specified in extension configuration or in environment variable IDEALS_IJ_PATH");
     }
 
-    var ideaVersionDir = path.normalize(path.dirname(path.dirname(ideaExecutablePath)));
-    var ideaVersion = path.basename(ideaVersionDir);
-    var dirWithVmOptions = path.dirname(ideaVersionDir);
-    var vmoptionsPath = path.join(dirWithVmOptions, path.basename(ideaVersion) + ".vmoptions");
-    
+    const ideaVersionDir = path.normalize(path.dirname(path.dirname(ideaExecutablePath)));
+    const ideaVersion = path.basename(ideaVersionDir);
+    const dirWithVmOptions = path.dirname(ideaVersionDir);
+    let vmoptionsPath = path.join(dirWithVmOptions, path.basename(ideaVersion) + ".vmoptions");
+
     if (!fs.existsSync(vmoptionsPath)) {
       vmoptionsPath = ideaExecutablePath + ".vmoptions";
     }
 
-    var content = fs.readFileSync(vmoptionsPath).toString();
+    let content = fs.readFileSync(vmoptionsPath).toString();
     content += "\n-Djava.awt.headless=true"; 
 
     const tmpdir = os.tmpdir();

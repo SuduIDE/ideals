@@ -22,15 +22,15 @@
         "ideals.startup.ideaExecutablePath": {
           "type": "string",
           "default": null,
-          "markdownDescription": "Path to idea executable"
+          "markdownDescription": "Path to IDEA executable"
         },
         "ideals.startup.transport": {
           "type": "string",
           "default": null,
           "enum": ["TCP", "STDIO"],
           "enumDescriptions": [
-            "Server wil be connected by TCP",
-            "Server will be connected by STDIO"
+            "Client will connect to running server by TCP",
+            "Client will start server and use STDIO to communicate"
           ]
         },
         "ideals.startup.port": {

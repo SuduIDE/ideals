@@ -93,83 +93,92 @@ The project was heavily inspired by [intellij-lsp-server](https://github.com/Rui
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
-## Installation
+## Using IdeaLS
 
-Server can be executed in two modes: STDIO and TCP.
-
-In STDIO mode the server must be run from the client as a child process,
-and they communicate with each other through the standard input/output channels.
-
-In TCP mode the server must be started before the client, which can communicate with the server through a TCP connection.
-Note, that even in TCP mode both the client and the server must run on the same machine as they share the same file system.
-
-
-### Trying it out
-Autoconfiguration of IDEA project is not implemented yet,
-so, before launching IDEA as a language server, you have to start IDEA in normal mode
-and configure your project manually (setup SDK, modules, dependencies, install required plugins etc.).
-As a result the `.idea` directory should be present in the project root.
-
-Run `runIde` gradle task to open a testing instance of IDEA. This instance will be run by TCP in headless mode, you don't need to do things from **Running server** section.
-After that you will need to run the client extension, that is described in **Running client** section 
-
-
-### Installing plugin
-If you want to use plugin in your locally installed Idea:
+### Building and Installing Plugin
+If you want to use the server plugin in your locally installed Idea:
 
 1. Run `:clean :buildPlugin` gradle tasks to create the plugin distribution.
 2. In IDEA, go to `File -> Plugins -> Install plugin from disk...` and select the `.zip` file that was output inside `build/distributions`.
 
-### Running server
-If you want to use server by STDIO in vscode or you are building your server by gradle task, you can skip this step. For another cases you should read this section
+### Preparing IDEA Project
+Autoconfiguration of an IDEA project is not implemented yet.
+So, before launching IDEA as a language server, you have to start IDEA in normal mode
+and configure your project manually (setup SDK, modules, dependencies, install required plugins etc.).
+As a result the `.idea` directory should be present in the project root.
 
-For running as language server IDEA must be configured to be executed in headless mode (no GUI).
+### Running Server
+To run a testing instance of IDEA with the development version of the plugin (as TCP server, port 8989) 
+execute `runIde` gradle task from the project root.
 
-You need to add `-Djava.awt.headless=true` to a `*.vmoptions` file that your Idea uses. [More information about these files you can read here](https://www.jetbrains.com/help/idea/tuning-the-ide.html#configure-jvm-options). 
+Server can be executed in two modes: `STDIO` and `TCP`.
 
-In our vscode extension we create in OS `tmp` directory `<process_pid>.vmoptions` file. It is a copy of options from `*.vmoptions` file, that idea executable uses. And then we add `-Djava.awt.headless=true` to the end of this temporary file. After that we run idea executable with `IDEA_VM_OPTIONS` environment variable set as the path we obtained above (`<OS tmp dir>/<process_pid>.vmoptions`). You can do something similar in your own extension for other client.
+In `STDIO` mode the client starts the server as a child process,
+and they communicate with each other through the standard input/output channels.
 
-After that you can run server.
+In `TCP` mode the server must be started before the client, which can communicate with the server through a TCP connection.
+Note, that even in TCP mode both the client and the server must run on the same machine as they share the same file system.
 
-For TCP mode you should run `[<idea executable path> | <idea script path>] lsp-server tcp [<port number>]` where `<port number>` is the port to listen. 8989 is set by default.
+If you're going to use IdeaLS in STDIO mode from VS Code, you can skip the rest of this section.
 
-For STDIO mode the command line should be `[<idea executable path> | <idea script path>] lsp-server`.
+#### STDIO Mode
+STDIO is the default mode for VS Code IdeaLS client. If you want to use IdeaLS with another LSP client,   
+configure (or extend) it to start the IDEA using the command line like this:
 
-### Running client
-You can run vscode extension that is placed in `client/vscode` folder in a debug mode or you can build it.
+`[<idea executable path>] lsp-server`.
+
+#### TCP Mode
+For TCP mode you should run IDEA before the client using command:
+
+`[<idea executable path>] lsp-server tcp [<port number>]` 
+
+where `<port number>` is the port to listen, 8989 by default.
+
+#### Configuring IDEA for Headless Mode
+When using IDEA as an LSP server it must be configured to be executed in headless mode (no GUI).
+You need to add `-Djava.awt.headless=true` to a `*.vmoptions` file that your IDEA uses.
+[More information about these files you can read here](https://www.jetbrains.com/help/idea/tuning-the-ide.html#configure-jvm-options).
+
+However, if you're going to use our VS Code extension as the client in STDIO (see sections below) mode,
+you don't have to manually configure IDEA for headless mode. It's done automatically.
+
+### Building and Running Client
+IdeaLS VS Code extension project is in `client/vscode` folder.
+
+To run a development instance of the extension open that folder in VS Code
+and run one of the `Run Extension *` launch configurations according to preferred development configuration.
+
+To build and run a standalone extension first refer to the guides:
 
 [Extension implementing guide](https://code.visualstudio.com/api/language-extensions/language-server-extension-guide#lsp-sample-a-simple-language-server-for-plain-text-files)
 
 [Extension building guide](https://code.visualstudio.com/api/working-with-extensions/publishing-extension#packaging-extensions)
 
+Once you have a `vsix` file, add it to your VS Code instance by `Extensions -> Install from VSIX...`.
 
-If you decided to build it: after you created vsix file, in vscode you need to go to Extensions -> Install from VSIX... and choose built extension.
-
-After first client launch nothing happens. 
-
-If you want to configure only our vscode extension, you need to:
+To configure the VS Code extension:
 
 1. Open user settings (ctrl + shift + p => Open User Settings)
 2. Find extension configurations (Extensions => IdeaLS)
-3. Select what type of connection do you want, STDIO or TCP
-4. * Paste a path to the Idea executable if you selected STDIO on a previous step (etc. C:\blabla\bin\idea64.exe)
+3. Select run mode (STDIO or TCP)
+4. * Provide a path to the Idea executable if you selected STDIO on a previous step (etc. C:\Program Files\JetBrains\IDEA\bin\idea64.exe)
    * Type TCP port if you selected TCP on a previous step. 8989 is by default
+5. Restart VS Code to apply the configuration.
 
-If you want to configure extensions by environment variables, you can set these variables:
+Instead of extension configuration environment variables can also be used:
 
-| Variable name    | Description                     | Expected values |
-| ---------------- | ------------------------------- | --------------- |
-| IDEALS_TRANSPORT | What kind of transport you want | TCP, STDIO      |
-| IDEALS_TCP_PORT  | Port for TCP connection         | Free port       |
-| IDEALS_IJ_PATH   | Idea executable path            |                 |
+| Variable name    | Description             | Expected values                            |
+| ---------------- |-------------------------|--------------------------------------------|
+| IDEALS_TRANSPORT | Run mode (or transport) | TCP, STDIO                                 |
+| IDEALS_TCP_PORT  | Port for TCP connection | Any available port number. 8989 if not set |
+| IDEALS_IJ_PATH   | Idea executable path    | Path to the IDEA binary executable         |
 
-After vscode restart all things must be okay.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Contribute with us.
 
-IdeaLS is an opensource product. We welcome everyone who wants to make it better.
+IdeaLS is an open-source product. We welcome everyone who wants to make it better.
 If you want to contribute with us, write [@serganch](https://t.me/serganch) in Telegram.
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
