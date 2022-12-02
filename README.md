@@ -161,7 +161,7 @@ To configure the VS Code extension:
 1. Open user settings (ctrl + shift + p => Open User Settings)
 2. Find extension configurations (Extensions => IdeaLS)
 3. Select run mode (STDIO or TCP)
-4. * Provide a path to the Idea executable if you selected STDIO on a previous step (etc. C:\Program Files\JetBrains\IDEA\bin\idea64.exe)
+4. * Provide a path to the Idea **executable** (not script) if you selected STDIO on a previous step (etc. C:\Program Files\JetBrains\IDEA\bin\idea64.exe)
    * Type TCP port if you selected TCP on a previous step. 8989 is by default
 5. Restart VS Code to apply the configuration.
 
