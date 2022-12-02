@@ -1,11 +1,10 @@
 import * as vscode from "vscode";
-
-
 import * as net from 'net';
+import { v1 as uuid } from 'uuid';
 
 import {integer, LanguageClientOptions, RevealOutputChannelOn,} from "vscode-languageclient";
 
-import {LanguageClient, ServerOptions, State, StreamInfo,} from "vscode-languageclient/node";
+import { LanguageClient, ServerOptions, State, StreamInfo, } from "vscode-languageclient/node";
 import path = require("path");
 import fs = require("fs");
 import os = require('node:os');
@@ -23,38 +22,45 @@ export class IdealsClient {
   async init(): Promise<void> {
     try {
       //Server options. LS client will use these options to start the LS.
-      let serverOptions: ServerOptions = this.getServerOptions();
+      let optionsAndPathToOptions: [ServerOptions, string] = this.getServerOptionsAndPathToOptions();
+      const [serverOptions, pathToOptions] = optionsAndPathToOptions
 
       //creating the language client.
       let clientId = "ideals-client";
       let clientName = "IdeaLS Client";
       let clientOptions: LanguageClientOptions = {
-        documentSelector: [{pattern: "**/*" /* scheme: "file", language: "java" */}],
+        documentSelector: [{ pattern: "**/*" /* scheme: "file", language: "java" */ }],
         outputChannel: outputChannel,
         revealOutputChannelOn: RevealOutputChannelOn.Never,
       };
       this.languageClient = new LanguageClient(
-          clientId,
-          clientName,
-          serverOptions,
-          clientOptions
+        clientId,
+        clientName,
+        serverOptions,
+        clientOptions
       );
 
       const disposeDidChange = this.languageClient.onDidChangeState(
-          (stateChangeEvent) => {
-            if (stateChangeEvent.newState === State.Stopped) {
-              vscode.window.showErrorMessage(
-                  "Failed to initialize the extension"
-              );
-            } else if (stateChangeEvent.newState === State.Running) {
-              vscode.window.showInformationMessage(
-                  "Extension initialized successfully!"
-              );
-            }
+        (stateChangeEvent) => {
+          if (stateChangeEvent.newState === State.Stopped) {
+            vscode.window.showErrorMessage(
+              "Failed to initialize the extension"
+            );
+          } else if (stateChangeEvent.newState === State.Running) {
+            vscode.window.showInformationMessage(
+              "Extension initialized successfully!"
+            );
           }
+        }
       );
 
       this.languageClient.start().then(() => {
+        if (pathToOptions != "") {
+          fs.unlink(path.normalize(pathToOptions), (err) => {
+            if (err) throw err;
+            console.log(pathToOptions + 'vmoptions file was deleted');
+          });
+        }
         disposeDidChange.dispose();
       });
 
@@ -64,7 +70,7 @@ export class IdealsClient {
   }
 
   //Create a command to be run to start the LS java process.
-  getServerOptions() {
+  getServerOptionsAndPathToOptions() {
     let configuredTransport: String =
       vscode.workspace.getConfiguration('ideals').get('startup.transport') || process.env.IDEALS_TRANSPORT || "STDIO";
   if (configuredTransport.toUpperCase() === "TCP") {
@@ -75,7 +81,7 @@ export class IdealsClient {
         port: +configuredPort
       };
 
-      return () => {
+      return [() => {
         try {
           let socket = net.connect(connectionInfo);
           let result: StreamInfo = {
@@ -88,7 +94,7 @@ export class IdealsClient {
           console.log("failed to connect: " + exception);
           throw exception;
         }
-      };
+      }, ""];
     }
 
     let ideaExecutablePath: string | undefined =
@@ -111,9 +117,8 @@ export class IdealsClient {
     content += "\n-Djava.awt.headless=true"; 
 
     const tmpdir = os.tmpdir();
-    const finalPath = path.join(tmpdir, String(process.pid) + ".vmoptions");
+    const finalPath = path.join(tmpdir, String(uuid()) + ".vmoptions");
     fs.writeFileSync(finalPath, content);
-    
 
     let serverOptions: ServerOptions = {
       command: ideaExecutablePath,
@@ -121,10 +126,20 @@ export class IdealsClient {
       options: {
         env: {
           IDEA_VM_OPTIONS: finalPath,
+          PYCHARM_VM_OPTIONS: finalPath,
+          PHPSTORM_VM_OPTIONS: finalPath,
+          WEBIDE_VM_OPTIONS: finalPath,
+          CLION_VM_OPTIONS: finalPath,
+          CLION64_VM_OPTIONS: finalPath,
+          DATAGRIP_VM_OPTIONS: finalPath,
+          RIDER_VM_OPTIONS: finalPath,
+          GOLAND_VM_OPTIONS: finalPath,
+          MPS_VM_OPTIONS: finalPath,
+          RUBYMINE_VM_OPTIONS: finalPath,
         }
       },
     };
-    return serverOptions;
+    return [serverOptions, finalPath];
 
   }
 }
