@@ -1,18 +1,13 @@
 package org.rri.ideals.server.bootstrap;
 
-import com.intellij.ide.CliResult;
-import com.intellij.openapi.application.ApplicationStarterBase;
-import kotlin.coroutines.Continuation;
+import com.intellij.openapi.application.ApplicationStarter;
 import org.jetbrains.annotations.NotNull;
-import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 
-@SuppressWarnings("ALL")
-public class LspServerStarter extends ApplicationStarterBase {
+public class LspServerStarter implements ApplicationStarter {
 
   public LspServerStarter() {
-    super(0);
   }
 
   @NotNull
@@ -23,11 +18,6 @@ public class LspServerStarter extends ApplicationStarterBase {
   public boolean isHeadless() {
     return true;
   }
-
-//  @Override
-//  public int getRequiredModality() {
-//    return NOT_IN_EDT;
-//  }
 
   @NotNull
   public String getUsageMessage() {
@@ -65,32 +55,21 @@ public class LspServerStarter extends ApplicationStarterBase {
     return new StdioLspServerRunner();
   }
 
-  @SuppressWarnings("UnstableApiUsage")
-  @Nullable
   @Override
-  protected Object executeCommand(@NotNull List<String> list, @Nullable String currendDirectory,
-                                  @NotNull Continuation<? super CliResult> continuation) {
-    try {
-//      return processCommand(list, currendDirectory).get();
-      var r = new TcpLspServerRunner();
-      r.setPort(8989);
-      r.prepareForListening();
-      while (true) {
-        var serverFuture = r.connectServer(r.waitForConnection());
-        serverFuture.join();
-        break;
-      }
-
-      return new CliResult(0, "OK");
-//    } catch (InterruptedException e) {
-//      throw new RuntimeException(e);
-//    } catch (ExecutionException e) {
-//      throw new RuntimeException(e);
-//    }
-    } finally {
-
-    }
+  public int getRequiredModality() {
+    return ApplicationStarter.NOT_IN_EDT;
   }
 
+  @Override
+  public void main(@NotNull List<String> args) {
+    ;
+  }
 
+  @Override
+  public void premain(@NotNull List<String> args) {
+    if (!checkArguments(args)) {
+      System.err.println(getUsageMessage());
+      System.exit(1);
+    }
+  }
 }
