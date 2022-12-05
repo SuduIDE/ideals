@@ -115,7 +115,7 @@ class DiagnosticsTask implements Runnable {
 
     var progress = new DaemonProgressIndicator();
 
-    Disposer.register(context, progress);
+//    Disposer.register(context, progress);
 
     var project = psiFile.getProject();
 
@@ -127,8 +127,11 @@ class DiagnosticsTask implements Runnable {
         final var range = ProperTextRange.create(0, document.getTextLength());
 
         // this shouldn't be needed but for some reason the next call fails without it
-        HighlightingSessionImpl.runInsideHighlightingSession(psiFile, progress, null, range, false, () -> {
+        HighlightingSessionImpl.runInsideHighlightingSession(psiFile, null, range, false, () -> {
+
         });
+//        HighlightingSessionImpl.runInsideHighlightingSession(psiFile, progress, null, range, false, () -> {
+//        });
 
         final var result = DaemonCodeAnalyzerEx.getInstanceEx(project).runMainPasses(psiFile, doc, progress);
         if (LOG.isTraceEnabled()) LOG.trace("Analyzing file: produced items: " + result.size());

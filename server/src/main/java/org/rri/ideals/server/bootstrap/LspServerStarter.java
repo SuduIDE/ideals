@@ -2,12 +2,15 @@ package org.rri.ideals.server.bootstrap;
 
 import com.intellij.ide.CliResult;
 import com.intellij.openapi.application.ApplicationStarterBase;
+import kotlin.coroutines.Continuation;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
+@SuppressWarnings("ALL")
 public class LspServerStarter extends ApplicationStarterBase {
 
   public LspServerStarter() {
@@ -23,10 +26,10 @@ public class LspServerStarter extends ApplicationStarterBase {
     return true;
   }
 
-  @Override
-  public int getRequiredModality() {
-    return NOT_IN_EDT;
-  }
+//  @Override
+//  public int getRequiredModality() {
+//    return NOT_IN_EDT;
+//  }
 
   @NotNull
   public String getUsageMessage() {
@@ -63,4 +66,20 @@ public class LspServerStarter extends ApplicationStarterBase {
 
     return new StdioLspServerRunner();
   }
+
+  @SuppressWarnings("UnstableApiUsage")
+  @Nullable
+  @Override
+  protected Object executeCommand(@NotNull List<String> list, @Nullable String currendDirectory,
+                                  @NotNull Continuation<? super CliResult> continuation) {
+    try {
+      return processCommand(list, currendDirectory).get();
+    } catch (InterruptedException e) {
+      throw new RuntimeException(e);
+    } catch (ExecutionException e) {
+      throw new RuntimeException(e);
+    }
+  }
+
+
 }
