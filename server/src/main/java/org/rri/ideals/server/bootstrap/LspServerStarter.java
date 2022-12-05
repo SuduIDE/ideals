@@ -7,7 +7,6 @@ import com.intellij.openapi.fileEditor.FileDocumentManager;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.Future;
 
 
@@ -34,11 +33,6 @@ public class LspServerStarter implements ApplicationStarter {
     return false;
   }
 
-  private @NotNull CompletableFuture<CliResult> processCommand(@NotNull List<String> args) {
-    return buildRunner(args)
-            .launch()
-            .thenApply(unused -> new CliResult(0, "LSP Server done"));
-  }
 
   @NotNull
   private static LspServerRunnerBase buildRunner(@NotNull List<String> args) {
@@ -66,12 +60,15 @@ public class LspServerStarter implements ApplicationStarter {
     return ApplicationStarter.NOT_IN_EDT;
   }
 
+  @SuppressWarnings("UnstableApiUsage")
   @Override
   public void main(@NotNull List<String> args) {
     try {
       int exitCode;
       try {
-        Future<CliResult> commandFuture = processCommand(args);
+        Future<CliResult> commandFuture = buildRunner(args)
+            .launch()
+            .thenApply(unused -> new CliResult(0, "LSP Server done"));
         CliResult result = commandFuture.get();
         if (result.getMessage() != null) {
           System.out.println(result.getMessage());
