@@ -7,8 +7,6 @@ import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 
 import java.util.List;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
 
 @SuppressWarnings("ALL")
 public class LspServerStarter extends ApplicationStarterBase {
@@ -40,11 +38,11 @@ public class LspServerStarter extends ApplicationStarterBase {
     return false;
   }
 
-  public @NotNull CompletableFuture<CliResult> processCommand(@NotNull List<String> args, @Nullable String currentDirectory) {
-    return buildRunner(args)
-            .launch()
-            .thenApply(unused -> new CliResult(0, "LSP Server done"));
-  }
+//  public @NotNull CompletableFuture<CliResult> processCommand(@NotNull List<String> args, @Nullable String currentDirectory) {
+//    return buildRunner(args)
+//            .launch()
+//            .thenApply(unused -> new CliResult(0, "LSP Server done"));
+//  }
 
   @NotNull
   private static LspServerRunnerBase buildRunner(@NotNull List<String> args) {
@@ -73,11 +71,24 @@ public class LspServerStarter extends ApplicationStarterBase {
   protected Object executeCommand(@NotNull List<String> list, @Nullable String currendDirectory,
                                   @NotNull Continuation<? super CliResult> continuation) {
     try {
-      return processCommand(list, currendDirectory).get();
-    } catch (InterruptedException e) {
-      throw new RuntimeException(e);
-    } catch (ExecutionException e) {
-      throw new RuntimeException(e);
+//      return processCommand(list, currendDirectory).get();
+      var r = new TcpLspServerRunner();
+      r.setPort(8989);
+      r.prepareForListening();
+      while (true) {
+        var serverFuture = r.connectServer(r.waitForConnection());
+        serverFuture.join();
+        break;
+      }
+
+      return new CliResult(0, "OK");
+//    } catch (InterruptedException e) {
+//      throw new RuntimeException(e);
+//    } catch (ExecutionException e) {
+//      throw new RuntimeException(e);
+//    }
+    } finally {
+
     }
   }
 
