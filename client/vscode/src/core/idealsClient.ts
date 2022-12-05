@@ -1,10 +1,9 @@
 import * as vscode from "vscode";
 import * as net from 'net';
-import { v1 as uuid } from 'uuid';
 
 import {integer, LanguageClientOptions, RevealOutputChannelOn,} from "vscode-languageclient";
 
-import { LanguageClient, ServerOptions, State, StreamInfo, } from "vscode-languageclient/node";
+import {LanguageClient, ServerOptions, State, StreamInfo,} from "vscode-languageclient/node";
 import path = require("path");
 import fs = require("fs");
 import os = require('node:os');
@@ -22,9 +21,7 @@ export class IdealsClient {
   async init(): Promise<void> {
     try {
       //Server options. LS client will use these options to start the LS.
-      let optionsAndPathToOptions: [ServerOptions, string] = this.getServerOptionsAndPathToOptions();
-      const [serverOptions, pathToOptions] = optionsAndPathToOptions
-
+      let ideaLSInitOptions = this.getIdeaLSInitOptions();
       //creating the language client.
       let clientId = "ideals-client";
       let clientName = "IdeaLS Client";
@@ -36,7 +33,7 @@ export class IdealsClient {
       this.languageClient = new LanguageClient(
         clientId,
         clientName,
-        serverOptions,
+        ideaLSInitOptions.serverOptions,
         clientOptions
       );
 
@@ -53,12 +50,11 @@ export class IdealsClient {
           }
         }
       );
-
+      const pathToVmoptions = ideaLSInitOptions.pathToVmoptions;
       this.languageClient.start().then(() => {
-        if (pathToOptions != "") {
-          fs.unlink(path.normalize(pathToOptions), (err) => {
+        if (pathToVmoptions) {
+          fs.unlink(path.normalize(pathToVmoptions), (err) => {
             if (err) throw err;
-            console.log(pathToOptions + 'vmoptions file was deleted');
           });
         }
         disposeDidChange.dispose();
@@ -70,7 +66,7 @@ export class IdealsClient {
   }
 
   //Create a command to be run to start the LS java process.
-  getServerOptionsAndPathToOptions() {
+  getIdeaLSInitOptions() : IdeaLSInitOptions {
     let configuredTransport: String =
       vscode.workspace.getConfiguration('ideals').get('startup.transport') || process.env.IDEALS_TRANSPORT || "STDIO";
   if (configuredTransport.toUpperCase() === "TCP") {
@@ -81,7 +77,7 @@ export class IdealsClient {
         port: +configuredPort
       };
 
-      return [() => {
+      return new IdeaLSInitOptions( () => {
         try {
           let socket = net.connect(connectionInfo);
           let result: StreamInfo = {
@@ -94,7 +90,7 @@ export class IdealsClient {
           console.log("failed to connect: " + exception);
           throw exception;
         }
-      }, ""];
+      });
     }
 
     let ideaExecutablePath: string | undefined =
@@ -114,34 +110,59 @@ export class IdealsClient {
     }
 
     let content = fs.readFileSync(vmoptionsPath).toString();
-    content += "\n-Djava.awt.headless=true"; 
+    content += "\n-Djava.awt.headless=true";
 
     const tmpdir = os.tmpdir();
-    const finalPath = path.join(tmpdir, String(uuid()) + ".vmoptions");
-    fs.writeFileSync(finalPath, content);
+    const pathToTempVmoptionsFile =
+        path.join(tmpdir, String(process.pid) + Math.random().toString().substring(2, 8) + ".vmoptions");
+    fs.writeFileSync(pathToTempVmoptionsFile, content);
 
     let serverOptions: ServerOptions = {
       command: ideaExecutablePath,
       args: ["lsp-server"],
       options: {
         env: {
-          IDEA_VM_OPTIONS: finalPath,
-          PYCHARM_VM_OPTIONS: finalPath,
-          PHPSTORM_VM_OPTIONS: finalPath,
-          WEBIDE_VM_OPTIONS: finalPath,
-          CLION_VM_OPTIONS: finalPath,
-          CLION64_VM_OPTIONS: finalPath,
-          DATAGRIP_VM_OPTIONS: finalPath,
-          RIDER_VM_OPTIONS: finalPath,
-          GOLAND_VM_OPTIONS: finalPath,
-          MPS_VM_OPTIONS: finalPath,
-          RUBYMINE_VM_OPTIONS: finalPath,
+          /* we want to support our plugin in all IDEA based IDEs, so if a new IDE published,
+           please add assignment to the required ENV VAR */
+          IDEA_VM_OPTIONS: pathToTempVmoptionsFile,
+          PYCHARM_VM_OPTIONS: pathToTempVmoptionsFile,
+          PHPSTORM_VM_OPTIONS: pathToTempVmoptionsFile,
+          WEBIDE_VM_OPTIONS: pathToTempVmoptionsFile,
+          CLION_VM_OPTIONS: pathToTempVmoptionsFile,
+          CLION64_VM_OPTIONS: pathToTempVmoptionsFile,
+          DATAGRIP_VM_OPTIONS: pathToTempVmoptionsFile,
+          RIDER_VM_OPTIONS: pathToTempVmoptionsFile,
+          GOLAND_VM_OPTIONS: pathToTempVmoptionsFile,
+          MPS_VM_OPTIONS: pathToTempVmoptionsFile,
+          RUBYMINE_VM_OPTIONS: pathToTempVmoptionsFile,
         }
       },
     };
-    return [serverOptions, finalPath];
-
+    const ans = new IdeaLSInitOptions(serverOptions);
+    ans.pathToVmoptions = pathToTempVmoptionsFile;
+    return ans;
   }
 }
 
 export const lspClient = new IdealsClient();
+
+export class IdeaLSInitOptions {
+  private readonly _serverOptions : ServerOptions;
+  private _pathToVmoptions ?: string;
+  constructor(newServerOptions : ServerOptions) {
+    this._serverOptions = newServerOptions;
+  }
+
+
+  set pathToVmoptions(value: string | undefined) {
+    this._pathToVmoptions = value;
+  }
+
+  get pathToVmoptions(): string | undefined {
+    return this._pathToVmoptions;
+  }
+
+  get serverOptions(): ServerOptions {
+    return this._serverOptions;
+  }
+}
