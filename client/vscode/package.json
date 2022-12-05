@@ -16,6 +16,33 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "configuration": {
+      "title": "IdeaLS",
+      "properties": {
+        "ideals.startup.ideaExecutablePath": {
+          "type": "string",
+          "default": null,
+          "markdownDescription": "Path to IDEA executable"
+        },
+        "ideals.startup.transport": {
+          "type": "string",
+          "default": null,
+          "enum": [
+            "TCP",
+            "STDIO"
+          ],
+          "enumDescriptions": [
+            "Client will connect to running server by TCP",
+            "Client will start server and use STDIO to communicate"
+          ]
+        },
+        "ideals.startup.port": {
+          "type": "number",
+          "default": 8989,
+          "markdownDescription": "Port for TCP connection"
+        }
+      }
+    }
   },
   "scripts": {
     "vscode:prepublish": "npm run compile",
@@ -29,6 +56,7 @@
     "@types/glob": "^7.2.0",
     "@types/mocha": "^9.1.1",
     "@types/node": "16.x",
+    "@types/uuid": "^9.0.0",
     "@types/vscode": "^1.67.0",
     "@typescript-eslint/eslint-plugin": "^5.27.0",
     "@typescript-eslint/parser": "^5.27.0",
@@ -40,6 +68,7 @@
   },
   "dependencies": {
     "jszip": "^3.10.1",
+    "uuid": "^9.0.0",
     "vscode-languageclient": "^8.0.1"
   }
 }
