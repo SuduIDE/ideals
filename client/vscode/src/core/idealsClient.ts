@@ -21,7 +21,7 @@ export class IdealsClient {
   async init(): Promise<void> {
     try {
       //Server options. LS client will use these options to start the LS.
-      let ideaLSInitOptions = this.getIdeaLSInitOptions();
+      let ideaLSInitOptions = this.getIdealsInitOptions();
       //creating the language client.
       let clientId = "ideals-client";
       let clientName = "IdeaLS Client";
@@ -66,7 +66,7 @@ export class IdealsClient {
   }
 
   //Create a command to be run to start the LS java process.
-  getIdeaLSInitOptions() : IdeaLSInitOptions {
+  getIdealsInitOptions() : IdealsInitOptions {
     let configuredTransport: String =
       vscode.workspace.getConfiguration('ideals').get('startup.transport') || process.env.IDEALS_TRANSPORT || "STDIO";
   if (configuredTransport.toUpperCase() === "TCP") {
@@ -77,7 +77,7 @@ export class IdealsClient {
         port: +configuredPort
       };
 
-      return new IdeaLSInitOptions( () => {
+      return new IdealsInitOptions( () => {
         try {
           let socket = net.connect(connectionInfo);
           let result: StreamInfo = {
@@ -133,12 +133,11 @@ export class IdealsClient {
           DATAGRIP_VM_OPTIONS: pathToTempVmoptionsFile,
           RIDER_VM_OPTIONS: pathToTempVmoptionsFile,
           GOLAND_VM_OPTIONS: pathToTempVmoptionsFile,
-          MPS_VM_OPTIONS: pathToTempVmoptionsFile,
           RUBYMINE_VM_OPTIONS: pathToTempVmoptionsFile,
         }
       },
     };
-    const ans = new IdeaLSInitOptions(serverOptions);
+    const ans = new IdealsInitOptions(serverOptions);
     ans.pathToVmoptions = pathToTempVmoptionsFile;
     return ans;
   }
@@ -146,7 +145,7 @@ export class IdealsClient {
 
 export const lspClient = new IdealsClient();
 
-export class IdeaLSInitOptions {
+export class IdealsInitOptions {
   private readonly _serverOptions : ServerOptions;
   private _pathToVmoptions ?: string;
   constructor(newServerOptions : ServerOptions) {
