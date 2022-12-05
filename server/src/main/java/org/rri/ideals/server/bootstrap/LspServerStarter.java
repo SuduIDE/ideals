@@ -16,6 +16,9 @@ public class LspServerStarter implements ApplicationStarter {
   }
 
   @NotNull
+  // this method is deprecated since 223.*
+  // Before 223.* idea was determining what starter need to be started by this method, but since
+  // 223.* we can set <id> key in plugin.xml instead
   public String getCommandName() {
     return "lsp-server";
   }
@@ -26,7 +29,7 @@ public class LspServerStarter implements ApplicationStarter {
 
   @NotNull
   public String getUsageMessage() {
-    return "Run \"idea " + getCommandName() + "\"";
+    return "Run \"idea lsp-server\"";
   }
 
   public boolean canProcessExternalCommandLine() {
