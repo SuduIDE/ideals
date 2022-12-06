@@ -30,7 +30,6 @@ public class CodeActionsTest extends LspServerTestBase {
         "Wrap using 'java.util.Optional'",
         "Wrap using 'null()'",
         "Adapt using call or new object",
-        "<html>Migrate 'a' type to 'String'</html>",
         invokedActionName
     ).sorted().toList();
 

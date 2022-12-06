@@ -41,7 +41,6 @@ public class CodeActionServiceTest extends DiagnosticsTestBase {
         "Wrap using 'java.util.Optional'",
         "Wrap using 'null()'",
         "Adapt using call or new object",
-        "<html>Migrate 'a' type to 'String'</html>",
         "Change variable 'a' type to 'String'"
     ).sorted().toList();
 
