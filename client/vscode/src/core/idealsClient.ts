@@ -61,7 +61,7 @@ export class IdealsClient {
       });
 
     } catch (exception) {
-      return Promise.reject("Extension error!");
+      return Promise.reject("Extension error: " + exception);
     }
   }
 
@@ -108,8 +108,10 @@ export class IdealsClient {
     if (!fs.existsSync(vmoptionsPath)) {
       vmoptionsPath = ideaExecutablePath + ".vmoptions";
     }
-
-    let content = fs.readFileSync(vmoptionsPath).toString();
+    var content : string = "";
+    if (fs.existsSync(vmoptionsPath)) {
+      content = fs.readFileSync(vmoptionsPath).toString();
+    }
     content += "\n-Djava.awt.headless=true";
 
     const tmpdir = os.tmpdir();
