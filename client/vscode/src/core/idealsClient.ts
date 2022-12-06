@@ -61,7 +61,7 @@ export class IdealsClient {
       });
 
     } catch (exception) {
-      return Promise.reject("Extension error!");
+      return Promise.reject("Extension error: " + exception);
     }
   }
 
