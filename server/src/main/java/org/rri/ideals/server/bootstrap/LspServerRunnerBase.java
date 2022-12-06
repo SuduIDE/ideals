@@ -43,7 +43,7 @@ public abstract class LspServerRunnerBase {
     }, AppExecutorUtil.getAppExecutorService());
   }
 
-  public CompletableFuture<Void> connectServer(@NotNull Connection connection) {
+  private CompletableFuture<Void> connectServer(@NotNull Connection connection) {
     var languageServer = new LspServer();
     LogPrintWriter trace = new LogPrintWriter(Logger.getInstance("org.eclipse.lsp4j"), LogLevel.TRACE);
     var launcher = Launcher.createLauncher(
