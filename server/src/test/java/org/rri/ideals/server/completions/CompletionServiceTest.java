@@ -43,12 +43,17 @@ public class CompletionServiceTest extends BasePlatformTestCase {
     return "test-data/completion";
   }
 
+  @Override
+  protected boolean isIconRequired() {
+    return true;
+  }
+
   @Test
   public void testCompletionForStaticImport() {
     testWithEngine(new CompletionTestParams("import-static-project", completionItem -> true,
         new MarkupContent(MarkupKind.MARKDOWN,
             """
-                \s[`ImportClass`](psi_element://ImportClass)
+                 [`ImportClass`](psi_element://ImportClass)
                                             
                 _@Contract(pure = true)__i_[](inferred.annotations) public static void methodToImport()"""), null));
   }
@@ -109,6 +114,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
     testWithEngine(new CompletionTestParams("java-function-and-keyword-project", null, null, expected));
   }
 
+  @SuppressWarnings("UnnecessaryUnicodeEscape")
   @Test
   public void testCompletionResolveFunctionsWithParameters() {
     testWithEngine(new CompletionTestParams("python-function-with-parameter-project",
