@@ -91,6 +91,7 @@ public class ProjectService {
     return project;
   }
 
+  @SuppressWarnings("UnstableApiUsage")
   @Nullable
   private Project findOrLoadProject(@NotNull LspPath projectPath, @NotNull ProjectManagerEx mgr) {
     return Arrays.stream(mgr.getOpenProjects())
