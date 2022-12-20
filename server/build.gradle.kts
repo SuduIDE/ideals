@@ -7,7 +7,7 @@ plugins {
 }
 
 group = "org.rri.ideals.server"
-version = "1.0-SNAPSHOT"
+version = System.getenv("IDEALS_VERSION") ?: "1.0-SNAPSHOT"
 
 repositories {
   mavenCentral()
