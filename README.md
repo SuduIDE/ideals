@@ -39,7 +39,7 @@ The project was heavily inspired by [intellij-lsp-server](https://github.com/Rui
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
 ## Requirements
-- IntelliJ IDEA (Community or Ultimate) 2022.2 or higher
+- IntelliJ IDEA (Community or Ultimate) or IDEA Platform based IDE 2022.3 or higher
 
 <p align="right">(<a href="#readme-top">back to top</a>)</p>
 
