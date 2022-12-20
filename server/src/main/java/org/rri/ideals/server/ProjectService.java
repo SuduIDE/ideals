@@ -91,12 +91,14 @@ public class ProjectService {
     return project;
   }
 
+  @SuppressWarnings("UnstableApiUsage")
   @Nullable
   private Project findOrLoadProject(@NotNull LspPath projectPath, @NotNull ProjectManagerEx mgr) {
     return Arrays.stream(mgr.getOpenProjects())
         .filter(it -> LspPath.fromLocalPath(Paths.get(Objects.requireNonNull(it.getBasePath()))).equals(projectPath))
         .findFirst()
-        .orElseGet(() -> mgr.openProject(projectPath.toPath(), new OpenProjectTask().withForceOpenInNewFrame(true)));
+        .orElseGet(() -> mgr.openProject(projectPath.toPath(),
+            new OpenProjectTask(false, null, false, false).withForceOpenInNewFrame(true)));
 
   }
 

@@ -43,6 +43,11 @@ public class CompletionServiceTest extends BasePlatformTestCase {
     return "test-data/completion";
   }
 
+  @Override
+  protected boolean isIconRequired() {
+    return true;
+  }
+
   @Test
   public void testCompletionForStaticImport() {
     testWithEngine(new CompletionTestParams("import-static-project", completionItem -> true,
