@@ -34,10 +34,13 @@ final public class ManagedDocuments {
   }
 
   public void startManaging(@NotNull TextDocumentItem textDocument) {
-    final var path = LspPath.fromLspUri(textDocument.getUri());
+    String uri = textDocument.getUri();
 
-    if(!canAccept(path))
+    if(!canAccept(uri)) {
       return;
+    }
+
+    final var path = LspPath.fromLspUri(uri);
 
     if (docs.containsKey(path)) {
       LOG.warn("URI was opened again without being closed, resetting: " + path);
@@ -76,7 +79,7 @@ final public class ManagedDocuments {
 */
       });
 
-      docs.put(path, new VersionedTextDocumentIdentifier(textDocument.getUri(), textDocument.getVersion()));
+      docs.put(path, new VersionedTextDocumentIdentifier(uri, textDocument.getVersion()));
 
     }));
   }
@@ -86,14 +89,15 @@ final public class ManagedDocuments {
     var textDocument = params.getTextDocument();
     var contentChanges = params.getContentChanges();
 
-    final var path = LspPath.fromLspUri(textDocument.getUri());
-
-    if(!canAccept(path))
+    String uri = textDocument.getUri();
+    if(!canAccept(uri))
       return;
+
+    final var path = LspPath.fromLspUri(uri);
 
     var managedTextDocId = docs.get(path);
     if (managedTextDocId == null)
-      throw new IllegalArgumentException("document isn't being managed: " + textDocument.getUri());
+      throw new IllegalArgumentException("document isn't being managed: " + uri);
 
     // Version number of our document should be (theirs - 1)
     // If stored version is null, this means the document has been just saved
@@ -150,10 +154,12 @@ final public class ManagedDocuments {
   }
 
   public void syncDocument(@NotNull TextDocumentIdentifier textDocument) {
-    var path = LspPath.fromLspUri(textDocument.getUri());
+    String uri = textDocument.getUri();
 
-    if(!canAccept(path))
+    if(!canAccept(uri))
       return;
+
+    var path = LspPath.fromLspUri(uri);
 
     if (!docs.containsKey(path)) {
       LOG.warn("Tried handling didSave, but the document isn't being managed: " + path);
@@ -172,14 +178,15 @@ final public class ManagedDocuments {
         })));
 
     // drop stored version to bring it in sync with the client (if there was any mismatch)
-    docs.put(path, new VersionedTextDocumentIdentifier(textDocument.getUri(), null));
+    docs.put(path, new VersionedTextDocumentIdentifier(uri, null));
   }
 
   public void stopManaging(@NotNull TextDocumentIdentifier textDocument) {
-    var path = LspPath.fromLspUri(textDocument.getUri());
-
-    if(!canAccept(path))
+    String uri = textDocument.getUri();
+    if(!canAccept(uri))
       return;
+
+    var path = LspPath.fromLspUri(uri);
 
     final var virtualFile = path.findVirtualFile();
     if(virtualFile != null) {
@@ -196,8 +203,8 @@ final public class ManagedDocuments {
   }
 
   @SuppressWarnings("BooleanMethodIsAlwaysInverted")
-  private static boolean canAccept(@NotNull LspPath path) {
-    return path.toString().startsWith("file:");
+  private static boolean canAccept(@NotNull String uri) {
+    return uri.startsWith("file://");
   }
 
   private void applyContentChangeEventChanges(@NotNull Document doc, @NotNull List<TextDocumentContentChangeEvent> contentChanges) {

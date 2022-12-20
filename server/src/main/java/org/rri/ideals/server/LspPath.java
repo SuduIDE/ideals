@@ -94,7 +94,7 @@ public class LspPath {
 
     Matcher matcher = schemeRegex.matcher(uriString);
     if(!matcher.find())
-      throw new IllegalArgumentException("URI must have schema: " + uriString);
+      return uriString; // if not a well-formed uri just leave as is
 
     var schemePlusColonPlusSlashes = matcher.group(0);
 
