@@ -28,6 +28,11 @@ public class LspPathTest {
   }
 
   @Test
+  public void uriNormalization_WithVsCodeSpecificUris() {
+    assertEquals("output:extension-output-SuduIDE.ideals-vscode-%231-IdeaLS%20Client", LspPath.fromLspUri("output:extension-output-SuduIDE.ideals-vscode-%231-IdeaLS%20Client").toLspUri());
+  }
+
+  @Test
   public void uriNormalization_driveLetterInLowerCase() {
     assertEquals("file:///e:/Program Files/test.txt", LspPath.fromLspUri("file:///E:/Program Files/test.txt").toLspUri());
     assertEquals("jar:///e:/Program Files/lib/jar!/test.txt", LspPath.fromLspUri("jar:///E:/Program Files/lib/jar!/test.txt").toLspUri());
