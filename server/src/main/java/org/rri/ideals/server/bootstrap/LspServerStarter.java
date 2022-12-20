@@ -3,7 +3,6 @@ package org.rri.ideals.server.bootstrap;
 import com.intellij.ide.CliResult;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ApplicationStarter;
-import com.intellij.openapi.fileEditor.FileDocumentManager;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.List;
@@ -91,7 +90,7 @@ public class LspServerStarter implements ApplicationStarter {
   }
 
   private void saveAll() {
-    FileDocumentManager.getInstance().saveAllDocuments();
+    // FileDocumentManager.getInstance().saveAllDocuments();  // LSP server must not save documents
     ApplicationManager.getApplication().saveSettings();
   }
 
