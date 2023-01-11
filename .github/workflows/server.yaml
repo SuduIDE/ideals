@@ -1,15 +1,17 @@
 name: Server
 on:
   push:
+    tags:
+      - 'v*'
     branches:
       - github-ci
-    paths:
-      - 'server/**'
+#    paths:
+#      - 'server/**'
   pull_request:
     branches:
       - master
-    paths:
-      - 'server/**'
+#    paths:
+#      - 'server/**'
 defaults:
   run:
     working-directory: server
