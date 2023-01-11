@@ -25,7 +25,7 @@ jobs:
           build-root-directory: server
       - uses: actions/upload-artifact@v3
         with:
-          name: IdeaLS-plugin-${{ steps.get_version.outputs.VERSION }}
+          name: idea-plugin-${{ steps.get_version.outputs.VERSION }}
           path: "server/build/distributions/*.zip"
 
 
@@ -41,7 +41,7 @@ jobs:
           vsce package
       - uses: actions/upload-artifact@v3
         with:
-          name: IdeaLS-VSCode-extension-${{ steps.get_version.outputs.VERSION }}
+          name: vscode-extension-${{ steps.get_version.outputs.VERSION }}
           path: "client/vscode/*.vsix"
 
 
