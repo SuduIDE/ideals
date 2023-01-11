@@ -27,8 +27,6 @@ jobs:
           path: "server/build/distributions/*.zip"
   package-vscode-extension:
     name: Package VSCode IdeaLS client extension
-    needs:
-      - test-vscode-extension
     runs-on: ubuntu-latest
     defaults:
       run:
