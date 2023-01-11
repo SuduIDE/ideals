@@ -10,9 +10,6 @@ on:
       - master
 #    paths:
 #      - 'server/**'
-defaults:
-  run:
-    working-directory: client/vscode
 jobs:
   test-vscode-extension:
     name: Test VSCode IdeaLS client extension
@@ -20,6 +17,9 @@ jobs:
       matrix:
         os: [ macos-latest, ubuntu-latest, windows-latest ]
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: client/vscode
     steps:
       - name: Checkout
         uses: actions/checkout@v3
