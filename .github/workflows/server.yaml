@@ -3,6 +3,8 @@ on:
   push:
     branches:
       - github-ci
+    paths:
+      - 'server/**'
 defaults:
   run:
     working-directory: server
