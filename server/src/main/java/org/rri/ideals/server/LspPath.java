@@ -26,7 +26,7 @@ public class LspPath {
 
   @NotNull
   public static LspPath fromLocalPath(@NotNull Path localPath) {
-    return new LspPath( localPath.toUri().toString());
+    return new LspPath(localPath.toUri().toString());
   }
 
   @NotNull
