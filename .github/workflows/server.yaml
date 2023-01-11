@@ -1,8 +1,6 @@
 name: Server
 on:
   push:
-    tags:
-      - 'v*'
     branches:
       - github-ci
     paths:
