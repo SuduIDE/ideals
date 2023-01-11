@@ -41,7 +41,7 @@ jobs:
           vsce package
       - uses: actions/upload-artifact@v3
         with:
-          name: IdeaLS-VSCode-Extension-${{ steps.get_version.outputs.VERSION }}
+          name: IdeaLS-VSCode-extension-${{ steps.get_version.outputs.VERSION }}
           path: "client/vscode/*.vsix"
 
 
