@@ -2,14 +2,10 @@ name: Server
 on:
   push:
     branches:
-      - github-ci
-  #    paths:
-  #      - 'server/**'
+      - master
   pull_request:
     branches:
       - master
-#    paths:
-#      - 'server/**'
 jobs:
   test-server:
     name: Test IdeaLS server
