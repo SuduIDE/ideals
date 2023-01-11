@@ -10,9 +10,6 @@ on:
       - master
 #    paths:
 #      - 'server/**'
-defaults:
-  run:
-    working-directory: server
 jobs:
   test-server:
     name: Test IdeaLS server
@@ -29,6 +26,7 @@ jobs:
       - name: Run tests
         uses: gradle/gradle-build-action@v2
         with:
+          working-directory: server
           arguments: test
           build-root-directory: server
       - uses: actions/upload-artifact@v3
@@ -42,6 +40,9 @@ jobs:
       matrix:
         os: [ macos-latest, ubuntu-latest, windows-latest ]
     runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: server
     steps:
       - name: Checkout
         uses: actions/checkout@v3

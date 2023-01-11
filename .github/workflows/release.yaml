@@ -3,9 +3,6 @@ on:
   push:
     tags:
       - 'v*'
-defaults:
-  run:
-    working-directory: server
 jobs:
   build-idea-plugin:
     name: Build IdeaLS plugin
@@ -19,6 +16,7 @@ jobs:
       - name: Build plugins
         uses: gradle/gradle-build-action@v2
         with:
+          working-directory: server
           arguments: :buildPlugin
           build-root-directory: server
       - uses: actions/upload-artifact@v3
@@ -30,6 +28,9 @@ jobs:
     needs:
       - test-vscode-extension
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: client
     steps:
       - name: Checkout
         uses: actions/checkout@v3
