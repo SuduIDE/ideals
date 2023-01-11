@@ -7,9 +7,6 @@ jobs:
   build-idea-plugin:
     name: Build IdeaLS plugin
     runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: server
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-java@v3
@@ -25,23 +22,44 @@ jobs:
         with:
           name: IdeaLS plugin
           path: "server/build/distributions/*.zip"
-  package-vscode-extension:
-    name: Package VSCode IdeaLS client extension
-    runs-on: ubuntu-latest
-    defaults:
-      run:
-        working-directory: client/vscode
-    steps:
-      - name: Checkout
-        uses: actions/checkout@v3
+
+
       - name: Install Node.js
         uses: actions/setup-node@v3
         with:
           node-version: 16.x
-      - run: npm install
-      - run: npm install -g vsce
-      - run: vsce package
+      - name: Build extension
+        working-directory: client/vscode
+        run: |
+          npm install
+          npm install -g vsce
+          vsce package
       - uses: actions/upload-artifact@v3
         with:
           name: IdeaLS VSCode extension
           path: "client/vscode/*.vsix"
+
+
+      - name: Build project # This would actually build your project, using zip for an example artifact
+        run: |
+          zip --junk-paths release-artifact "client/vscode/.*\.vsix" "server/build/distributions/.*\.zip"
+      - name: Create Release
+        id: create_release
+        uses: actions/create-release@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          tag_name: ${{ github.ref }}
+          release_name: Release ${{ github.ref }}
+          draft: false
+          prerelease: false
+      - name: Upload Release Asset
+        id: upload-release-asset
+        uses: actions/upload-release-asset@v1
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        with:
+          upload_url: ${{ steps.create_release.outputs.upload_url }} # This pulls from the CREATE RELEASE step above, referencing it's ID to get its outputs object, which include a `upload_url`. See this blog post for more info: https://jasonet.co/posts/new-features-of-github-actions/#passing-data-to-future-steps
+          asset_path: ./release-artifact.zip
+          asset_name: release-artifact
+          asset_content_type: application/zip
