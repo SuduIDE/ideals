@@ -7,6 +7,9 @@ jobs:
   build-idea-plugin:
     name: Build IdeaLS plugin
     runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: server
     steps:
       - uses: actions/checkout@v3
       - uses: actions/setup-java@v3
@@ -16,7 +19,6 @@ jobs:
       - name: Build plugins
         uses: gradle/gradle-build-action@v2
         with:
-          working-directory: server
           arguments: :buildPlugin
           build-root-directory: server
       - uses: actions/upload-artifact@v3
@@ -30,7 +32,7 @@ jobs:
     runs-on: ubuntu-latest
     defaults:
       run:
-        working-directory: client
+        working-directory: client/vscode
     steps:
       - name: Checkout
         uses: actions/checkout@v3
