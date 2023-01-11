@@ -4,7 +4,7 @@ on:
     tags:
       - 'v*'
     branches:
-      - github-actions
+      - github-ci
     paths:
       - 'server/**'
   pull_request:
@@ -37,7 +37,7 @@ jobs:
         if: success() || failure()
         with:
           name: test-report-${{ matrix.os }}
-          path: "server/build/reports/tests/test/**/*.*"
+          path: "build/reports/tests/test/**/*.*"
   build-idea-plugin:
     name: Build IdeaLS plugin
     runs-on: ubuntu-latest
@@ -55,4 +55,4 @@ jobs:
       - uses: actions/upload-artifact@v3
         with:
           name: IdeaLS plugin
-          path: "server/build/distributions/*.zip"
+          path: "build/distributions/*.zip"
