@@ -1,0 +1,46 @@
+name: Release
+on:
+  push:
+    tags:
+      - 'v*'
+defaults:
+  run:
+    working-directory: server
+jobs:
+  build-idea-plugin:
+    name: Build IdeaLS plugin
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'corretto'
+          java-version: '17'
+      - name: Build plugins
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: :buildPlugin
+          build-root-directory: server
+      - uses: actions/upload-artifact@v3
+        with:
+          name: IdeaLS plugin
+          path: "server/build/distributions/*.zip"
+  package-vscode-extension:
+    name: Package VSCode IdeaLS client extension
+    needs:
+      - test-vscode-extension
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v3
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+      - run: npm install
+      - run: npm install -g vsce
+      - run: vsce package
+      - uses: actions/upload-artifact@v3
+        with:
+          name: IdeaLS VSCode extension
+          path: "client/vscode/*.vsix"
