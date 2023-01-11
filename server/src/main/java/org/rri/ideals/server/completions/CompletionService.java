@@ -4,6 +4,8 @@ import com.google.gson.Gson;
 import com.intellij.codeInsight.completion.CompletionUtil;
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementPresentation;
+import com.intellij.codeInsight.template.impl.TemplateManagerImpl;
+import com.intellij.codeInsight.template.impl.TemplateState;
 import com.intellij.icons.AllIcons;
 import com.intellij.lang.Language;
 import com.intellij.lang.documentation.DocumentationResultData;
@@ -407,6 +409,15 @@ final public class CompletionService implements Disposable {
           handleInsert(cachedData, cachedLookupElementWithMatcher, editor, copyToInsert, completionInfo);
 
           caretOffsetAfterInsertRef.set(editor.getCaretModel().getOffset());
+          TemplateState templateState = TemplateManagerImpl.getTemplateState(editor);
+          if (templateState != null) {
+//            editor.getDocument().replaceString();
+            // одинаковые сегменты имеют одинаковые имена
+            templateState.getTemplate().getSegmentName(0);
+            // тут уже готовые ренджы сегментов
+            templateState.getSegmentRange(0);
+          }
+          LOG.assertTrue(templateState != null);
         }), new LspProgressIndicator(cancelChecker));
   }
 
