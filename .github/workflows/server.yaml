@@ -1,8 +1,15 @@
 name: Server
 on:
   push:
+    tags:
+      - 'v*'
     branches:
-      - github-ci
+      - github-actions
+    paths:
+      - 'server/**'
+  pull_request:
+    branches:
+      - master
     paths:
       - 'server/**'
 defaults:
@@ -13,7 +20,7 @@ jobs:
     name: Test IdeaLS server
     strategy:
       matrix:
-        os: [macos-latest, ubuntu-latest, windows-latest]
+        os: [ macos-latest, ubuntu-latest, windows-latest ]
     runs-on: ${{ matrix.os }}
     steps:
       - uses: actions/checkout@v3
