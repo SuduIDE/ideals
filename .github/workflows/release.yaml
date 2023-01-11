@@ -14,7 +14,8 @@ jobs:
         run: echo "VERSION=${GITHUB_REF#refs/*/}" >> $GITHUB_OUTPUT
 
 
-      - uses: actions/setup-java@v3
+      - name: Setup Java
+        uses: actions/setup-java@v3
         with:
           distribution: 'corretto'
           java-version: '17'
@@ -23,7 +24,8 @@ jobs:
         with:
           arguments: :buildPlugin
           build-root-directory: server
-      - uses: actions/upload-artifact@v3
+      - name: Upload plugin artifact
+        uses: actions/upload-artifact@v3
         with:
           name: idea-plugin-${{ steps.get_version.outputs.VERSION }}
           path: "server/build/distributions/*.zip"
@@ -39,7 +41,8 @@ jobs:
           npm install
           npm install -g vsce
           vsce package
-      - uses: actions/upload-artifact@v3
+      - name: Upload vscode extension artifact
+        uses: actions/upload-artifact@v3
         with:
           name: vscode-extension-${{ steps.get_version.outputs.VERSION }}
           path: "client/vscode/*.vsix"
