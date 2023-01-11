@@ -11,6 +11,31 @@ on:
 #    paths:
 #      - 'server/**'
 jobs:
+  test-server:
+    name: Test IdeaLS server
+    strategy:
+      matrix:
+        os: [ macos-latest, ubuntu-latest, windows-latest ]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v3
+      - uses: actions/setup-java@v3
+        with:
+          distribution: 'corretto'
+          java-version: '17'
+      - name: Run tests
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: test
+          build-root-directory: server
+      - uses: actions/upload-artifact@v3
+        if: success() || failure()
+        with:
+          name: test-report-${{ matrix.os }}
+          path: "server/build/reports/tests/test/**/*.*"
   test-vscode-extension:
     name: Test VSCode IdeaLS client extension
     strategy:
