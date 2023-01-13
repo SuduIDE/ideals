@@ -11,7 +11,7 @@ import {lspClient} from './core/idealsClient';
 export function activate(context: vscode.ExtensionContext) {
 	const provider = new JarDocumentContentProvider(context);
 	const jarRegistration = vscode.workspace.registerTextDocumentContentProvider(JAR_CONTENT_SCHEME, provider);
-	const zipRegistration = vscode.workspace.registerTextDocumentContentProvider(ZIP_CONTENT_SCHEME, provider);
+	const zipRegistration =   vscode.workspace.registerTextDocumentContentProvider(ZIP_CONTENT_SCHEME, provider);
 
 	context.subscriptions.push(jarRegistration);
 	context.subscriptions.push(zipRegistration);
