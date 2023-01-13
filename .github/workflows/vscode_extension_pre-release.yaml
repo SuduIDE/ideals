@@ -4,12 +4,12 @@ on:
     branches:
       - master
     paths:
-      - 'client/vscode/**'
+      - 'client/**'
   pull_request:
     branches:
       - master
     paths:
-      - 'client/vscode/**'
+      - 'client/**'
 jobs:
   test-vscode-extension:
     name: Test VSCode IdeaLS client extension
