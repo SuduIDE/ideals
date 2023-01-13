@@ -8,6 +8,8 @@ on:
   pull_request:
     branches:
       - master
+    paths:
+      - 'client/vscode/**'
 jobs:
   test-vscode-extension:
     name: Test VSCode IdeaLS client extension
