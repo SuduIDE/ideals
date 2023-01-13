@@ -1,0 +1,34 @@
+name: VSCode extension pre-release
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'client/vscode/**'
+  pull_request:
+    branches:
+      - master
+jobs:
+  test-vscode-extension:
+    name: Test VSCode IdeaLS client extension
+    strategy:
+      matrix:
+        os: [ macos-latest, ubuntu-latest, windows-latest ]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: client/vscode
+    steps:
+      - uses: actions/checkout@v3
+      - name: Install Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: 16.x
+      - name: Compile extension
+        run: npm install
+      - name: Run tests on Linux
+        run: xvfb-run -a npm test
+        if: runner.os == 'Linux'
+      - name: Run tests on other systems
+        run: npm test
+        if: runner.os != 'Linux'
