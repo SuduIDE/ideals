@@ -6,6 +6,7 @@ import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementPresentation;
 import com.intellij.codeInsight.template.impl.TemplateManagerImpl;
 import com.intellij.codeInsight.template.impl.TemplateState;
+import com.intellij.codeInsight.template.impl.Variable;
 import com.intellij.icons.AllIcons;
 import com.intellij.lang.Language;
 import com.intellij.lang.documentation.DocumentationResultData;
@@ -24,6 +25,7 @@ import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.Ref;
+import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.util.registry.Registry;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiFileFactory;
@@ -47,8 +49,11 @@ import org.rri.ideals.server.util.MiscUtil;
 import org.rri.ideals.server.util.TextUtil;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 @Service(Service.Level.PROJECT)
 final public class CompletionService implements Disposable {
@@ -113,10 +118,10 @@ final public class CompletionService implements Disposable {
 
     Ref<Document> copyThatCalledCompletionDocRef = new Ref<>();
     Ref<Document> copyToInsertDocRef = new Ref<>();
-    Ref<Integer> caretOffsetAfterInsertRef = new Ref<>();
+    Ref<TextRange> caretOffsetAfterInsertRef = new Ref<>();
 
     ArrayList<TextEdit> diff;
-    int caretOffsetAfterInsert;
+    int snippetBounds;
     Document copyToInsertDoc;
     Document copyThatCalledCompletionDoc;
     var disposable = Disposer.newDisposable();
@@ -140,7 +145,7 @@ final public class CompletionService implements Disposable {
       assert copyToInsertDoc != null;
       assert copyThatCalledCompletionDoc != null;
 
-      caretOffsetAfterInsert = caretOffsetAfterInsertRef.get();
+      snippetBounds = caretOffsetAfterInsertRef.get();
       diff = new ArrayList<>(TextUtil.textEditFromDocs(copyThatCalledCompletionDoc, copyToInsertDoc));
 
       if (diff.isEmpty()) {
@@ -158,7 +163,7 @@ final public class CompletionService implements Disposable {
           TextEditRearranger.findOverlappingTextEditsInRangeFromMainTextEditToCaretAndMergeThem(
               toListOfEditsWithOffsets(diff, copyThatCalledCompletionDoc),
               replaceElementStartOffset, replaceElementEndOffset,
-              copyThatCalledCompletionDoc.getText(), caretOffsetAfterInsert);
+              copyThatCalledCompletionDoc.getText(), snippetBounds);
 
       unresolved.setAdditionalTextEdits(
           toListOfTextEdits(newTextAndAdditionalEdits.additionalEdits(), copyThatCalledCompletionDoc)
@@ -411,13 +416,49 @@ final public class CompletionService implements Disposable {
           caretOffsetAfterInsertRef.set(editor.getCaretModel().getOffset());
           TemplateState templateState = TemplateManagerImpl.getTemplateState(editor);
           if (templateState != null) {
-//            editor.getDocument().replaceString();
-            // одинаковые сегменты имеют одинаковые имена
-            templateState.getTemplate().getSegmentName(0);
-            // тут уже готовые ренджы сегментов
-            templateState.getSegmentRange(0);
+            var document = MiscUtil.getDocument(copyToInsert);
+            if (document == null) {
+              return;
+            }
+            var template = templateState.getTemplate();
+            var variableToSegments =
+                template.getVariables()
+                    .stream()
+                    .collect(Collectors.toMap(Variable::getName,
+                        variable -> new ArrayList<TextEditWithOffsets>()));
+            variableToSegments.put("END", new ArrayList<>());
+            HashMap<String, Integer> variableToNumber = new HashMap<>();
+            for (int i = 0; i < template.getVariableCount(); i++) {
+              variableToNumber.put(template.getVariableNameAt(i), i + 1);
+            }
+            variableToNumber.put("END", 0);
+            for (int i = 0; i < template.getSegmentsCount(); i++) {
+              var segmentRange = templateState.getSegmentRange(i);
+              var segmentOffsetStart = segmentRange.getStartOffset();
+              var segmentOffsetEnd = segmentRange.getEndOffset();
+              var segmentName = template.getSegmentName(i);
+              variableToSegments.get(segmentName).add(new TextEditWithOffsets(
+                  new TextRange(
+                      segmentOffsetStart,
+                      segmentOffsetEnd),
+                  "${" + variableToNumber.get(segmentName).toString() + ":" + document.getText().substring(segmentOffsetStart, segmentOffsetEnd) + "}"));
+            }
+            var sortedLspSegments =
+                variableToSegments.values().stream().flatMap(Collection::stream).sorted().toList();
+            WriteCommandAction.runWriteCommandAction(project, null, null, templateState::gotoEnd);
+
+            WriteCommandAction.runWriteCommandAction(project, null, null, () -> {
+              for (int i = sortedLspSegments.size() - 1; i >= 0; i--) {
+                var lspSegment = sortedLspSegments.get(i);
+                if (lspSegment.getRange().getStartOffset() == lspSegment.getRange().getEndOffset()) {
+                  document.insertString(lspSegment.getRange().getStartOffset(), lspSegment.getNewText());
+                } else {
+                  document.replaceString(lspSegment.getRange().getStartOffset(),
+                      lspSegment.getRange().getEndOffset(), lspSegment.getNewText());
+                }
+              }
+            }, copyToInsert);
           }
-          LOG.assertTrue(templateState != null);
         }), new LspProgressIndicator(cancelChecker));
   }
 
