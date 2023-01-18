@@ -1,4 +1,4 @@
-name: VSCode extension pre-release
+name: VSCode extension tests
 on:
   push:
     branches:
