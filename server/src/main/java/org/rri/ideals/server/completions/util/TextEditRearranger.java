@@ -1,5 +1,6 @@
 package org.rri.ideals.server.completions.util;
 
+import com.intellij.openapi.util.TextRange;
 import org.jetbrains.annotations.NotNull;
 
 import java.util.ArrayList;
@@ -30,7 +31,7 @@ public class TextEditRearranger {
    * @param replaceElementStartOffset the main TextEdit's range start
    * @param replaceElementEndOffset the main TextEdit's range end
    * @param originalText document's text *before* insert
-   * @param caretOffsetAfterInsert caret position *after* insert
+   * @param snippetBounds caret position *after* insert
    * @return Additional TextEdits and new main TextEdit
    */
   @NotNull
@@ -39,19 +40,19 @@ public class TextEditRearranger {
       int replaceElementStartOffset,
       int replaceElementEndOffset,
       @NotNull String originalText,
-      int caretOffsetAfterInsert
+      @NotNull TextRange snippetBounds
   ) {
     var diffRangesAsOffsetsTreeSet = new TreeSet<>(diffRangesAsOffsetsList);
     var additionalEdits = new ArrayList<TextEditWithOffsets>();
 
-    var textEditWithCaret = findAndTransformEditWithCaret(diffRangesAsOffsetsTreeSet, caretOffsetAfterInsert);
+//    var textEditWithCaret = findAndTransformEditWithCaret(diffRangesAsOffsetsTreeSet, snippetBounds);
 
-    final int selectedEditRangeStartOffset = textEditWithCaret.getRange().getStartOffset();
-    final int selectedEditRangeEndOffset = textEditWithCaret.getRange().getEndOffset();
+//    final int selectedEditRangeStartOffset = textEditWithCaret.getRange().getStartOffset();
+//    final int selectedEditRangeEndOffset = textEditWithCaret.getRange().getEndOffset();
 
-    final int collisionRangeStartOffset = Integer.min(selectedEditRangeStartOffset,
+    final int collisionRangeStartOffset = Integer.min(snippetBounds.getStartOffset(),
         replaceElementStartOffset);
-    final int collisionRangeEndOffset = Integer.max(selectedEditRangeEndOffset,
+    final int collisionRangeEndOffset = Integer.max(snippetBounds.getEndOffset(),
         replaceElementEndOffset);
 
     var editsToMergeRangesAsOffsets = findIntersectedEdits(

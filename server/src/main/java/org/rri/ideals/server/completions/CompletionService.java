@@ -118,10 +118,10 @@ final public class CompletionService implements Disposable {
 
     Ref<Document> copyThatCalledCompletionDocRef = new Ref<>();
     Ref<Document> copyToInsertDocRef = new Ref<>();
-    Ref<TextRange> caretOffsetAfterInsertRef = new Ref<>();
+    Ref<TextRange> snippetBoundsRef = new Ref<>();
 
     ArrayList<TextEdit> diff;
-    int snippetBounds;
+    TextRange snippetBounds;
     Document copyToInsertDoc;
     Document copyThatCalledCompletionDoc;
     var disposable = Disposer.newDisposable();
@@ -137,7 +137,7 @@ final public class CompletionService implements Disposable {
           cancelChecker,
           copyThatCalledCompletionDocRef,
           copyToInsertDocRef,
-          caretOffsetAfterInsertRef,
+          snippetBoundsRef,
           disposable, unresolved);
 
       copyToInsertDoc = copyToInsertDocRef.get();
@@ -145,7 +145,7 @@ final public class CompletionService implements Disposable {
       assert copyToInsertDoc != null;
       assert copyThatCalledCompletionDoc != null;
 
-      snippetBounds = caretOffsetAfterInsertRef.get();
+      snippetBounds = snippetBoundsRef.get();
       diff = new ArrayList<>(TextUtil.textEditFromDocs(copyThatCalledCompletionDoc, copyToInsertDoc));
 
       if (diff.isEmpty()) {
@@ -375,7 +375,7 @@ final public class CompletionService implements Disposable {
       @NotNull CancelChecker cancelChecker,
       @NotNull Ref<Document> copyThatCalledCompletionDocRef,
       @NotNull Ref<Document> copyToInsertDocRef,
-      @NotNull Ref<Integer> caretOffsetAfterInsertRef,
+      @NotNull Ref<TextRange> snippetBounds,
       @NotNull Disposable disposable,
       @NotNull CompletionItem unresolved) {
     var cachedLookupElementWithMatcher = cachedData.lookupElementsWithMatcher.get(lookupElementIndex);
@@ -412,14 +412,10 @@ final public class CompletionService implements Disposable {
           }
 
           handleInsert(cachedData, cachedLookupElementWithMatcher, editor, copyToInsert, completionInfo);
-
-          caretOffsetAfterInsertRef.set(editor.getCaretModel().getOffset());
+          snippetBounds.set(editor.getCaretModel().getCurrentCaret().getSelectionRange());
           TemplateState templateState = TemplateManagerImpl.getTemplateState(editor);
           if (templateState != null) {
-            var document = MiscUtil.getDocument(copyToInsert);
-            if (document == null) {
-              return;
-            }
+            var document = editor.getDocument();
             var template = templateState.getTemplate();
             var variableToSegments =
                 template.getVariables()
@@ -458,6 +454,7 @@ final public class CompletionService implements Disposable {
                 }
               }
             }, copyToInsert);
+            snippetBounds.set(sortedLspSegments.get(0).getRange());
           }
         }), new LspProgressIndicator(cancelChecker));
   }

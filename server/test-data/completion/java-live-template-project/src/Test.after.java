@@ -1,7 +1,7 @@
 class Test {
     void test() {
-        for (int i$0 = 0; i < ; i++) {
-        </s></s></s></s>
+        for (int ${1:i} = 0; ${1:i} < ${2:}; ${1:i}++) {
+            ${0:}
         }
     }
 }
