@@ -1,0 +1,40 @@
+name: Server tests
+on:
+  push:
+    branches:
+      - master
+    paths:
+      - 'server/**'
+  pull_request:
+    branches:
+      - master
+    paths:
+      - 'server/**'
+jobs:
+  test-server:
+    name: Test IdeaLS server
+    strategy:
+      matrix:
+        os: [ macos-latest, ubuntu-latest, windows-latest ]
+    runs-on: ${{ matrix.os }}
+    defaults:
+      run:
+        working-directory: server
+    steps:
+      - uses: actions/checkout@v3
+      - name: Setup Java
+        uses: actions/setup-java@v3
+        with:
+          distribution: 'corretto'
+          java-version: '17'
+      - name: Run tests
+        uses: gradle/gradle-build-action@v2
+        with:
+          arguments: test
+          build-root-directory: server
+      - name: Upload test report
+        uses: actions/upload-artifact@v3
+        if: success() || failure()
+        with:
+          name: test-report-${{ matrix.os }}
+          path: "server/build/reports/tests/test/**/*.*"
