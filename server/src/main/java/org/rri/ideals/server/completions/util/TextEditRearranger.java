@@ -45,14 +45,17 @@ public class TextEditRearranger {
     var diffRangesAsOffsetsTreeSet = new TreeSet<>(diffRangesAsOffsetsList);
     var additionalEdits = new ArrayList<TextEditWithOffsets>();
 
-//    var textEditWithCaret = findAndTransformEditWithCaret(diffRangesAsOffsetsTreeSet, snippetBounds);
+    var textEditWithStartSnippetCaret = findAndTransformEditWithCaret(diffRangesAsOffsetsTreeSet,
+        snippetBounds.getStartOffset());
+    var textEditWithEndSnippetCaret = findAndTransformEditWithCaret(diffRangesAsOffsetsTreeSet,
+        snippetBounds.getEndOffset());
 
-//    final int selectedEditRangeStartOffset = textEditWithCaret.getRange().getStartOffset();
-//    final int selectedEditRangeEndOffset = textEditWithCaret.getRange().getEndOffset();
+    final int selectedEditRangeStartOffset = textEditWithStartSnippetCaret.getRange().getStartOffset();
+    final int selectedEditRangeEndOffset = textEditWithEndSnippetCaret.getRange().getEndOffset();
 
-    final int collisionRangeStartOffset = Integer.min(snippetBounds.getStartOffset(),
+    final int collisionRangeStartOffset = Integer.min(selectedEditRangeStartOffset,
         replaceElementStartOffset);
-    final int collisionRangeEndOffset = Integer.max(snippetBounds.getEndOffset(),
+    final int collisionRangeEndOffset = Integer.max(selectedEditRangeEndOffset,
         replaceElementEndOffset);
 
     var editsToMergeRangesAsOffsets = findIntersectedEdits(
@@ -185,7 +188,7 @@ public class TextEditRearranger {
       if (currentRelativeCaretOffset < sub) { // not found
         var caretOffsetInOriginalDoc = prevEnd + currentRelativeCaretOffset;
         textEditWithCaret = new TextEditWithOffsets(
-            caretOffsetInOriginalDoc, caretOffsetInOriginalDoc, "$0");
+            caretOffsetInOriginalDoc, caretOffsetInOriginalDoc, "");
         break;
       }
 
@@ -193,11 +196,9 @@ public class TextEditRearranger {
 
       sub = editWithOffsets.getNewText().length();
       if (currentRelativeCaretOffset <= sub) {
-        final var textWithCaret = editWithOffsets.getNewText().substring(0, currentRelativeCaretOffset) +
-            "$0" + editWithOffsets.getNewText().substring(currentRelativeCaretOffset);
         sortedDiffRanges.remove(editWithOffsets);
 
-        editWithOffsets = new TextEditWithOffsets(editWithOffsets.getRange(), textWithCaret);
+        editWithOffsets = new TextEditWithOffsets(editWithOffsets.getRange(), editWithOffsets.getNewText());
         textEditWithCaret = editWithOffsets;
         break;
       }
@@ -208,7 +209,7 @@ public class TextEditRearranger {
 
     if (textEditWithCaret == null) {  // still not found
       var caretOffsetInOriginalDoc = prevEnd + currentRelativeCaretOffset;
-      textEditWithCaret = new TextEditWithOffsets(caretOffsetInOriginalDoc, caretOffsetInOriginalDoc, "$0");
+      textEditWithCaret = new TextEditWithOffsets(caretOffsetInOriginalDoc, caretOffsetInOriginalDoc, "");
     }
 
     sortedDiffRanges.add(textEditWithCaret);

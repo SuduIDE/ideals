@@ -163,7 +163,8 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   @Test
   public void testJavaLiveTemplate() {
     runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams("java-live-template-project",
-        completionItem -> Objects.equals(completionItem.getLabel(), "fori"), new MarkupContent(MarkupKind.MARKDOWN,
+        completionItem -> Objects.equals(completionItem.getLabel(), "itco"),
+        new MarkupContent(MarkupKind.MARKDOWN,
         """
             for(int $INDEX$ = 0; $INDEX$ < $LIMIT$; $INDEX$++) { $END$ }
 

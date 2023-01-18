@@ -441,7 +441,8 @@ final public class CompletionService implements Disposable {
             }
             var sortedLspSegments =
                 variableToSegments.values().stream().flatMap(Collection::stream).sorted().toList();
-            WriteCommandAction.runWriteCommandAction(project, null, null, templateState::gotoEnd);
+            WriteCommandAction.runWriteCommandAction(project, null, null,
+                () -> templateState.gotoEnd(false));
 
             WriteCommandAction.runWriteCommandAction(project, null, null, () -> {
               for (int i = sortedLspSegments.size() - 1; i >= 0; i--) {
