@@ -414,54 +414,62 @@ final public class CompletionService implements Disposable {
           handleInsert(cachedData, cachedLookupElementWithMatcher, editor, copyToInsert, completionInfo);
           int caretOffset = editor.getCaretModel().getOffset();
           snippetBoundsRef.set(new TextRange(caretOffset, caretOffset));
+
           TemplateState templateState = TemplateManagerImpl.getTemplateState(editor);
           var document = editor.getDocument();
           if (templateState != null) {
-            var template = templateState.getTemplate();
-            var variableToSegments =
-                template.getVariables()
-                    .stream()
-                    .collect(Collectors.toMap(Variable::getName,
-                        variable -> new ArrayList<TextEditWithOffsets>()));
-            variableToSegments.put("END", new ArrayList<>());
-            HashMap<String, Integer> variableToNumber = new HashMap<>();
-            for (int i = 0; i < template.getVariableCount(); i++) {
-              variableToNumber.put(template.getVariableNameAt(i), i + 1);
-            }
-            variableToNumber.put("END", 0);
-            for (int i = 0; i < template.getSegmentsCount(); i++) {
-              var segmentRange = templateState.getSegmentRange(i);
-              var segmentOffsetStart = segmentRange.getStartOffset();
-              var segmentOffsetEnd = segmentRange.getEndOffset();
-              var segmentName = template.getSegmentName(i);
-              variableToSegments.get(segmentName).add(new TextEditWithOffsets(
-                  new TextRange(
-                      segmentOffsetStart,
-                      segmentOffsetEnd),
-                  "${" + variableToNumber.get(segmentName).toString() + ":" + document.getText().substring(segmentOffsetStart, segmentOffsetEnd) + "}"));
-            }
-            var sortedLspSegments =
-                variableToSegments.values().stream().flatMap(Collection::stream).sorted().toList();
-            WriteCommandAction.runWriteCommandAction(project, null, null,
-                () -> templateState.gotoEnd(false));
-
-            WriteCommandAction.runWriteCommandAction(project, null, null, () -> {
-              for (int i = sortedLspSegments.size() - 1; i >= 0; i--) {
-                var lspSegment = sortedLspSegments.get(i);
-                if (lspSegment.getRange().getStartOffset() == lspSegment.getRange().getEndOffset()) {
-                  document.insertString(lspSegment.getRange().getStartOffset(), lspSegment.getNewText());
-                } else {
-                  document.replaceString(lspSegment.getRange().getStartOffset(),
-                      lspSegment.getRange().getEndOffset(), lspSegment.getNewText());
-                }
-              }
-            }, copyToInsert);
-            snippetBoundsRef.set(new TextRange(sortedLspSegments.get(0).getRange().getStartOffset(),
-                sortedLspSegments.get(sortedLspSegments.size() - 1).getRange().getEndOffset()));
+            handleSnippetsInsert(snippetBoundsRef, copyToInsert, templateState, document);
           } else {
             WriteCommandAction.runWriteCommandAction(project, null, null, () -> document.insertString(caretOffset, "$0"), copyToInsert);
           }
         }), new LspProgressIndicator(cancelChecker));
+  }
+
+  private void handleSnippetsInsert(@NotNull Ref<TextRange> snippetBoundsRef,
+                                    @NotNull PsiFile copyToInsert,
+                                    @NotNull TemplateState templateState,
+                                    @NotNull Document document) {
+    var template = templateState.getTemplate();
+    var variableToSegments =
+        template.getVariables()
+            .stream()
+            .collect(Collectors.toMap(Variable::getName,
+                variable -> new ArrayList<TextEditWithOffsets>()));
+    variableToSegments.put("END", new ArrayList<>());
+    HashMap<String, Integer> variableToNumber = new HashMap<>();
+    for (int i = 0; i < template.getVariableCount(); i++) {
+      variableToNumber.put(template.getVariableNameAt(i), i + 1);
+    }
+    variableToNumber.put("END", 0);
+    for (int i = 0; i < template.getSegmentsCount(); i++) {
+      var segmentRange = templateState.getSegmentRange(i);
+      var segmentOffsetStart = segmentRange.getStartOffset();
+      var segmentOffsetEnd = segmentRange.getEndOffset();
+      var segmentName = template.getSegmentName(i);
+      variableToSegments.get(segmentName).add(new TextEditWithOffsets(
+          new TextRange(
+              segmentOffsetStart,
+              segmentOffsetEnd),
+          "${" + variableToNumber.get(segmentName).toString() + ":" + document.getText().substring(segmentOffsetStart, segmentOffsetEnd) + "}"));
+    }
+    var sortedLspSegments =
+        variableToSegments.values().stream().flatMap(Collection::stream).sorted().toList();
+    WriteCommandAction.runWriteCommandAction(project, null, null,
+        () -> templateState.gotoEnd(false));
+
+    WriteCommandAction.runWriteCommandAction(project, null, null, () -> {
+      for (int i = sortedLspSegments.size() - 1; i >= 0; i--) {
+        var lspSegment = sortedLspSegments.get(i);
+        if (lspSegment.getRange().getStartOffset() == lspSegment.getRange().getEndOffset()) {
+          document.insertString(lspSegment.getRange().getStartOffset(), lspSegment.getNewText());
+        } else {
+          document.replaceString(lspSegment.getRange().getStartOffset(),
+              lspSegment.getRange().getEndOffset(), lspSegment.getNewText());
+        }
+      }
+    }, copyToInsert);
+    snippetBoundsRef.set(new TextRange(sortedLspSegments.get(0).getRange().getStartOffset(),
+        sortedLspSegments.get(sortedLspSegments.size() - 1).getRange().getEndOffset()));
   }
 
   @SuppressWarnings("UnstableApiUsage")
