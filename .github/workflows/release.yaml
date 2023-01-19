@@ -21,6 +21,8 @@ jobs:
           java-version: '17'
       - name: Build plugins
         uses: gradle/gradle-build-action@v2
+        env:
+          IDEALS_VERSION: ${{ steps.get_version.outputs.VERSION }}
         with:
           arguments: :buildPlugin
           build-root-directory: server
@@ -37,10 +39,12 @@ jobs:
           node-version: 16.x
       - name: Build extension
         working-directory: client/vscode
+        env:
+          IDEALS_VERSION: ${{ steps.get_version.outputs.VERSION }}
         run: |
           npm install
           npm install -g vsce
-          vsce package
+          vsce package $IDEALS_VERSION
       - name: Upload vscode extension artifact
         uses: actions/upload-artifact@v3
         with:
