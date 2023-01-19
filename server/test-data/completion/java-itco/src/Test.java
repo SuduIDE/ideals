@@ -1,5 +1,5 @@
 class Test {
     void test() {
-        itc</cursor/>
+        itco</cursor/>
     }
 }

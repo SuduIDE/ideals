@@ -375,7 +375,7 @@ final public class CompletionService implements Disposable {
       @NotNull CancelChecker cancelChecker,
       @NotNull Ref<Document> copyThatCalledCompletionDocRef,
       @NotNull Ref<Document> copyToInsertDocRef,
-      @NotNull Ref<TextRange> snippetBounds,
+      @NotNull Ref<TextRange> snippetBoundsRef,
       @NotNull Disposable disposable,
       @NotNull CompletionItem unresolved) {
     var cachedLookupElementWithMatcher = cachedData.lookupElementsWithMatcher.get(lookupElementIndex);
@@ -412,10 +412,11 @@ final public class CompletionService implements Disposable {
           }
 
           handleInsert(cachedData, cachedLookupElementWithMatcher, editor, copyToInsert, completionInfo);
-          snippetBounds.set(editor.getCaretModel().getCurrentCaret().getSelectionRange());
+          int caretOffset = editor.getCaretModel().getOffset();
+          snippetBoundsRef.set(new TextRange(caretOffset, caretOffset));
           TemplateState templateState = TemplateManagerImpl.getTemplateState(editor);
+          var document = editor.getDocument();
           if (templateState != null) {
-            var document = editor.getDocument();
             var template = templateState.getTemplate();
             var variableToSegments =
                 template.getVariables()
@@ -455,7 +456,10 @@ final public class CompletionService implements Disposable {
                 }
               }
             }, copyToInsert);
-            snippetBounds.set(sortedLspSegments.get(0).getRange());
+            snippetBoundsRef.set(new TextRange(sortedLspSegments.get(0).getRange().getStartOffset(),
+                sortedLspSegments.get(sortedLspSegments.size() - 1).getRange().getEndOffset()));
+          } else {
+            WriteCommandAction.runWriteCommandAction(project, null, null, () -> document.insertString(caretOffset, "$0"), copyToInsert);
           }
         }), new LspProgressIndicator(cancelChecker));
   }

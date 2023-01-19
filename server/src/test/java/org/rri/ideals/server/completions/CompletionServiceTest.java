@@ -144,8 +144,8 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   }
 
   @Test
-  public void testPythonLiveTemplate() {
-    runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams("python-live-template-project",
+  public void testPythonIterLiveTemplate() {
+    runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams("python-iter",
         completionItem -> Objects.equals(completionItem.getLabel(), "iter"),
         new MarkupContent(MarkupKind.MARKDOWN,
             """
@@ -155,27 +155,62 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   }
 
   @Test
-  public void testPythonPostfixTemplate() {
-    runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams("python-postfix-template-project",
+  public void testPythonIterePostfixTemplate() {
+    runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams("python-itere",
+        completionItem -> Objects.equals(completionItem.getLabel(), "itere"),
+        new MarkupContent(MarkupKind.MARKDOWN,
+            """
+                for $INDEX$, $VAR$ in enumerate($ITERABLE$): $END$
+                
+                Iterate (for ... in enumerate)"""), null)));
+  }
+
+  @Test
+  public void testPythonIfPostfixTemplate() {
+    runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams("python-if",
         completionItem -> Objects.equals(completionItem.getLabel(), "if"), null, null)));
   }
 
   @Test
-  public void testJavaLiveTemplate() {
-    runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams("java-live-template-project",
-        completionItem -> Objects.equals(completionItem.getLabel(), "itco"),
+  public void testJavaForiLiveTemplate() {
+    runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams("java-fori",
+        completionItem -> Objects.equals(completionItem.getLabel(), "fori"),
         new MarkupContent(MarkupKind.MARKDOWN,
-        """
-            for(int $INDEX$ = 0; $INDEX$ < $LIMIT$; $INDEX$++) { $END$ }
+            """
+                for(int $INDEX$ = 0; $INDEX$ < $LIMIT$; $INDEX$++) { $END$ }
 
-            Create iteration loop"""
-    ), null)));
+                Create iteration loop"""
+        ), null)));
   }
 
   @Test
-  public void testJavaPostfixTemplate() {
+  public void testJavaItcoLiveTemplate() {
+    runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams("java-itco",
+        completionItem -> Objects.equals(completionItem.getLabel(), "itco"),
+        new MarkupContent(MarkupKind.MARKDOWN,
+            """
+                for($ITER\\_TYPE$ $ITER$ = $COLLECTION$.iterator(); $ITER$.hasNext(); ) { $ELEMENT\\_TYPE$ $VAR$ =$CAST$ $ITER$.next(); $END$ }
+                                         
+                Iterate elements of java.util.Collection"""
+        ), null)));
+  }
+
+  @Test
+  public void testJavaItli() {
+    runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams("java-itli",
+        completionItem -> Objects.equals(completionItem.getLabel(), "itli"),
+        new MarkupContent(MarkupKind.MARKDOWN,
+            """
+                for (int $INDEX$ = 0; $INDEX$ < $LIST$.size(); $INDEX$++) { $ELEMENT\\_TYPE$ $VAR$ = $CAST$ $LIST$.get($INDEX$); $END$ }
+                                
+                Iterate elements of java.util.List"""
+        ), null)));
+  }
+
+  @Test
+  public void testJavaLambdaPostfixTemplate() {
     runWithTemplateFlags(() -> runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams(
-        "java-postfix-template-project", completionItem -> Objects.equals(completionItem.getLabel(), "lambda"),
+        "java-lambda", completionItem -> Objects.equals(completionItem.getLabel(), "lambda"),
         null, null))));
   }
 
@@ -190,8 +225,8 @@ public class CompletionServiceTest extends BasePlatformTestCase {
     final var expectedText = test.expected();
     var cs = getProject().getService(CompletionService.class);
     var completionItems = cs.computeCompletions(
-            LspPath.fromLspUri(params.getTextDocument().getUri()), params.getPosition(),
-            new TestUtil.DumbCancelChecker());
+        LspPath.fromLspUri(params.getTextDocument().getUri()), params.getPosition(),
+        new TestUtil.DumbCancelChecker());
     if (completionTestParams.finder != null) {
       var compItem = completionItems.stream().filter(completionTestParams.finder).findFirst().orElseThrow();
       compItem.setData(gson.fromJson(gson.toJson(compItem.getData()), JsonObject.class));
@@ -211,9 +246,10 @@ public class CompletionServiceTest extends BasePlatformTestCase {
     }
     if (completionTestParams.expectedItems != null) {
       assertEquals(completionTestParams.expectedItems(),
-              completionItems.stream().map(CompletionServiceTestUtil::removeResolveInfo).collect(Collectors.toSet()));
+          completionItems.stream().map(CompletionServiceTestUtil::removeResolveInfo).collect(Collectors.toSet()));
     }
   }
+
   @Test
   public void testCompletionCancellation() {
     var cancelChecker = new AlwaysTrueCancelChecker();
@@ -232,7 +268,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
     var psiFile = myFixture.configureByText(
         JavaFileType.INSTANCE,
         """
-             """);
+            """);
 
     var completionList = Assertions.assertDoesNotThrow(
         () -> getCompletionListAtPosition(psiFile, new Position(0, 0)));
@@ -249,7 +285,7 @@ public class CompletionServiceTest extends BasePlatformTestCase {
         gson.toJson(targetCompletionItem.getData()),
         JsonObject.class));
     Assertions.assertThrows(CancellationException.class,
-        () ->getProject()
+        () -> getProject()
             .getService(CompletionService.class)
             .resolveCompletion(targetCompletionItem, cancelChecker));
   }
