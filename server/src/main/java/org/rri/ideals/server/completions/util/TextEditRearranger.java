@@ -45,16 +45,16 @@ public class TextEditRearranger {
     var diffRangesAsOffsetsTreeSet = new TreeSet<>(diffRangesAsOffsetsList);
     var additionalEdits = new ArrayList<TextEditWithOffsets>();
 
-    final int firstTextEditWithSnippetStartOffset =
+    final int leftSnippetsBound =
         findRangeOfTextEditWithSnippetBound(diffRangesAsOffsetsTreeSet,
         snippetBounds.getStartOffset()).getStartOffset();
-    final int lastTextEditWithSnippetEndOffset =
+    final int rightSnippetsBound =
         findRangeOfTextEditWithSnippetBound(diffRangesAsOffsetsTreeSet,
             snippetBounds.getEndOffset()).getEndOffset();
 
-    final int collisionRangeStartOffset = Integer.min(firstTextEditWithSnippetStartOffset,
+    final int collisionRangeStartOffset = Integer.min(leftSnippetsBound,
         replaceElementStartOffset);
-    final int collisionRangeEndOffset = Integer.max(lastTextEditWithSnippetEndOffset,
+    final int collisionRangeEndOffset = Integer.max(rightSnippetsBound,
         replaceElementEndOffset);
 
     var editsToMergeRangesAsOffsets = findIntersectedEdits(
