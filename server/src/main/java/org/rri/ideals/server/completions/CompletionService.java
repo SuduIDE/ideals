@@ -160,7 +160,7 @@ final public class CompletionService implements Disposable {
           MiscUtil.positionToOffset(copyThatCalledCompletionDoc, unresolvedTextEdit.getRange().getEnd());
 
       var newTextAndAdditionalEdits =
-          TextEditRearranger.findOverlappingTextEditsInRangeFromMainTextEditToCaretAndMergeThem(
+          TextEditRearranger.findOverlappingTextEditsInRangeFromMainTextEditToSnippetsAndMergeThem(
               toListOfEditsWithOffsets(diff, copyThatCalledCompletionDoc),
               replaceElementStartOffset, replaceElementEndOffset,
               copyThatCalledCompletionDoc.getText(), snippetBounds);

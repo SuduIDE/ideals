@@ -165,7 +165,7 @@ public class TextEditRearrangerTest {
                                                      @NotNull String expectedString,
                                                      @NotNull Set<TextEditWithOffsets> expectedAdditionalEdits) {
 
-    var res = TextEditRearranger.findOverlappingTextEditsInRangeFromMainTextEditToCaretAndMergeThem(
+    var res = TextEditRearranger.findOverlappingTextEditsInRangeFromMainTextEditToSnippetsAndMergeThem(
         diffRangesAsOffsetsList,
         replaceElementStartOffset,
         replaceElementEndOffset,

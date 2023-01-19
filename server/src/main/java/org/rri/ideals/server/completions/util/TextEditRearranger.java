@@ -12,7 +12,7 @@ public class TextEditRearranger {
   /**
    * VScode doesn't allow to change main TextEdit's range during resolve, but allows to change
    * its text and additional edits. Also, snippets are allowed only in main TextEdit. So solution
-   * is to find text edits, that have intersecting ranges with range from text edit to caret, and
+   * is to find text edits, that have intersecting ranges with range from text edit to snippets, and
    * merge them, as if they were a single text edit with range from main text edit. It is more
    * understandable in example:<p>
    * Text = 1234567. You have the main TextEdit with range [2, 3]: 1|23|4567. Diff is equal to list
@@ -31,11 +31,11 @@ public class TextEditRearranger {
    * @param replaceElementStartOffset the main TextEdit's range start
    * @param replaceElementEndOffset the main TextEdit's range end
    * @param originalText document's text *before* insert
-   * @param snippetBounds caret position *after* insert
+   * @param snippetBounds snippetBound position *after* insert
    * @return Additional TextEdits and new main TextEdit
    */
   @NotNull
-  static public MergeEditsResult findOverlappingTextEditsInRangeFromMainTextEditToCaretAndMergeThem(
+  static public MergeEditsResult findOverlappingTextEditsInRangeFromMainTextEditToSnippetsAndMergeThem(
       @NotNull List<@NotNull TextEditWithOffsets> diffRangesAsOffsetsList,
       int replaceElementStartOffset,
       int replaceElementEndOffset,
@@ -74,7 +74,7 @@ public class TextEditRearranger {
   }
 
   /**
-   * Here we are merging intersected edits in range from main TextEdit to caret
+   * Here we are merging intersected edits in range from main TextEdit to snippetBound
    * @param editsToMergeRangesAsOffsets intersected edits
    * @param replaceElementStartOffset main TextEdit's range start
    * @param replaceElementEndOffset main TextEdit's range end
@@ -127,8 +127,8 @@ public class TextEditRearranger {
 
   /**
    * Find intersected TextEdits with range [collisionRangeStartOffset, collisionRangeEndOffset]
-   * @param collisionRangeStartOffset min(main TextEdit's start, caret)
-   * @param collisionRangeEndOffset max(main TextEdit's end, caret)
+   * @param collisionRangeStartOffset min(main TextEdit's start, snippetBound)
+   * @param collisionRangeEndOffset max(main TextEdit's end, snippetBound)
    * @param diffRangesAsOffsetsTreeSet sorted diff TextEdits
    * @param uselessEdits aka additional TextEdits, that will achieve diff's TextEdits, that are
    *                     not intersecting with collision range
@@ -169,7 +169,7 @@ public class TextEditRearranger {
   /**
    * Finds range of edit, inside which the snippet bound is positioned.
    * @param sortedDiffRanges mutable set with text edits sorted by position
-   * @param snippetBound absolute caret offset
+   * @param snippetBound absolute snippetBound offset
    * @return the found or created text edit with marked text
    */
   @NotNull
@@ -178,35 +178,35 @@ public class TextEditRearranger {
       int snippetBound) {
     int sub;
     int prevEnd = 0;
-    int currentRelativeCaretOffset = snippetBound;
+    int currentRelativeBoundOffset = snippetBound;
 
-    TextRange textEditWithCaret = null;
+    TextRange rangeWithSnippetBound = null;
     for (TextEditWithOffsets editWithOffsets : sortedDiffRanges) {
       sub = (editWithOffsets.getRange().getStartOffset() - prevEnd);
-      if (currentRelativeCaretOffset < sub) { // not found
-        var caretOffsetInOriginalDoc = prevEnd + currentRelativeCaretOffset;
-        textEditWithCaret = new TextRange(
-            caretOffsetInOriginalDoc, caretOffsetInOriginalDoc);
+      if (currentRelativeBoundOffset < sub) { // not found
+        var boundOffsetInOriginalDoc = prevEnd + currentRelativeBoundOffset;
+        rangeWithSnippetBound = new TextRange(
+            boundOffsetInOriginalDoc, boundOffsetInOriginalDoc);
         break;
       }
 
-      currentRelativeCaretOffset -= sub;
+      currentRelativeBoundOffset -= sub;
 
       sub = editWithOffsets.getNewText().length();
-      if (currentRelativeCaretOffset <= sub) {
-        textEditWithCaret = editWithOffsets.getRange();
+      if (currentRelativeBoundOffset <= sub) {
+        rangeWithSnippetBound = editWithOffsets.getRange();
         break;
       }
 
-      currentRelativeCaretOffset -= sub;
+      currentRelativeBoundOffset -= sub;
       prevEnd = editWithOffsets.getRange().getEndOffset();
     }
 
-    if (textEditWithCaret == null) {  // still not found
-      var caretOffsetInOriginalDoc = prevEnd + currentRelativeCaretOffset;
-      textEditWithCaret = new TextRange(caretOffsetInOriginalDoc, caretOffsetInOriginalDoc);
+    if (rangeWithSnippetBound == null) {  // still not found
+      var boundOffsetInOriginalDoc = prevEnd + currentRelativeBoundOffset;
+      rangeWithSnippetBound = new TextRange(boundOffsetInOriginalDoc, boundOffsetInOriginalDoc);
     }
 
-    return textEditWithCaret;
+    return rangeWithSnippetBound;
   }
 }
