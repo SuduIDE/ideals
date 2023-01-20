@@ -60,7 +60,7 @@ The project was heavily inspired by [intellij-lsp-server](https://github.com/Rui
 | Diagnostics                   | `textDocument/publishDiagnostics`    | :heavy_check_mark: | N/A                                                   |
 | Completion                    | `textDocument/completion`            | :heavy_check_mark: | `Ctrl + Space`                                        |
 | Hover                         | `textDocument/hover`                 | :x:                |                                                       |
-| Signature Help                | `textDocument/signatureHelp`         | :x:                |                                                       |
+| Signature Help                | `textDocument/signatureHelp`         | :heavy_check_mark: |                                                       |
 | Goto Declaration              | `textDocument/declaration`           | :x:                |                                                       |
 | Goto Definition               | `textDocument/definition`            | :heavy_check_mark: | `Ctrl + Left mouse click`                             |
 | Goto Type Definition          | `textDocument/typeDefinition`        | :heavy_check_mark: | `Right mouse click -> Go to -> Type defintion`        |
@@ -87,7 +87,6 @@ The project was heavily inspired by [intellij-lsp-server](https://github.com/Rui
 | Inline Value                  | `textDocument/inlineValue`           | :x:                |                                                       |
 | Inlay Hint                    | `textDocument/inlayHint`             | :x:                |                                                       |
 | Monikers                      | `textDocument/moniker`               | :x:                |                                                       |
-| Signature Help                | `textDocument/signatureHelp`         | :x:                |                                                       |
 | Document Color                | `textDocument/documentColor`         | :x:                |                                                       |
 | Linked Editing Range          | `textDocument/linkedEditingRange`    | :x:                |                                                       |
 
