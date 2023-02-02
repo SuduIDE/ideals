@@ -4,6 +4,9 @@ import com.google.gson.Gson;
 import com.intellij.codeInsight.completion.CompletionUtil;
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementPresentation;
+import com.intellij.codeInsight.template.impl.TemplateManagerImpl;
+import com.intellij.codeInsight.template.impl.TemplateState;
+import com.intellij.codeInsight.template.impl.Variable;
 import com.intellij.icons.AllIcons;
 import com.intellij.lang.Language;
 import com.intellij.lang.documentation.DocumentationResultData;
@@ -22,6 +25,7 @@ import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.Ref;
+import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.util.registry.Registry;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiFileFactory;
@@ -45,8 +49,11 @@ import org.rri.ideals.server.util.MiscUtil;
 import org.rri.ideals.server.util.TextUtil;
 
 import java.util.ArrayList;
+import java.util.Collection;
+import java.util.HashMap;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicReference;
+import java.util.stream.Collectors;
 
 @Service(Service.Level.PROJECT)
 final public class CompletionService implements Disposable {
@@ -111,10 +118,10 @@ final public class CompletionService implements Disposable {
 
     Ref<Document> copyThatCalledCompletionDocRef = new Ref<>();
     Ref<Document> copyToInsertDocRef = new Ref<>();
-    Ref<Integer> caretOffsetAfterInsertRef = new Ref<>();
+    Ref<TextRange> snippetBoundsRef = new Ref<>();
 
     ArrayList<TextEdit> diff;
-    int caretOffsetAfterInsert;
+    TextRange snippetBounds;
     Document copyToInsertDoc;
     Document copyThatCalledCompletionDoc;
     var disposable = Disposer.newDisposable();
@@ -130,7 +137,7 @@ final public class CompletionService implements Disposable {
           cancelChecker,
           copyThatCalledCompletionDocRef,
           copyToInsertDocRef,
-          caretOffsetAfterInsertRef,
+          snippetBoundsRef,
           disposable, unresolved);
 
       copyToInsertDoc = copyToInsertDocRef.get();
@@ -138,7 +145,7 @@ final public class CompletionService implements Disposable {
       assert copyToInsertDoc != null;
       assert copyThatCalledCompletionDoc != null;
 
-      caretOffsetAfterInsert = caretOffsetAfterInsertRef.get();
+      snippetBounds = snippetBoundsRef.get();
       diff = new ArrayList<>(TextUtil.textEditFromDocs(copyThatCalledCompletionDoc, copyToInsertDoc));
 
       if (diff.isEmpty()) {
@@ -153,10 +160,10 @@ final public class CompletionService implements Disposable {
           MiscUtil.positionToOffset(copyThatCalledCompletionDoc, unresolvedTextEdit.getRange().getEnd());
 
       var newTextAndAdditionalEdits =
-          TextEditRearranger.findOverlappingTextEditsInRangeFromMainTextEditToCaretAndMergeThem(
+          TextEditRearranger.findOverlappingTextEditsInRangeFromMainTextEditToSnippetsAndMergeThem(
               toListOfEditsWithOffsets(diff, copyThatCalledCompletionDoc),
               replaceElementStartOffset, replaceElementEndOffset,
-              copyThatCalledCompletionDoc.getText(), caretOffsetAfterInsert);
+              copyThatCalledCompletionDoc.getText(), snippetBounds);
 
       unresolved.setAdditionalTextEdits(
           toListOfTextEdits(newTextAndAdditionalEdits.additionalEdits(), copyThatCalledCompletionDoc)
@@ -368,7 +375,7 @@ final public class CompletionService implements Disposable {
       @NotNull CancelChecker cancelChecker,
       @NotNull Ref<Document> copyThatCalledCompletionDocRef,
       @NotNull Ref<Document> copyToInsertDocRef,
-      @NotNull Ref<Integer> caretOffsetAfterInsertRef,
+      @NotNull Ref<TextRange> snippetBoundsRef,
       @NotNull Disposable disposable,
       @NotNull CompletionItem unresolved) {
     var cachedLookupElementWithMatcher = cachedData.lookupElementsWithMatcher.get(lookupElementIndex);
@@ -405,9 +412,64 @@ final public class CompletionService implements Disposable {
           }
 
           handleInsert(cachedData, cachedLookupElementWithMatcher, editor, copyToInsert, completionInfo);
+          int caretOffset = editor.getCaretModel().getOffset();
+          snippetBoundsRef.set(new TextRange(caretOffset, caretOffset));
 
-          caretOffsetAfterInsertRef.set(editor.getCaretModel().getOffset());
+          TemplateState templateState = TemplateManagerImpl.getTemplateState(editor);
+          var document = editor.getDocument();
+          if (templateState != null) {
+            handleSnippetsInsert(snippetBoundsRef, copyToInsert, templateState, document);
+          } else {
+            WriteCommandAction.runWriteCommandAction(project, null, null, () -> document.insertString(caretOffset, "$0"), copyToInsert);
+          }
         }), new LspProgressIndicator(cancelChecker));
+  }
+
+  private void handleSnippetsInsert(@NotNull Ref<TextRange> snippetBoundsRef,
+                                    @NotNull PsiFile copyToInsert,
+                                    @NotNull TemplateState templateState,
+                                    @NotNull Document document) {
+    var template = templateState.getTemplate();
+    var variableToSegments =
+        template.getVariables()
+            .stream()
+            .collect(Collectors.toMap(Variable::getName,
+                variable -> new ArrayList<TextEditWithOffsets>()));
+    variableToSegments.put("END", new ArrayList<>());
+    HashMap<String, Integer> variableToNumber = new HashMap<>();
+    for (int i = 0; i < template.getVariableCount(); i++) {
+      variableToNumber.put(template.getVariableNameAt(i), i + 1);
+    }
+    variableToNumber.put("END", 0);
+    for (int i = 0; i < template.getSegmentsCount(); i++) {
+      var segmentRange = templateState.getSegmentRange(i);
+      var segmentOffsetStart = segmentRange.getStartOffset();
+      var segmentOffsetEnd = segmentRange.getEndOffset();
+      var segmentName = template.getSegmentName(i);
+      variableToSegments.get(segmentName).add(new TextEditWithOffsets(
+          new TextRange(
+              segmentOffsetStart,
+              segmentOffsetEnd),
+          "${" + variableToNumber.get(segmentName).toString() + ":" + document.getText().substring(segmentOffsetStart, segmentOffsetEnd) + "}"));
+    }
+    var sortedLspSegments =
+        variableToSegments.values().stream().flatMap(Collection::stream).sorted().toList();
+    WriteCommandAction.runWriteCommandAction(project, null, null,
+        () -> templateState.gotoEnd(false));
+
+    WriteCommandAction.runWriteCommandAction(project, null, null, () -> {
+      for (int i = sortedLspSegments.size() - 1; i >= 0; i--) {
+        var lspSegment = sortedLspSegments.get(i);
+        if (lspSegment.getRange().getStartOffset() == lspSegment.getRange().getEndOffset()) {
+          document.insertString(lspSegment.getRange().getStartOffset(), lspSegment.getNewText());
+        } else {
+          document.replaceString(lspSegment.getRange().getStartOffset(),
+              lspSegment.getRange().getEndOffset(), lspSegment.getNewText());
+        }
+      }
+    }, copyToInsert);
+    snippetBoundsRef.set(new TextRange(sortedLspSegments.get(0).getRange().getStartOffset(),
+        sortedLspSegments.get(sortedLspSegments.size() - 1).getRange().getEndOffset()));
   }
 
   @SuppressWarnings("UnstableApiUsage")
