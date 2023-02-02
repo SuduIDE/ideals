@@ -30,7 +30,6 @@ import org.rri.ideals.server.util.MiscUtil;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extends Location>, List<? extends LocationLink>>> {
@@ -146,33 +145,28 @@ abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extend
     if (file == null) {
       return null;
     }
-    final var providers = FileEditorProviderManager.getInstance().getProviders(project, file);
-    if (providers.length == 0) {
+    final var providers = FileEditorProviderManager.getInstance().getProviderList(project, file);
+    if (providers.isEmpty()) {
       return null;
     }
-    final var editors = new FileEditor[providers.length];
-    for (int i = 0; i < providers.length; ++i) {
-      final var provider = providers[i];
-      assert provider != null;
-      assert provider.accept(project, file);
-      final var editor = provider.createEditor(project, file);
-      editors[i] = editor;
-      assert editor.isValid();
-    }
+    final var editorsWithProviders = providers.stream().map(
+        provider -> {
+          assert provider != null;
+          assert provider.accept(project, file);
+          final var editor = provider.createEditor(project, file);
+          assert editor.isValid();
+          return new FileEditorWithProvider(editor, provider);
+        }).toList();
     final var fileEditorManager = (FileEditorManagerEx) FileEditorManagerEx.getInstance(project);
 
-    final var editorsWithProviders = IntStream.range(0, providers.length)
-            .filter(i -> editors[i] != null && providers[i] != null)
-            .mapToObj(i -> new FileEditorWithProvider(editors[i], providers[i]))
-            .toList();
     return new MyEditorComposite(file, editorsWithProviders, fileEditorManager);
   }
 
   @SuppressWarnings("deprecation")
   private static class MyEditorComposite extends EditorWithProviderComposite {
     public MyEditorComposite(@NotNull VirtualFile file,
-                                          @NotNull List<FileEditorWithProvider> editorsWithProviders,
-                                          @NotNull FileEditorManagerEx fileEditorManager) {
+                             @NotNull List<FileEditorWithProvider> editorsWithProviders,
+                             @NotNull FileEditorManagerEx fileEditorManager) {
       super(file, editorsWithProviders, fileEditorManager);
     }
   }
