@@ -27,10 +27,10 @@ import org.rri.ideals.server.commands.LspCommand;
 import org.rri.ideals.server.util.EditorUtil;
 import org.rri.ideals.server.util.MiscUtil;
 
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
-import java.util.stream.IntStream;
 import java.util.stream.Stream;
 
 abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extends Location>, List<? extends LocationLink>>> {
@@ -146,25 +146,20 @@ abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extend
     if (file == null) {
       return null;
     }
-    final var providers = FileEditorProviderManager.getInstance().getProviders(project, file);
-    if (providers.length == 0) {
+    final var providers = FileEditorProviderManager.getInstance().getProviderList(project, file);
+    if (providers.isEmpty()) {
       return null;
     }
-    final var editors = new FileEditor[providers.length];
-    for (int i = 0; i < providers.length; ++i) {
-      final var provider = providers[i];
+    final var editorsWithProviders = new ArrayList<FileEditorWithProvider>(providers.size());
+    for (var provider : providers) {
       assert provider != null;
       assert provider.accept(project, file);
       final var editor = provider.createEditor(project, file);
-      editors[i] = editor;
       assert editor.isValid();
+      editorsWithProviders.add(new FileEditorWithProvider(editor, provider));
     }
     final var fileEditorManager = (FileEditorManagerEx) FileEditorManagerEx.getInstance(project);
 
-    final var editorsWithProviders = IntStream.range(0, providers.length)
-            .filter(i -> editors[i] != null && providers[i] != null)
-            .mapToObj(i -> new FileEditorWithProvider(editors[i], providers[i]))
-            .toList();
     return new MyEditorComposite(file, editorsWithProviders, fileEditorManager);
   }
 
