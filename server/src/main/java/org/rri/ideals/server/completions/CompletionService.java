@@ -420,6 +420,8 @@ final public class CompletionService implements Disposable {
           if (templateState != null) {
             handleSnippetsInsert(snippetBoundsRef, copyToInsert, templateState, document);
           } else {
+            LOG.assertTrue(!CompletionItemKind.Snippet.equals(
+                unresolved.getKind()), "TEMPLATE STATE IS NULL!");
             WriteCommandAction.runWriteCommandAction(project, null, null, () -> document.insertString(caretOffset, "$0"), copyToInsert);
           }
         }), new LspProgressIndicator(cancelChecker));
