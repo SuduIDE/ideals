@@ -27,7 +27,6 @@ import org.rri.ideals.server.commands.LspCommand;
 import org.rri.ideals.server.util.EditorUtil;
 import org.rri.ideals.server.util.MiscUtil;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -150,14 +149,14 @@ abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extend
     if (providers.isEmpty()) {
       return null;
     }
-    final var editorsWithProviders = new ArrayList<FileEditorWithProvider>(providers.size());
-    for (var provider : providers) {
-      assert provider != null;
-      assert provider.accept(project, file);
-      final var editor = provider.createEditor(project, file);
-      assert editor.isValid();
-      editorsWithProviders.add(new FileEditorWithProvider(editor, provider));
-    }
+    final var editorsWithProviders = providers.stream().map(
+        provider -> {
+          assert provider != null;
+          assert provider.accept(project, file);
+          final var editor = provider.createEditor(project, file);
+          assert editor.isValid();
+          return new FileEditorWithProvider(editor, provider);
+        }).toList();
     final var fileEditorManager = (FileEditorManagerEx) FileEditorManagerEx.getInstance(project);
 
     return new MyEditorComposite(file, editorsWithProviders, fileEditorManager);
@@ -166,8 +165,8 @@ abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extend
   @SuppressWarnings("deprecation")
   private static class MyEditorComposite extends EditorWithProviderComposite {
     public MyEditorComposite(@NotNull VirtualFile file,
-                                          @NotNull List<FileEditorWithProvider> editorsWithProviders,
-                                          @NotNull FileEditorManagerEx fileEditorManager) {
+                             @NotNull List<FileEditorWithProvider> editorsWithProviders,
+                             @NotNull FileEditorManagerEx fileEditorManager) {
       super(file, editorsWithProviders, fileEditorManager);
     }
   }
