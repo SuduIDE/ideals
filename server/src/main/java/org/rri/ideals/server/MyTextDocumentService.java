@@ -2,6 +2,8 @@ package org.rri.ideals.server;
 
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.openapi.project.DumbService;
+import com.intellij.ui.CoreIconManager;
+import com.intellij.ui.IconManager;
 import com.intellij.util.concurrency.AppExecutorUtil;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
@@ -31,6 +33,15 @@ public class MyTextDocumentService implements TextDocumentService {
 
   public MyTextDocumentService(@NotNull LspSession session) {
     this.session = session;
+  }
+
+  static {
+    try {
+      //noinspection UnstableApiUsage
+      IconManager.activate(new CoreIconManager());
+    } catch (Throwable e) {
+      LOG.warn("Core icon manager can't be loaded:\n" + e);
+    }
   }
 
   @Override

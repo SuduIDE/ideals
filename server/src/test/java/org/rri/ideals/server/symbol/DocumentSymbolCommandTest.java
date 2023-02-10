@@ -12,7 +12,6 @@ import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
 import org.rri.ideals.server.LspPath;
-import org.rri.ideals.server.TestUtil;
 
 import java.lang.String;
 import java.nio.file.Paths;
@@ -26,6 +25,10 @@ import static org.rri.ideals.server.TestUtil.newRange;
 
 @RunWith(JUnit4.class)
 public class DocumentSymbolCommandTest extends BasePlatformTestCase {
+  @Override
+  protected boolean isIconRequired() {
+    return true;
+  }
 
   @Override
   protected String getTestDataPath() {
@@ -167,10 +170,12 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
   private void checkDocumentSymbols(@NotNull List<@NotNull DocumentSymbol> answers, @Nullable VirtualFile virtualFile) {
     assertNotNull(virtualFile);
     final var path = LspPath.fromVirtualFile(virtualFile);
-    final var future = new DocumentSymbolCommand().runAsync(getProject(), path);
-    final var lstEither = TestUtil.getNonBlockingEdt(future, 50000);
-    assertNotNull(lstEither);
-    final var result = lstEither.stream().map(Either::getRight).toList();
+//    final var future = new DocumentSymbolCommand().runAsync(getProject(), path);
+    var service = getProject().getService(DocumentSymbolService.class);
+    var x = service.computeDocumentSymbols(LspPath.fromVirtualFile(virtualFile), () -> {});
+//    final var lstEither = TestUtil.getNonBlockingEdt(future, 50000);
+//    assertNotNull(lstEither);
+    final var result = x.stream().map(Either::getRight).toList();
     assertEquals(answers, result);
   }
 

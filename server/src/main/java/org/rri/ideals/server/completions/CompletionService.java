@@ -29,8 +29,6 @@ import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.util.registry.Registry;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiFileFactory;
-import com.intellij.ui.CoreIconManager;
-import com.intellij.ui.IconManager;
 import io.github.furstenheim.CopyDown;
 import kotlin.coroutines.EmptyCoroutineContext;
 import kotlinx.coroutines.CoroutineScopeKt;
@@ -193,7 +191,6 @@ final public class CompletionService implements Disposable {
     Registry.get("psi.deferIconLoading").setValue(false); // todo set this flag in server setup
     var d = Disposer.newDisposable();
     try {
-      IconManager.activate(new CoreIconManager());
       var presentation = LookupElementPresentation.renderElement(lookupElement);
 
       StringBuilder contextInfo = new StringBuilder();
@@ -277,7 +274,6 @@ final public class CompletionService implements Disposable {
     } catch (Throwable e) {
       throw MiscUtil.wrap(e);
     } finally {
-      IconManager.deactivate();
       Disposer.dispose(d);
     }
   }
