@@ -36,5 +36,6 @@ public class DocumentSymbolCommand extends LspCommand<List<Either<SymbolInformat
     }
     final var visitor = new DocumentSymbolPsiVisitor(ctx.getPsiFile(), ctx.getCancelToken(), document);
     return visitor.visit().stream().map(Either::<SymbolInformation, DocumentSymbol>forRight).toList();
+//    FileStructurePopup popup = ViewStructureAction.createPopup(ctx.getProject(), );
   }
 }
