@@ -3,7 +3,7 @@ package org.rri.ideals.server.symbol;
 import com.intellij.icons.AllIcons;
 import com.intellij.ide.structureView.*;
 import com.intellij.ide.util.treeView.smartTree.TreeElement;
-import com.intellij.openapi.application.ApplicationManager;
+import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ReadAction;
 import com.intellij.openapi.command.WriteCommandAction;
 import com.intellij.openapi.components.Service;
@@ -15,10 +15,11 @@ import com.intellij.openapi.fileEditor.impl.text.TextEditorProvider;
 import com.intellij.openapi.progress.ProgressManager;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
+import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.util.ThrowableComputable;
 import com.intellij.openapi.util.registry.Registry;
 import com.intellij.psi.PsiElement;
-import com.intellij.ui.speedSearch.ElementFilter;
+import com.intellij.psi.PsiFile;
 import org.eclipse.lsp4j.DocumentSymbol;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.SymbolInformation;
@@ -26,6 +27,7 @@ import org.eclipse.lsp4j.SymbolKind;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
+import org.jetbrains.annotations.Nullable;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.completions.util.IconUtil;
 import org.rri.ideals.server.util.LspProgressIndicator;
@@ -33,9 +35,7 @@ import org.rri.ideals.server.util.MiscUtil;
 
 import javax.swing.*;
 import java.util.ArrayList;
-import java.util.HashSet;
 import java.util.List;
-import java.util.Set;
 
 import static com.intellij.ide.actions.ViewStructureAction.createStructureViewModel;
 
@@ -53,6 +53,7 @@ final public class DocumentSymbolService {
   public @NotNull List<Either<SymbolInformation, DocumentSymbol>> computeDocumentSymbols(
       @NotNull LspPath path,
       @NotNull CancelChecker cancelChecker) {
+    LOG.info("document symbol start");
     final var psiFile = MiscUtil.resolvePsiFile(project, path);
     if (psiFile == null) {
       return List.of();
@@ -60,25 +61,14 @@ final public class DocumentSymbolService {
     var disposable = Disposer.newDisposable();
     try {
       return ProgressManager.getInstance().runProcess(() -> {
-        Registry.get("psi.deferIconLoading").setValue(false, disposable);
 
-        var fileEditor = WriteCommandAction.runWriteCommandAction(project,
-            (ThrowableComputable<FileEditor, RuntimeException>)
-                () -> TextEditorProvider.getInstance().createEditor(project, psiFile.getVirtualFile()));
-        Disposer.register(disposable, fileEditor);
-        StructureViewBuilder builder = ReadAction.compute(fileEditor::getStructureViewBuilder);
-        if (builder == null) return List.of();
-        StructureViewModel treeModel;
-        if (builder instanceof TreeBasedStructureViewBuilder) {
-          treeModel = ((TreeBasedStructureViewBuilder) builder).createStructureViewModel(EditorUtil.getEditorEx(fileEditor));
-        } else {
-          StructureView structureView = builder.createStructureView(fileEditor, project);
-          treeModel = createStructureViewModel(project, fileEditor, structureView);
+        StructureViewTreeElement root = getViewTreeElement(psiFile, disposable);
+        if (root == null) {
+          return List.of();
         }
-        StructureViewTreeElement root = treeModel.getRoot();
-        var doc = ReadAction.compute(() -> MiscUtil.getDocument(psiFile));
-        assert doc != null;
-        var rootSymbol = processTree(root, doc);
+        Document document = ReadAction.compute(() -> MiscUtil.getDocument(psiFile));
+        assert document != null;
+        var rootSymbol = processTree(root, psiFile, document);
         return List.of(Either.forRight(rootSymbol));
       }, new LspProgressIndicator(cancelChecker));
     } finally {
@@ -87,11 +77,36 @@ final public class DocumentSymbolService {
     }
   }
 
-  @SuppressWarnings("deprecation")
+  @Nullable
+  private StructureViewTreeElement getViewTreeElement(@NotNull PsiFile psiFile,
+                                                      @NotNull Disposable parentDisposable) {
+    Registry.get("psi.deferIconLoading").setValue(false, parentDisposable);
+
+    var fileEditor = WriteCommandAction.runWriteCommandAction(project,
+        (ThrowableComputable<FileEditor, RuntimeException>)
+            () -> TextEditorProvider.getInstance().createEditor(project, psiFile.getVirtualFile()));
+    Disposer.register(parentDisposable, fileEditor);
+    StructureViewBuilder builder = ReadAction.compute(fileEditor::getStructureViewBuilder);
+    if (builder == null) {
+      return null;
+    }
+    StructureViewModel treeModel;
+    if (builder instanceof TreeBasedStructureViewBuilder) {
+      treeModel = ((TreeBasedStructureViewBuilder) builder).createStructureViewModel(EditorUtil.getEditorEx(fileEditor));
+    } else {
+      StructureView structureView = builder.createStructureView(fileEditor, project);
+      treeModel = createStructureViewModel(project, fileEditor, structureView);
+    }
+    return treeModel.getRoot();
+  }
+
+  @Nullable
   private DocumentSymbol processTree(@NotNull TreeElement root,
-                           @NotNull Document document) {
-    var curSymbol = new DocumentSymbol();
-    ReadAction.run(() -> {
+                                     @NotNull PsiFile psiFile,
+                                     @NotNull Document document) {
+
+    var documentSymbol = ReadAction.compute(() -> {
+      var curSymbol = new DocumentSymbol();
       var icon = root.getPresentation().getIcon(false);
       assert icon != null;
       curSymbol.setKind(getSymbolKind(icon));
@@ -99,23 +114,39 @@ final public class DocumentSymbolService {
         var maybePsiElement = viewElement.getValue();
         curSymbol.setName(viewElement.getPresentation().getPresentableText());
         if (maybePsiElement instanceof PsiElement psiElement) {
+          if (psiElement.getContainingFile() != psiFile) {
+            // refers to another file
+            return null;
+          }
           var ideaRange = psiElement.getTextRange();
           curSymbol.setRange(new Range(
               MiscUtil.offsetToPosition(document, ideaRange.getStartOffset()),
               MiscUtil.offsetToPosition(document, ideaRange.getEndOffset())));
+
+          var ideaPickSelectionRange = new TextRange(psiElement.getTextOffset(), psiElement.getTextOffset());
+          curSymbol.setSelectionRange(new Range(
+              MiscUtil.offsetToPosition(document, ideaPickSelectionRange.getStartOffset()),
+              MiscUtil.offsetToPosition(document, ideaPickSelectionRange.getEndOffset())));
         }
       }
+      return curSymbol;
     });
-    curSymbol.setSelectionRange(curSymbol.getRange());
-    var children  = new ArrayList<DocumentSymbol>();
-    for (TreeElement child : ReadAction.compute(root::getChildren)) {
-      children.add(processTree(child, document));
+    if (documentSymbol == null) {
+      return null; // if refers to another file
     }
-    curSymbol.setChildren(children);
-    return curSymbol;
+    var children = new ArrayList<DocumentSymbol>();
+    for (TreeElement child : ReadAction.compute(root::getChildren)) {
+      var childSymbol = processTree(child, psiFile, document);
+      if (childSymbol != null) { // if not refers to another file
+        children.add(childSymbol);
+      }
+    }
+    documentSymbol.setChildren(children);
+    return documentSymbol;
   }
 
-  private SymbolKind getSymbolKind(Icon icon) {
+  @NotNull
+  private SymbolKind getSymbolKind(@Nullable Icon icon) {
     SymbolKind kind = SymbolKind.Object;
     if (IconUtil.compareIcons(icon, AllIcons.Nodes.Method) ||
         IconUtil.compareIcons(icon, AllIcons.Nodes.AbstractMethod)) {
@@ -151,16 +182,5 @@ final public class DocumentSymbolService {
       kind = SymbolKind.Field;
     }
     return kind;
-  }
-
-  private static class FileStructurePopupFilter<T> implements ElementFilter<T> {
-    private String myLastFilter;
-    private final Set<Object> myVisibleParents = new HashSet<>();
-    private final boolean isUnitTest = ApplicationManager.getApplication().isUnitTestMode();
-
-    @Override
-    public boolean shouldBeShowing(T value) {
-      return true;
-    }
   }
 }
