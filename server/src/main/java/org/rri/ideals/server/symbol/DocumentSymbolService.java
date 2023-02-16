@@ -20,6 +20,9 @@ import com.intellij.openapi.util.ThrowableComputable;
 import com.intellij.openapi.util.registry.Registry;
 import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
+import com.intellij.ui.DeferredIcon;
+import com.intellij.ui.IconManager;
+import com.intellij.ui.PlatformIcons;
 import org.eclipse.lsp4j.DocumentSymbol;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.SymbolInformation;
@@ -148,6 +151,13 @@ final public class DocumentSymbolService {
   @NotNull
   private SymbolKind getSymbolKind(@Nullable Icon icon) {
     SymbolKind kind = SymbolKind.Object;
+    var iconManager = IconManager.getInstance();
+    if (icon == null) {
+      return SymbolKind.Object;
+    }
+    if (icon instanceof DeferredIcon deferredIcon) {
+      icon = deferredIcon.getBaseIcon();
+    }
     if (IconUtil.compareIcons(icon, AllIcons.Nodes.Method) ||
         IconUtil.compareIcons(icon, AllIcons.Nodes.AbstractMethod)) {
       kind = SymbolKind.Method;
@@ -175,6 +185,8 @@ final public class DocumentSymbolService {
     } else if (IconUtil.compareIcons(icon, AllIcons.Nodes.Constant)) {
       kind = SymbolKind.Constant;
     } else if (
+        IconUtil.compareIcons(icon,
+            iconManager.tooltipOnlyIfComposite(iconManager.getPlatformIcon(PlatformIcons.Class))) ||
         IconUtil.compareIcons(icon, AllIcons.Nodes.Class) ||
             IconUtil.compareIcons(icon, AllIcons.Nodes.AbstractClass)) {
       kind = SymbolKind.Class;

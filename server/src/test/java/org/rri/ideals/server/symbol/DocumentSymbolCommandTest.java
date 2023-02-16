@@ -19,6 +19,7 @@ import java.util.ArrayList;
 import java.util.List;
 
 import static org.eclipse.lsp4j.SymbolKind.Class;
+import static org.eclipse.lsp4j.SymbolKind.Enum;
 import static org.eclipse.lsp4j.SymbolKind.Object;
 import static org.eclipse.lsp4j.SymbolKind.*;
 import static org.rri.ideals.server.TestUtil.newRange;
@@ -74,12 +75,12 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
         newRange(26, 7, 26, 8),
         newRange(26, 7, 26, 7));
 
-    final var enumLetter = documentSymbol("Letter", Object,
+    final var enumLetter = documentSymbol("Letter", Enum,
         newRange(25, 2, 27, 3),
         newRange(25, 14, 25, 14),
         arrayList(enumMemberA, enumMemberB));
 
-    final var docSymClass = documentSymbol("DocumentSymbol", Object, newRange(4, 0, 28, 1),
+    final var docSymClass = documentSymbol("DocumentSymbol", Class, newRange(4, 0, 28, 1),
         newRange(4, 13, 4, 13),
         arrayList(fieldIntX, fieldClass1Cls, docSymConstructor, methodFoo, entryInterface, enumLetter));
     final var docSymFile = documentSymbol("DocumentSymbol.java", Object, newRange(0, 0, 28, 1),
@@ -137,98 +138,70 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
     checkDocumentSymbols(answers, virtualFile.findChild("documentSymbol.py"));
   }
 
-//  @Test
-//  public void testDocumentSymbolKotlin() {
-//    var virtualFile = myFixture.copyDirectoryToProject("kotlin/project1/src", "");
-//    virtualFile = virtualFile.findChild("org");
-//    assertNotNull(virtualFile);
-//
-//    final var enumMemberA = documentSymbol("A", EnumMember,
-//        newRange(5, 2, 5, 3),
-//        newRange(5, 2, 5, 3));
-//    final var enumMemberB = documentSymbol("B", EnumMember,
-//        newRange(5, 5, 5, 6),
-//        newRange(5, 5, 5, 6));
-//    final var enumLetters = documentSymbol("Letter", Enum, newRange(4, 11, 4, 17),
-//        newRange(4, 11, 4, 17),
-//        arrayList(enumMemberA, enumMemberB));
-//
-//    final var interFooParamX = documentSymbol("x", Variable, newRange(9, 10, 9, 11),
-//        newRange(9, 10, 9, 11));
-//    final var interFooParamStr = documentSymbol("str", Variable,
-//        newRange(9, 18, 9, 21),
-//        newRange(9, 18, 9, 21));
-//    final var interMethodFoo = documentSymbol("foo(Int, String)", Method,
-//        newRange(9, 6, 9, 9),
-//        newRange(9, 6, 9, 9),
-//        arrayList(interFooParamX, interFooParamStr));
-//    final var interInterface = documentSymbol("Interface", Interface,
-//        newRange(8, 10, 8, 19),
-//        newRange(8, 10, 8, 19),
-//        arrayList(interMethodFoo));
-//
-//    final var annotationClassForTest = documentSymbol("ForTest", Class,
-//        newRange(12, 17, 12, 24),
-//        newRange(12, 17, 12, 24));
-//
-//    final var constructorParamX = documentSymbol("x", Variable,
-//        newRange(14, 35, 14, 36),
-//        newRange(14, 35, 14, 36));
-//    final var docSymConstructor = documentSymbol("DocumentSymbol(Int)", Constructor,
-//        newRange(14, 34, 14, 42),
-//        newRange(14, 34, 14, 42),
-//        arrayList(constructorParamX));
-//    final var docSymClassFieldX = documentSymbol("x", Field,
-//        newRange(15, 14, 15, 15),
-//        newRange(15, 14, 15, 15));
-//    final var docSymCLassFieldCls = documentSymbol("cls", Field,
-//        newRange(16, 14, 16, 17),
-//        newRange(16, 14, 16, 17));
-//
-//    final var fooParamX = documentSymbol("x", Variable,
-//        newRange(18, 19, 18, 20),
-//        newRange(18, 19, 18, 20));
-//    final var fooParamStr = documentSymbol("str", Variable,
-//        newRange(18, 27, 18, 30),
-//        newRange(18, 27, 18, 30));
-//
-//    final var fooVarA = documentSymbol("a", Variable,
-//        newRange(19, 8, 19, 9),
-//        newRange(19, 8, 19, 9));
-//
-//    final var fooVarCls = documentSymbol("cls", Variable,
-//        newRange(20, 8, 20, 11),
-//        newRange(20, 8, 20, 11));
-//
-//    final var fooVarB = documentSymbol("b", Variable,
-//        newRange(21, 8, 21, 9),
-//        newRange(21, 8, 21, 9));
-//
-//    final var methodFoo = documentSymbol("foo(Int, String)", Method,
-//        newRange(18, 15, 18, 18),
-//        newRange(18, 15, 18, 18),
-//        arrayList(fooParamX, fooParamStr, fooVarA, fooVarCls, fooVarB));
-//
-//    final var methodBar = documentSymbol("bar()", Method,
-//        newRange(25, 6, 25, 9),
-//        newRange(25, 6, 25, 9));
-//
-//    final var docSymClass = documentSymbol("DocumentSymbol", Class,
-//        newRange(14, 20, 14, 34),
-//        newRange(14, 20, 14, 34),
-//        arrayList(docSymConstructor, docSymClassFieldX, docSymCLassFieldCls, methodFoo, methodBar));
-//
-//    final var buzParamA = documentSymbol("a", Variable,
-//        newRange(28, 8, 28, 9),
-//        newRange(28, 8, 28, 9));
-//    final var funcBuz = documentSymbol("buz(Int)", Function,
-//        newRange(28, 4, 28, 7),
-//        newRange(28, 4, 28, 7),
-//        arrayList(buzParamA));
-//
-//    List<DocumentSymbol> answers = arrayList(enumLetters, interInterface, annotationClassForTest, docSymClass, funcBuz);
-//    checkDocumentSymbols(answers, virtualFile.findChild("DocumentSymbol.kt"));
-//  }
+  @Test
+  public void testDocumentSymbolKotlin() {
+    var virtualFile = myFixture.copyDirectoryToProject("kotlin/project1/src", "");
+    virtualFile = virtualFile.findChild("org");
+    assertNotNull(virtualFile);
+
+    final var enumMemberA = documentSymbol("A", Object,
+        newRange(5, 2, 5, 4),
+        newRange(5, 2, 5, 2));
+    final var enumMemberB = documentSymbol("B", Object,
+        newRange(5, 5, 5, 6),
+        newRange(5, 5, 5, 5));
+    final var enumLetters = documentSymbol("Letter", Object,
+        newRange(4, 0, 6, 1),
+        newRange(4, 11, 4, 11),
+        arrayList(enumMemberA, enumMemberB));
+
+    final var interMethodFoo = documentSymbol("foo(Int, String): Int", Method,
+        newRange(9, 2, 9, 35),
+        newRange(9, 6, 9, 6));
+    final var interInterface = documentSymbol("Interface", Object,
+        newRange(8, 0, 10, 1),
+        newRange(8, 10, 8, 10),
+        arrayList(interMethodFoo));
+
+    final var annotationClassForTest = documentSymbol("ForTest", Object,
+        newRange(12, 0, 12, 24),
+        newRange(12, 17, 12, 17));
+
+    final var docSymConstructor = documentSymbol("constructor DocumentSymbol(Int)", Method,
+        newRange(14, 34, 14, 42),
+        newRange(14, 34, 14, 34));
+    final var docSymClassFieldX = documentSymbol("x: Int", Field,
+        newRange(15, 2, 15, 19),
+        newRange(15, 14, 15, 14));
+    final var docSymCLassFieldCls = documentSymbol("cls: Class1", Object,
+        newRange(16, 2, 16, 28),
+        newRange(16, 14, 16, 14));
+
+    final var methodFoo = documentSymbol("foo(Int, String): Int", Method,
+        newRange(18, 2, 23, 3),
+        newRange(18, 15, 18, 15));
+
+    final var methodBar = documentSymbol("bar()", Method,
+        newRange(25, 2, 25, 21),
+        newRange(25, 6, 25, 6));
+
+    final var docSymClass = documentSymbol("DocumentSymbol", Object,
+        newRange(14, 0, 26, 1),
+        newRange(14, 20, 14, 20),
+        arrayList(docSymConstructor, docSymClassFieldX, docSymCLassFieldCls, methodFoo, methodBar));
+
+    final var funcBuz = documentSymbol("buz(Int): Int", Function,
+        newRange(28, 0, 28, 28),
+        newRange(28, 4, 28, 4));
+
+    final var docSymFile = documentSymbol("DocumentSymbol.kt", Object,
+        newRange(0, 0, 29, 0  ),
+        newRange(0, 0, 0, 0),
+        arrayList(enumLetters, interInterface, annotationClassForTest, docSymClass, funcBuz));
+
+    List<DocumentSymbol> answers = arrayList(docSymFile);
+    checkDocumentSymbols(answers, virtualFile.findChild("DocumentSymbol.kt"));
+  }
 
   private void checkDocumentSymbols(@NotNull List<@NotNull DocumentSymbol> answers, @Nullable VirtualFile virtualFile) {
     assertNotNull(virtualFile);
