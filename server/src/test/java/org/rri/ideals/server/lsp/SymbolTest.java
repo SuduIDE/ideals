@@ -28,11 +28,21 @@ public class SymbolTest extends LspServerTestBase {
         .map(Either::getRight)
         .collect(Collectors.toList());
 
-    final var x = documentSymbol("x", SymbolKind.Variable, range(1, 43, 1, 44), null);
-    final var testConstructor = documentSymbol("DocumentSymbolIntegratingTest(int)", SymbolKind.Constructor, range(1, 9, 1, 38), List.of(x));
-    final var testClass = documentSymbol("DocumentSymbolIntegratingTest", SymbolKind.Class, range(0, 13, 0, 42), List.of(testConstructor));
+    final var testConstructor = documentSymbol("DocumentSymbolIntegratingTest(int)",
+        SymbolKind.Method,
+        range(1, 2, 1, 48),
+        range(1, 9, 1, 9), List.of());
+    final var testClass = documentSymbol("DocumentSymbolIntegratingTest",
+        SymbolKind.Class,
+        range(0, 0, 2, 1),
+        range(0, 13, 0, 13),
+        List.of(testConstructor));
 
-    final var answer = List.of(testClass);
+    final var testFile = documentSymbol("DocumentSymbolIntegratingTest.java",
+        SymbolKind.Object,
+        range(0, 0, 2, 1), range(0, 0, 0, 0),
+        List.of(testClass));
+    final var answer = List.of(testFile);
 
     assertEquals(answer, result);
   }
@@ -55,8 +65,10 @@ public class SymbolTest extends LspServerTestBase {
   private static DocumentSymbol documentSymbol(@NotNull String name,
                                                @NotNull SymbolKind kind,
                                                @NotNull Range range,
+                                               @NotNull Range selectionRange,
                                                @Nullable List<@NotNull DocumentSymbol> children) {
-    return new DocumentSymbol(name, kind, range, range, null, children == null ? null : new ArrayList<>(children));
+    return new DocumentSymbol(name, kind, range, selectionRange, null, children == null ? null :
+        new ArrayList<>(children));
   }
 
   @SuppressWarnings("SameParameterValue")

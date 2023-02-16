@@ -1,10 +1,10 @@
 package org.rri.ideals.server.rename;
 
-import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.rri.ideals.server.LspLightBasePlatformTestCase;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.TestUtil;
 
@@ -12,7 +12,7 @@ import java.util.Comparator;
 import java.util.List;
 import java.util.stream.Stream;
 
-abstract class RenameCommandTestBase extends BasePlatformTestCase {
+abstract class RenameCommandTestBase extends LspLightBasePlatformTestCase {
   protected LspPath renameTestPath;
   protected String renameTestUri;
   protected String orgTestClassUri;

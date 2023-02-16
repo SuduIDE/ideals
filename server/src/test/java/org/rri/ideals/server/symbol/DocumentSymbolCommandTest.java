@@ -1,7 +1,6 @@
 package org.rri.ideals.server.symbol;
 
 import com.intellij.openapi.vfs.VirtualFile;
-import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.eclipse.lsp4j.DocumentSymbol;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.SymbolKind;
@@ -11,6 +10,7 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.rri.ideals.server.LspLightBasePlatformTestCase;
 import org.rri.ideals.server.LspPath;
 
 import java.lang.String;
@@ -25,7 +25,7 @@ import static org.eclipse.lsp4j.SymbolKind.*;
 import static org.rri.ideals.server.TestUtil.newRange;
 
 @RunWith(JUnit4.class)
-public class DocumentSymbolCommandTest extends BasePlatformTestCase {
+public class DocumentSymbolCommandTest extends LspLightBasePlatformTestCase {
   @Override
   protected boolean isIconRequired() {
     return true;
@@ -62,7 +62,7 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
         newRange(22, 4, 22, 15),
         newRange(22, 9, 22, 9));
 
-    final var entryInterface = documentSymbol("EntryInter", Object,
+    final var entryInterface = documentSymbol("EntryInter", Interface,
         newRange(21, 2, 23, 3),
         newRange(21, 19, 21, 19),
         arrayList(interMethodFoo));
@@ -140,6 +140,7 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
 
   @Test
   public void testDocumentSymbolKotlin() {
+    // kotlin icons use not idea standard icons
     var virtualFile = myFixture.copyDirectoryToProject("kotlin/project1/src", "");
     virtualFile = virtualFile.findChild("org");
     assertNotNull(virtualFile);
@@ -170,7 +171,7 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
     final var docSymConstructor = documentSymbol("constructor DocumentSymbol(Int)", Method,
         newRange(14, 34, 14, 42),
         newRange(14, 34, 14, 34));
-    final var docSymClassFieldX = documentSymbol("x: Int", Field,
+    final var docSymClassFieldX = documentSymbol("x: Int", Object,
         newRange(15, 2, 15, 19),
         newRange(15, 14, 15, 14));
     final var docSymCLassFieldCls = documentSymbol("cls: Class1", Object,
@@ -181,7 +182,7 @@ public class DocumentSymbolCommandTest extends BasePlatformTestCase {
         newRange(18, 2, 23, 3),
         newRange(18, 15, 18, 15));
 
-    final var methodBar = documentSymbol("bar()", Method,
+    final var methodBar = documentSymbol("bar(): Int", Method,
         newRange(25, 2, 25, 21),
         newRange(25, 6, 25, 6));
 

@@ -4,7 +4,6 @@ import com.intellij.ide.highlighter.JavaFileType;
 import com.intellij.openapi.fileTypes.FileType;
 import com.intellij.psi.PsiDocumentManager;
 import com.intellij.psi.PsiFile;
-import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import com.jetbrains.python.PythonFileType;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.TextEdit;
@@ -13,6 +12,7 @@ import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.rri.ideals.server.LspLightBasePlatformTestCase;
 import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.util.MiscUtil;
 import org.rri.ideals.server.util.TextUtil;
@@ -21,7 +21,7 @@ import java.util.List;
 import java.util.Objects;
 
 @RunWith(JUnit4.class)
-public class OnTypeFormattingCommandTest extends BasePlatformTestCase {
+public class OnTypeFormattingCommandTest extends LspLightBasePlatformTestCase {
   @Test
   public void testFormatAfterClosedBlockJava() {
     Assertions.assertEquals(List.of(

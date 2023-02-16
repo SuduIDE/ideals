@@ -1,15 +1,16 @@
 package org.rri.ideals.server.references;
 
-import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
+import org.rri.ideals.server.LspLightBasePlatformTestCase;
 import org.rri.ideals.server.engine.IdeaTestFixture;
 import org.rri.ideals.server.engine.TestEngine;
 import org.rri.ideals.server.generator.TestGenerator;
 
 import java.nio.file.Paths;
 
-public abstract class ReferencesCommandTestBase<E extends TestGenerator<? extends TestGenerator.Test>> extends BasePlatformTestCase {
+public abstract class ReferencesCommandTestBase<E extends TestGenerator<?
+    extends TestGenerator.Test>> extends LspLightBasePlatformTestCase {
   @Override
   protected String getTestDataPath() {
     return Paths.get("test-data/references").toAbsolutePath().toString();

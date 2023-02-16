@@ -22,7 +22,6 @@ import com.intellij.psi.PsiElement;
 import com.intellij.psi.PsiFile;
 import com.intellij.ui.DeferredIcon;
 import com.intellij.ui.IconManager;
-import com.intellij.ui.PlatformIcons;
 import org.eclipse.lsp4j.DocumentSymbol;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.SymbolInformation;
@@ -71,6 +70,9 @@ final public class DocumentSymbolService {
         }
         Document document = ReadAction.compute(() -> MiscUtil.getDocument(psiFile));
         assert document != null;
+
+        Registry.get("psi.deferIconLoading").setValue(false, disposable);
+
         var rootSymbol = processTree(root, psiFile, document);
         return List.of(Either.forRight(rootSymbol));
       }, new LspProgressIndicator(cancelChecker));
@@ -83,7 +85,6 @@ final public class DocumentSymbolService {
   @Nullable
   private StructureViewTreeElement getViewTreeElement(@NotNull PsiFile psiFile,
                                                       @NotNull Disposable parentDisposable) {
-    Registry.get("psi.deferIconLoading").setValue(false, parentDisposable);
 
     var fileEditor = WriteCommandAction.runWriteCommandAction(project,
         (ThrowableComputable<FileEditor, RuntimeException>)
@@ -111,7 +112,6 @@ final public class DocumentSymbolService {
     var documentSymbol = ReadAction.compute(() -> {
       var curSymbol = new DocumentSymbol();
       var icon = root.getPresentation().getIcon(false);
-      assert icon != null;
       curSymbol.setKind(getSymbolKind(icon));
       if (root instanceof StructureViewTreeElement viewElement) {
         var maybePsiElement = viewElement.getValue();
@@ -168,7 +168,8 @@ final public class DocumentSymbolService {
       kind = SymbolKind.Module;
     } else if (IconUtil.compareIcons(icon, AllIcons.Nodes.Function)) {
       kind = SymbolKind.Function;
-    } else if (IconUtil.compareIcons(icon, AllIcons.Nodes.Interface)) {
+    } else if (IconUtil.compareIcons(icon, AllIcons.Nodes.Interface) ||
+    IconUtil.compareIcons(icon, iconManager.tooltipOnlyIfComposite(AllIcons.Nodes.Interface))) {
       kind = SymbolKind.Interface;
     } else if (IconUtil.compareIcons(icon, AllIcons.Nodes.Type)) {
       kind = SymbolKind.TypeParameter;
@@ -185,8 +186,9 @@ final public class DocumentSymbolService {
     } else if (IconUtil.compareIcons(icon, AllIcons.Nodes.Constant)) {
       kind = SymbolKind.Constant;
     } else if (
+        IconUtil.compareIcons(icon, AllIcons.Nodes.Class) ||
         IconUtil.compareIcons(icon,
-            iconManager.tooltipOnlyIfComposite(iconManager.getPlatformIcon(PlatformIcons.Class))) ||
+            iconManager.tooltipOnlyIfComposite(AllIcons.Nodes.Class)) ||
         IconUtil.compareIcons(icon, AllIcons.Nodes.Class) ||
             IconUtil.compareIcons(icon, AllIcons.Nodes.AbstractClass)) {
       kind = SymbolKind.Class;

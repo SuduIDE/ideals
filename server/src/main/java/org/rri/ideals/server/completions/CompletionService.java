@@ -29,6 +29,8 @@ import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.util.registry.Registry;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiFileFactory;
+import com.intellij.ui.DeferredIcon;
+import com.intellij.ui.IconManager;
 import io.github.furstenheim.CopyDown;
 import kotlin.coroutines.EmptyCoroutineContext;
 import kotlinx.coroutines.CoroutineScopeKt;
@@ -188,7 +190,6 @@ final public class CompletionService implements Disposable {
   private static CompletionItem createLspCompletionItem(@NotNull LookupElement lookupElement,
                                                         @NotNull Range textEditRange) {
     var resItem = new CompletionItem();
-    Registry.get("psi.deferIconLoading").setValue(false); // todo set this flag in server setup
     var d = Disposer.newDisposable();
     try {
       var presentation = LookupElementPresentation.renderElement(lookupElement);
@@ -220,13 +221,15 @@ final public class CompletionService implements Disposable {
       resItem.setTags(tagList);
 
       var icon = presentation.getIcon();
-
+      if (icon instanceof DeferredIcon deferredIcon) {
+        icon = deferredIcon.getBaseIcon();
+      }
       if (icon == null) {
         resItem.setKind(CompletionItemKind.Keyword);
         return resItem;
       }
       CompletionItemKind kind = null;
-
+      var iconManager = IconManager.getInstance();
       if (IconUtil.compareIcons(icon, AllIcons.Nodes.Method) ||
           IconUtil.compareIcons(icon, AllIcons.Nodes.AbstractMethod)) {
         kind = CompletionItemKind.Method;
@@ -237,7 +240,9 @@ final public class CompletionService implements Disposable {
         kind = CompletionItemKind.Module;
       } else if (IconUtil.compareIcons(icon, AllIcons.Nodes.Function)) {
         kind = CompletionItemKind.Function;
-      } else if (IconUtil.compareIcons(icon, AllIcons.Nodes.Interface)) {
+      } else if (IconUtil.compareIcons(icon, AllIcons.Nodes.Interface) ||
+          IconUtil.compareIcons(icon,
+              iconManager.tooltipOnlyIfComposite(AllIcons.Nodes.Interface))) {
         kind = CompletionItemKind.Interface;
       } else if (IconUtil.compareIcons(icon, AllIcons.Nodes.Folder)) {
         kind = CompletionItemKind.Folder;
@@ -260,7 +265,10 @@ final public class CompletionService implements Disposable {
       } else if (IconUtil.compareIcons(icon, AllIcons.Nodes.Constant)) {
         kind = CompletionItemKind.Constant;
       } else if (
-          IconUtil.compareIcons(icon, AllIcons.Nodes.Class) ||  // todo find another way for classes in java
+          IconUtil.compareIcons(icon, AllIcons.Nodes.Class) ||
+              IconUtil.compareIcons(icon,
+                  iconManager.tooltipOnlyIfComposite(AllIcons.Nodes.Class)) ||
+              IconUtil.compareIcons(icon, AllIcons.Nodes.Class) ||
               IconUtil.compareIcons(icon, AllIcons.Nodes.AbstractClass)) {
         kind = CompletionItemKind.Class;
       } else if (IconUtil.compareIcons(icon, AllIcons.Nodes.Field)) {
@@ -285,6 +293,8 @@ final public class CompletionService implements Disposable {
     VoidCompletionProcess process = new VoidCompletionProcess();
     Ref<List<CompletionItem>> resultRef = new Ref<>();
     try {
+      // need for icon load
+      Registry.get("psi.deferIconLoading").setValue(false, process);
       var lookupElementsWithMatcherRef = new Ref<List<LookupElementWithMatcher>>();
       var completionDataVersionRef = new Ref<Integer>();
       // invokeAndWait is necessary for editor creation and completion call

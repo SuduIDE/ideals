@@ -3,7 +3,11 @@ package org.rri.ideals.server.bootstrap;
 import com.intellij.ide.CliResult;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ApplicationStarter;
+import com.intellij.openapi.diagnostic.Logger;
+import com.intellij.ui.CoreIconManager;
+import com.intellij.ui.IconManager;
 import org.jetbrains.annotations.NotNull;
+import org.rri.ideals.server.symbol.DocumentSymbolCommand;
 
 import java.util.List;
 import java.util.concurrent.Future;
@@ -34,11 +38,17 @@ public class LspServerStarter implements ApplicationStarter {
   public boolean canProcessExternalCommandLine() {
     return false;
   }
-
+  private static final Logger LOG = Logger.getInstance(DocumentSymbolCommand.class);
 
   @NotNull
   private static LspServerRunnerBase buildRunner(@NotNull List<String> args) {
     assert args.size() >= 1 : "insufficient arguments";
+    try {
+      //noinspection UnstableApiUsage
+      IconManager.activate(new CoreIconManager());
+    } catch (Throwable e) {
+      LOG.warn("Core icon manager can't be loaded:\n" + e);
+    }
 
     if (args.size() > 1) {
       var transportType = args.get(1);

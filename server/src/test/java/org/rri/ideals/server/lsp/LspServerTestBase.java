@@ -93,4 +93,9 @@ public abstract class LspServerTestBase extends HeavyPlatformTestCase {
     server.stop();
     ProjectManagerEx.getInstanceEx().closeAndDisposeAllProjects(false);
   }
+
+  @Override
+  protected boolean isIconRequired() {
+    return true;
+  }
 }

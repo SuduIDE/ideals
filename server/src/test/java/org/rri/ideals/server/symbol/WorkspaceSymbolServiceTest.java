@@ -1,7 +1,6 @@
 package org.rri.ideals.server.symbol;
 
 import com.intellij.openapi.project.Project;
-import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.Range;
 import org.eclipse.lsp4j.SymbolKind;
@@ -12,6 +11,7 @@ import org.jetbrains.annotations.Nullable;
 import org.junit.Test;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.rri.ideals.server.LspLightBasePlatformTestCase;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.TestUtil;
 
@@ -19,7 +19,11 @@ import java.nio.file.Paths;
 import java.util.List;
 
 @RunWith(JUnit4.class)
-public class WorkspaceSymbolServiceTest extends BasePlatformTestCase {
+public class WorkspaceSymbolServiceTest extends LspLightBasePlatformTestCase {
+  @Override
+  protected boolean isIconRequired() {
+    return true;
+  }
 
   @Override
   protected String getTestDataPath() {
