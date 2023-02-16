@@ -83,7 +83,7 @@ public class DocumentSymbolCommandTest extends LspLightBasePlatformTestCase {
     final var docSymClass = documentSymbol("DocumentSymbol", Class, newRange(4, 0, 28, 1),
         newRange(4, 13, 4, 13),
         arrayList(fieldIntX, fieldClass1Cls, docSymConstructor, methodFoo, entryInterface, enumLetter));
-    final var docSymFile = documentSymbol("DocumentSymbol.java", Object, newRange(0, 0, 28, 1),
+    final var docSymFile = documentSymbol("DocumentSymbol.java", File, newRange(0, 0, 28, 1),
         newRange(0, 0, 0, 0), arrayList(docSymClass));
 
     final var answers = arrayList(docSymFile);
@@ -129,7 +129,7 @@ public class DocumentSymbolCommandTest extends LspLightBasePlatformTestCase {
     final var functionFooBar = documentSymbol("foo_bar(x, /, y, *, z)", Function,
         newRange(21, 0, 23, 26),
         newRange(22, 4, 22, 4));
-    final var docSymFile = documentSymbol("documentSymbol.py", Object,
+    final var docSymFile = documentSymbol("documentSymbol.py", File,
         newRange(0, 0, 24, 0),
         newRange(0, 0, 0, 0),
         arrayList(varStringP, barBoolB, docSymClass, functionFooBar));
@@ -195,7 +195,7 @@ public class DocumentSymbolCommandTest extends LspLightBasePlatformTestCase {
         newRange(28, 0, 28, 28),
         newRange(28, 4, 28, 4));
 
-    final var docSymFile = documentSymbol("DocumentSymbol.kt", Object,
+    final var docSymFile = documentSymbol("DocumentSymbol.kt", File,
         newRange(0, 0, 29, 0  ),
         newRange(0, 0, 0, 0),
         arrayList(enumLetters, interInterface, annotationClassForTest, docSymClass, funcBuz));

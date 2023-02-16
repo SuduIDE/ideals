@@ -85,8 +85,15 @@ public class WorkspaceSymbolServiceTest extends LspLightBasePlatformTestCase {
     final var workspaceSymbolFuncClass1 = workspaceSymbol("Class1(x, y)", SymbolKind.Function,
         location(workspaceSymbolUri, TestUtil.newRange(2, 4, 2, 10)));
 
+    final var class1SrcFile = workspaceSymbol("class1", SymbolKind.File,
+        location(class1Uri, TestUtil.newRange(0, 0, 9, 0)));
+
+    final var otherClass1SrcFile = workspaceSymbol("otherClass1", SymbolKind.File,
+        location(otherClass1Uri, TestUtil.newRange(0, 0, 2, 0)));
+
     final var result = doSearch("Class1", getProject());
-    final var answer = List.of(workspaceSymbolFuncClass1, workspaceSymbolVarClass1, otherClass1Class1, class1Class1);
+    final var answer = List.of(workspaceSymbolFuncClass1, workspaceSymbolVarClass1,
+        otherClass1Class1, class1Class1, class1SrcFile, otherClass1SrcFile);
 
     assertEquals(answer, result);
   }
@@ -98,15 +105,28 @@ public class WorkspaceSymbolServiceTest extends LspLightBasePlatformTestCase {
     assertNotNull(virtualFile);
     virtualFile = virtualFile.findChild("WorkspaceSymbol.kt");
     assertNotNull(virtualFile);
-    final var uri = LspPath.fromVirtualFile(virtualFile).toLspUri();
+    final var workspaceSymbolUri = LspPath.fromVirtualFile(virtualFile).toLspUri();
+    virtualFile = virtualFile.getParent().findChild("DocumentSymbol.kt");
+    assertNotNull(virtualFile);
+    final var documentSymbolUri = LspPath.fromVirtualFile(virtualFile).toLspUri();
 
-    final var varSymbol = workspaceSymbol("symbol", SymbolKind.Field,
-        location(uri, TestUtil.newRange(3, 14, 3, 20)), "WorkspaceSymbol");
-    final var funSymbol = workspaceSymbol("symbol(int, int)", SymbolKind.Function,
-        location(uri, TestUtil.newRange(5, 6, 5, 12)), "WorkspaceSymbol");
+    // kotlin icons are different from standard icons
+    final var varSymbol = workspaceSymbol("symbol", SymbolKind.Object,
+        location(workspaceSymbolUri, TestUtil.newRange(3, 14, 3, 20)), "WorkspaceSymbol");
+    final var funSymbol = workspaceSymbol("symbol(Int, Int)", SymbolKind.Method,
+        location(workspaceSymbolUri, TestUtil.newRange(5, 6, 5, 12)), "WorkspaceSymbol");
+
+    // we can't determine kotlin class kind by icon
+    final var workspaceSymbolClass = workspaceSymbol("WorkspaceSymbol", SymbolKind.Object,
+        location(workspaceSymbolUri, TestUtil.newRange(2, 11, 2, 26)), null);
+    final var documentSymbolClass = workspaceSymbol("DocumentSymbol", SymbolKind.Object,
+        location(documentSymbolUri, TestUtil.newRange(14, 20, 14, 34)), null);
+
+    final var documentSymbolFile = workspaceSymbol("DocumentSymbolKt", SymbolKind.Object,
+        location(documentSymbolUri, TestUtil.newRange(0, 0, 29, 0)), null);
 
     final var result = doSearch("symbol", getProject());
-    final var answer = List.of(varSymbol, funSymbol);
+    final var answer = List.of(varSymbol, funSymbol, documentSymbolClass, workspaceSymbolClass, documentSymbolFile);
 
     assertEquals(answer, result);
   }

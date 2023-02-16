@@ -110,7 +110,6 @@ public class MyTextDocumentService implements TextDocumentService {
   @SuppressWarnings("deprecation")
   @Override
   public CompletableFuture<List<Either<SymbolInformation, DocumentSymbol>>> documentSymbol(DocumentSymbolParams params) {
-//    return new DocumentSymbolCommand().runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
     final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
     return CompletableFutures.computeAsync(
         AppExecutorUtil.getAppExecutorService(),

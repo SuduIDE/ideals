@@ -7,7 +7,6 @@ import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.ui.CoreIconManager;
 import com.intellij.ui.IconManager;
 import org.jetbrains.annotations.NotNull;
-import org.rri.ideals.server.symbol.DocumentSymbolCommand;
 
 import java.util.List;
 import java.util.concurrent.Future;
@@ -38,7 +37,7 @@ public class LspServerStarter implements ApplicationStarter {
   public boolean canProcessExternalCommandLine() {
     return false;
   }
-  private static final Logger LOG = Logger.getInstance(DocumentSymbolCommand.class);
+  private static final Logger LOG = Logger.getInstance(LspServerStarter.class);
 
   @NotNull
   private static LspServerRunnerBase buildRunner(@NotNull List<String> args) {

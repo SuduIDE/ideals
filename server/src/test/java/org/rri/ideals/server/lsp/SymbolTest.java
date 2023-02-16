@@ -39,7 +39,7 @@ public class SymbolTest extends LspServerTestBase {
         List.of(testConstructor));
 
     final var testFile = documentSymbol("DocumentSymbolIntegratingTest.java",
-        SymbolKind.Object,
+        SymbolKind.File,
         range(0, 0, 2, 1), range(0, 0, 0, 0),
         List.of(testClass));
     final var answer = List.of(testFile);
