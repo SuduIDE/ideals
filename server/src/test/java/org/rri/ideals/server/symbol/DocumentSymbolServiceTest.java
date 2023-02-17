@@ -25,7 +25,7 @@ import static org.eclipse.lsp4j.SymbolKind.*;
 import static org.rri.ideals.server.TestUtil.newRange;
 
 @RunWith(JUnit4.class)
-public class DocumentSymbolCommandTest extends LspLightBasePlatformTestCase {
+public class DocumentSymbolServiceTest extends LspLightBasePlatformTestCase {
 
   @Override
   protected String getTestDataPath() {
