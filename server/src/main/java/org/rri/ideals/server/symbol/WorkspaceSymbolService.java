@@ -21,7 +21,10 @@ import com.intellij.psi.search.ProjectScope;
 import com.intellij.psi.search.SearchScope;
 import com.intellij.util.concurrency.AppExecutorUtil;
 import com.intellij.util.containers.ContainerUtil;
-import org.eclipse.lsp4j.*;
+import org.eclipse.lsp4j.Location;
+import org.eclipse.lsp4j.SymbolInformation;
+import org.eclipse.lsp4j.SymbolKind;
+import org.eclipse.lsp4j.WorkspaceSymbol;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -134,10 +137,6 @@ final public class WorkspaceSymbolService {
     if (!(descriptor.getItem() instanceof final PsiElement elem)) {
       return null;
     }
-    final var provider = DocumentSymbolInfoProvider.findFor(elem.getLanguage());
-    if (provider == null) {
-      return null;
-    }
     if (!(elem instanceof NavigationItem navigationItem)) {
       return null;
     }
@@ -164,9 +163,6 @@ final public class WorkspaceSymbolService {
         kind,
         Either.forLeft(MiscUtil.psiElementToLocation(elem, psiFile)),
         containerName);
-    if (provider.isDeprecated(elem)) {
-      symbol.setTags(List.of(SymbolTag.Deprecated));
-    }
     return new WorkspaceSearchResult(symbol, elem, descriptor.getWeight(), scope.contains(virtualFile));
   }
 

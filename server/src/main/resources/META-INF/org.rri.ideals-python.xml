@@ -1,9 +1,0 @@
-<idea-plugin>
-  <id>org.rri.ideals.python</id>
-  <depends>org.rri.ideals</depends>
-  <depends>com.intellij.modules.python</depends>
-
-  <extensions defaultExtensionNs="org.rri.lsp.server">
-    <documentSymbolInfoProvider implementation="org.rri.ideals.server.python.symbol.PyDocumentSymbolInfoProvider"/>
-  </extensions>
-</idea-plugin>
