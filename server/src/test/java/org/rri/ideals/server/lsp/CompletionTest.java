@@ -22,10 +22,6 @@ import java.util.List;
 import java.util.Set;
 
 public class CompletionTest extends LspServerTestWithEngineBase {
-  @Override
-  protected boolean isIconRequired() {
-    return true;
-  }
 
   @Override
   protected @NotNull String getTestDataRelativePath() {
