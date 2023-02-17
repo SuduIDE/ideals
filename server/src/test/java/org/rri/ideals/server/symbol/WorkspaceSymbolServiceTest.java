@@ -20,10 +20,6 @@ import java.util.List;
 
 @RunWith(JUnit4.class)
 public class WorkspaceSymbolServiceTest extends LspLightBasePlatformTestCase {
-  @Override
-  protected boolean isIconRequired() {
-    return true;
-  }
 
   @Override
   protected String getTestDataPath() {
