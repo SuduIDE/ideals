@@ -15,6 +15,7 @@ public class SymbolUtil {
   public static SymbolKind getSymbolKind(@NotNull ItemPresentation presentation) {
     var parent = Disposer.newDisposable();
     try {
+      // allow icon loading
       Registry.get("psi.deferIconLoading").setValue(false, parent);
 
       var icon = presentation.getIcon(false);
