@@ -26,10 +26,6 @@ import static org.rri.ideals.server.TestUtil.newRange;
 
 @RunWith(JUnit4.class)
 public class DocumentSymbolCommandTest extends LspLightBasePlatformTestCase {
-  @Override
-  protected boolean isIconRequired() {
-    return true;
-  }
 
   @Override
   protected String getTestDataPath() {
