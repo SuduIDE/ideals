@@ -185,7 +185,6 @@ final public class CompletionService implements Disposable {
     return additionalEdits.stream().map(editWithOffsets -> editWithOffsets.toTextEdit(document)).toList();
   }
 
-  @SuppressWarnings("UnstableApiUsage")
   @NotNull
   private static CompletionItem createLspCompletionItem(@NotNull LookupElement lookupElement,
                                                         @NotNull Range textEditRange) {
