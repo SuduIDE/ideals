@@ -4,6 +4,8 @@ import com.google.gson.Gson;
 import com.intellij.codeInsight.completion.CompletionUtil;
 import com.intellij.codeInsight.lookup.LookupElement;
 import com.intellij.codeInsight.lookup.LookupElementPresentation;
+import com.intellij.codeInsight.lookup.LookupManager;
+import com.intellij.codeInsight.lookup.impl.LookupImpl;
 import com.intellij.codeInsight.template.impl.TemplateManagerImpl;
 import com.intellij.codeInsight.template.impl.TemplateState;
 import com.intellij.codeInsight.template.impl.Variable;
@@ -31,6 +33,7 @@ import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiFileFactory;
 import com.intellij.ui.CoreIconManager;
 import com.intellij.ui.IconManager;
+import com.intellij.util.SlowOperations;
 import io.github.furstenheim.CopyDown;
 import kotlin.coroutines.EmptyCoroutineContext;
 import kotlinx.coroutines.CoroutineScopeKt;
@@ -430,6 +433,18 @@ final public class CompletionService implements Disposable {
                                     @NotNull TemplateState templateState,
                                     @NotNull Document document) {
     var template = templateState.getTemplate();
+
+    while (!templateState.isLastVariable()) {
+      final LookupImpl lookup =
+          (LookupImpl) LookupManager.getActiveLookup(templateState.getEditor());
+      if (lookup != null) {
+        SlowOperations.allowSlowOperations(() -> lookup.finishLookup('\t'));
+      } else {
+        WriteCommandAction.runWriteCommandAction(project, null, null,
+            templateState::nextTab);
+      }
+    }
+
     var variableToSegments =
         template.getVariables()
             .stream()
@@ -455,7 +470,8 @@ final public class CompletionService implements Disposable {
     var sortedLspSegments =
         variableToSegments.values().stream().flatMap(Collection::stream).sorted().toList();
     WriteCommandAction.runWriteCommandAction(project, null, null,
-        () -> templateState.gotoEnd(false));
+        () -> templateState.gotoEnd(false)
+    );
 
     WriteCommandAction.runWriteCommandAction(project, null, null, () -> {
       for (int i = sortedLspSegments.size() - 1; i >= 0; i--) {

@@ -196,6 +196,18 @@ public class CompletionServiceTest extends BasePlatformTestCase {
   }
 
   @Test
+  public void testJavaIterWithLookupItemLiveTemplate() {
+    runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams("java-iter-with-lookup-item",
+        completionItem -> Objects.equals(completionItem.getLabel(), "iter"),
+        new MarkupContent(MarkupKind.MARKDOWN,
+            """
+                for ($ELEMENT\\_TYPE$ $VAR$ : $ITERABLE\\_TYPE$) { $END$ }
+                
+                Iterate Iterable or array"""
+        ), null)));
+  }
+
+  @Test
   public void testJavaItli() {
     runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams("java-itli",
         completionItem -> Objects.equals(completionItem.getLabel(), "itli"),
@@ -204,6 +216,19 @@ public class CompletionServiceTest extends BasePlatformTestCase {
                 for (int $INDEX$ = 0; $INDEX$ < $LIST$.size(); $INDEX$++) { $ELEMENT\\_TYPE$ $VAR$ = $CAST$ $LIST$.get($INDEX$); $END$ }
                                 
                 Iterate elements of java.util.List"""
+        ), null)));
+  }
+
+  @Test
+  public void testJavaItarWithLookupItem() {
+    runWithTemplateFlags(() -> testWithEngine(new CompletionTestParams(
+        "java-itar-with-lookup-item",
+        completionItem -> Objects.equals(completionItem.getLabel(), "itar"),
+        new MarkupContent(MarkupKind.MARKDOWN,
+            """
+                for(int $INDEX$ = 0; $INDEX$ < $ARRAY$.length; $INDEX$++) { $ELEMENT\\_TYPE$ $VAR$ = $ARRAY$\\[$INDEX$\\]; $END$ }
+                
+                Iterate elements of array"""
         ), null)));
   }
 
