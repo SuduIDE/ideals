@@ -23,10 +23,6 @@
        Read more: https://plugins.jetbrains.com/docs/intellij/plugin-compatibility.html -->
   <depends>com.intellij.modules.platform</depends>
 
-  <depends optional="true" config-file="org.rri.ideals-java.xml">com.intellij.java</depends>
-  <depends optional="true" config-file="org.rri.ideals-kotlin.xml">org.jetbrains.kotlin</depends>
-  <depends optional="true" config-file="org.rri.ideals-python.xml">com.intellij.modules.python</depends>
-
   <!-- Extension points defined by the plugin.
        Read more: https://plugins.jetbrains.com/docs/intellij/plugin-extension-points.html -->
   <extensions defaultExtensionNs="com.intellij">
@@ -43,8 +39,5 @@
   </extensions>
 
   <extensionPoints>
-    <extensionPoint qualifiedName="org.rri.lsp.server.documentSymbolInfoProvider"
-                    interface="org.rri.ideals.server.symbol.DocumentSymbolInfoProvider"
-                    dynamic="true" />
   </extensionPoints>
 </idea-plugin>

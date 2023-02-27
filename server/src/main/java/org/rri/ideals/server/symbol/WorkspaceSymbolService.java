@@ -3,6 +3,7 @@ package org.rri.ideals.server.symbol;
 import com.intellij.ide.actions.searcheverywhere.FoundItemDescriptor;
 import com.intellij.ide.actions.searcheverywhere.SearchEverywhereToggleAction;
 import com.intellij.ide.actions.searcheverywhere.SymbolSearchEverywhereContributor;
+import com.intellij.navigation.NavigationItem;
 import com.intellij.openapi.actionSystem.AnActionEvent;
 import com.intellij.openapi.actionSystem.impl.SimpleDataContext;
 import com.intellij.openapi.application.ApplicationManager;
@@ -14,6 +15,7 @@ import com.intellij.openapi.project.DumbService;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Ref;
 import com.intellij.psi.PsiElement;
+import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiNameIdentifierOwner;
 import com.intellij.psi.search.ProjectScope;
 import com.intellij.psi.search.SearchScope;
@@ -21,7 +23,7 @@ import com.intellij.util.concurrency.AppExecutorUtil;
 import com.intellij.util.containers.ContainerUtil;
 import org.eclipse.lsp4j.Location;
 import org.eclipse.lsp4j.SymbolInformation;
-import org.eclipse.lsp4j.SymbolTag;
+import org.eclipse.lsp4j.SymbolKind;
 import org.eclipse.lsp4j.WorkspaceSymbol;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.eclipse.lsp4j.jsonrpc.CompletableFutures;
@@ -29,6 +31,7 @@ import org.eclipse.lsp4j.jsonrpc.messages.Either;
 import org.jetbrains.annotations.NotNull;
 import org.jetbrains.annotations.Nullable;
 import org.rri.ideals.server.LspPath;
+import org.rri.ideals.server.symbol.util.SymbolUtil;
 import org.rri.ideals.server.util.MiscUtil;
 
 import java.util.ArrayList;
@@ -134,12 +137,11 @@ final public class WorkspaceSymbolService {
     if (!(descriptor.getItem() instanceof final PsiElement elem)) {
       return null;
     }
-    final var provider = DocumentSymbolInfoProvider.findFor(elem.getLanguage());
-    if (provider == null) {
+    if (!(elem instanceof NavigationItem navigationItem)) {
       return null;
     }
-    final var info = provider.calculateSymbolInfo(elem);
-    if (info == null) {
+    var itemPresentation = navigationItem.getPresentation();
+    if (itemPresentation == null) {
       return null;
     }
     final var psiFile = elem.getContainingFile();
@@ -151,13 +153,16 @@ final public class WorkspaceSymbolService {
         ? ((PsiNameIdentifierOwner) elem.getParent()).getName()
         : null;
     final var location = new Location();
+    SymbolKind kind = SymbolUtil.getSymbolKind(itemPresentation);
+    if (elem instanceof PsiFile) {
+      kind = SymbolKind.File;
+    }
     location.setUri(LspPath.fromVirtualFile(virtualFile).toLspUri());
-    final var symbol = new WorkspaceSymbol(info.getName(), info.getKind(),
+    final var symbol = new WorkspaceSymbol(
+        itemPresentation.getPresentableText(),
+        kind,
         Either.forLeft(MiscUtil.psiElementToLocation(elem, psiFile)),
         containerName);
-    if (provider.isDeprecated(elem)) {
-      symbol.setTags(List.of(SymbolTag.Deprecated));
-    }
     return new WorkspaceSearchResult(symbol, elem, descriptor.getWeight(), scope.contains(virtualFile));
   }
 

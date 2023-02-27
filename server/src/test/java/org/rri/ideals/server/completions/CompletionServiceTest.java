@@ -7,7 +7,6 @@ import com.intellij.ide.highlighter.JavaFileType;
 import com.intellij.openapi.util.Key;
 import com.intellij.psi.PsiFile;
 import com.intellij.testFramework.TestModeFlags;
-import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import com.jetbrains.python.PythonFileType;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
@@ -17,6 +16,7 @@ import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.rri.ideals.server.LspLightBasePlatformTestCase;
 import org.rri.ideals.server.LspPath;
 import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.completions.generators.CompletionTestGenerator;
@@ -33,7 +33,7 @@ import java.util.function.Predicate;
 import java.util.stream.Collectors;
 
 @RunWith(JUnit4.class)
-public class CompletionServiceTest extends BasePlatformTestCase {
+public class CompletionServiceTest extends LspLightBasePlatformTestCase {
   private static final Key<Boolean> ourShowTemplatesInTests = Key.create("ShowTemplatesInTests");
   private static final Key<Boolean> ourTemplateTesting = Key.create("TemplateTesting");
   private final Gson gson = new GsonBuilder().create();
@@ -43,10 +43,6 @@ public class CompletionServiceTest extends BasePlatformTestCase {
     return "test-data/completion";
   }
 
-  @Override
-  protected boolean isIconRequired() {
-    return true;
-  }
 
   @Test
   public void testCompletionForStaticImport() {
@@ -112,6 +108,19 @@ public class CompletionServiceTest extends BasePlatformTestCase {
         CompletionItemKind.Keyword
     ));
     testWithEngine(new CompletionTestParams("java-function-and-keyword-project", null, null, expected));
+  }
+
+  @Test
+  public void testCompletionForImportedClass() {
+    var expected = Set.of(CompletionServiceTestUtil.createCompletionItem(
+        "ImportClass",
+        " default package",
+        null,
+        new ArrayList<>(),
+        "ImportClass",
+        CompletionItemKind.Class
+    ));
+    testWithEngine(new CompletionTestParams("java-class", null, null, expected));
   }
 
   @Test

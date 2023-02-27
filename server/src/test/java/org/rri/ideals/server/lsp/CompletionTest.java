@@ -23,7 +23,6 @@ import java.util.Set;
 
 public class CompletionTest extends LspServerTestWithEngineBase {
 
-
   @Override
   protected @NotNull String getTestDataRelativePath() {
     return "completion/integration-test";

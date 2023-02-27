@@ -16,7 +16,7 @@ import org.rri.ideals.server.formatting.OnTypeFormattingCommand;
 import org.rri.ideals.server.references.*;
 import org.rri.ideals.server.rename.RenameCommand;
 import org.rri.ideals.server.signature.SignatureHelpService;
-import org.rri.ideals.server.symbol.DocumentSymbolCommand;
+import org.rri.ideals.server.symbol.DocumentSymbolService;
 import org.rri.ideals.server.util.Metrics;
 
 import java.util.List;
@@ -32,7 +32,6 @@ public class MyTextDocumentService implements TextDocumentService {
   public MyTextDocumentService(@NotNull LspSession session) {
     this.session = session;
   }
-
   @Override
   public void didOpen(DidOpenTextDocumentParams params) {
     final var textDocument = params.getTextDocument();
@@ -111,7 +110,12 @@ public class MyTextDocumentService implements TextDocumentService {
   @SuppressWarnings("deprecation")
   @Override
   public CompletableFuture<List<Either<SymbolInformation, DocumentSymbol>>> documentSymbol(DocumentSymbolParams params) {
-    return new DocumentSymbolCommand().runAsync(session.getProject(), LspPath.fromLspUri(params.getTextDocument().getUri()));
+    final var path = LspPath.fromLspUri(params.getTextDocument().getUri());
+    return CompletableFutures.computeAsync(
+        AppExecutorUtil.getAppExecutorService(),
+        (cancelChecker) ->
+            documentSymbols().computeDocumentSymbols(path, cancelChecker)
+    );
   }
 
   @Override
@@ -157,6 +161,11 @@ public class MyTextDocumentService implements TextDocumentService {
   @NotNull
   private CompletionService completions() {
     return session.getProject().getService(CompletionService.class);
+  }
+
+  @NotNull
+  private DocumentSymbolService documentSymbols() {
+    return session.getProject().getService(DocumentSymbolService.class);
   }
 
   @NotNull

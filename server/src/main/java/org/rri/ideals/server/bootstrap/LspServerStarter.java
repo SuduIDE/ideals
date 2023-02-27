@@ -35,7 +35,6 @@ public class LspServerStarter implements ApplicationStarter {
     return false;
   }
 
-
   @NotNull
   private static LspServerRunnerBase buildRunner(@NotNull List<String> args) {
     assert args.size() >= 1 : "insufficient arguments";

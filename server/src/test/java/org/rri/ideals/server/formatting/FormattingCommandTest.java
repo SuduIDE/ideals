@@ -1,7 +1,6 @@
 package org.rri.ideals.server.formatting;
 
 import com.intellij.openapi.fileTypes.FileType;
-import com.intellij.testFramework.fixtures.BasePlatformTestCase;
 import com.jetbrains.python.PythonFileType;
 import org.eclipse.lsp4j.Position;
 import org.eclipse.lsp4j.Range;
@@ -12,6 +11,7 @@ import org.junit.Test;
 import org.junit.jupiter.api.Assertions;
 import org.junit.runner.RunWith;
 import org.junit.runners.JUnit4;
+import org.rri.ideals.server.LspLightBasePlatformTestCase;
 import org.rri.ideals.server.TestUtil;
 import org.rri.ideals.server.commands.ExecutorContext;
 import org.rri.ideals.server.util.TextUtil;
@@ -19,7 +19,7 @@ import org.rri.ideals.server.util.TextUtil;
 import java.util.List;
 
 @RunWith(JUnit4.class)
-public class FormattingCommandTest extends BasePlatformTestCase {
+public class FormattingCommandTest extends LspLightBasePlatformTestCase {
 
   @Test
   public void testEmptyFileFormatting() {
