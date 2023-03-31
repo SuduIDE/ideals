@@ -71,10 +71,10 @@ public class LspServerStarter implements ApplicationStarter {
             .launch()
             .thenApply(unused -> new CliResult(0, "LSP Server done"));
         CliResult result = commandFuture.get();
-        if (result.getMessage() != null) {
-          System.out.println(result.getMessage());
+        if (result.message() != null) {
+          System.out.println(result.message());
         }
-        exitCode = result.getExitCode();
+        exitCode = result.exitCode();
       } finally {
         ApplicationManager.getApplication().invokeAndWait(this::saveAll);
       }

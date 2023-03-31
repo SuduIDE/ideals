@@ -11,10 +11,7 @@ import com.intellij.codeInsight.template.impl.TemplateState;
 import com.intellij.codeInsight.template.impl.Variable;
 import com.intellij.icons.AllIcons;
 import com.intellij.lang.Language;
-import com.intellij.lang.documentation.DocumentationResultData;
-import com.intellij.lang.documentation.DocumentationTarget;
 import com.intellij.lang.documentation.ide.IdeDocumentationTargetProvider;
-import com.intellij.lang.documentation.impl.ImplKt;
 import com.intellij.openapi.Disposable;
 import com.intellij.openapi.application.ApplicationManager;
 import com.intellij.openapi.application.ReadAction;
@@ -29,15 +26,15 @@ import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.util.Ref;
 import com.intellij.openapi.util.TextRange;
 import com.intellij.openapi.util.registry.Registry;
+import com.intellij.platform.backend.documentation.DocumentationData;
+import com.intellij.platform.backend.documentation.DocumentationTarget;
+import com.intellij.platform.backend.documentation.impl.ImplKt;
 import com.intellij.psi.PsiFile;
 import com.intellij.psi.PsiFileFactory;
 import com.intellij.ui.DeferredIcon;
 import com.intellij.ui.IconManager;
 import com.intellij.util.SlowOperations;
 import io.github.furstenheim.CopyDown;
-import kotlin.coroutines.EmptyCoroutineContext;
-import kotlinx.coroutines.CoroutineScopeKt;
-import kotlinx.coroutines.future.FutureKt;
 import org.eclipse.lsp4j.*;
 import org.eclipse.lsp4j.jsonrpc.CancelChecker;
 import org.eclipse.lsp4j.jsonrpc.messages.Either;
@@ -497,10 +494,8 @@ final public class CompletionService implements Disposable {
   @NotNull
   private static Either<String, MarkupContent> toLspDocumentation(@NotNull DocumentationTarget target) {
     try {
-      var cs = CoroutineScopeKt.CoroutineScope(EmptyCoroutineContext.INSTANCE);
       //noinspection OverrideOnly
-      DocumentationResultData res = FutureKt.asCompletableFuture(ImplKt.computeDocumentationAsync(cs,
-          target.createPointer())).get();
+      DocumentationData res = ImplKt.computeDocumentationBlocking(target.createPointer());
       if (res == null) {
         return Either.forRight(null);
       }
