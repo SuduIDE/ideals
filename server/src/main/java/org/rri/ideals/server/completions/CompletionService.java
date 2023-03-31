@@ -440,6 +440,8 @@ final public class CompletionService implements Disposable {
       final LookupImpl lookup =
           (LookupImpl) LookupManager.getActiveLookup(templateState.getEditor());
       if (lookup != null) {
+        // IDEA still use this deprecated method in completion selectItem
+        //noinspection deprecation
         SlowOperations.allowSlowOperations(() -> lookup.finishLookup('\t'));
       } else {
         WriteCommandAction.runWriteCommandAction(project, null, null,
