@@ -125,12 +125,14 @@ public class CompletionServiceTest extends LspLightBasePlatformTestCase {
 
   @Test
   public void testCompletionResolveFunctionsWithParameters() {
+    //noinspection UnnecessaryUnicodeEscape
     testWithEngine(new CompletionTestParams("python-function-with-parameter-project",
         completionItem -> Objects.equals(completionItem.getLabel(), "foo"),
         new MarkupContent(MarkupKind.MARKDOWN,
             """
-                /src/python-function-with-parameter-project/src/test.py\s\s
-                def **foo**(x: Any) -> None
+                 `/src/python-function-with-parameter-project/src/test.py`
+
+                def foo(x: Any) -> None
 
                 Unittest placeholder
 
@@ -148,8 +150,9 @@ public class CompletionServiceTest extends LspLightBasePlatformTestCase {
     testWithEngine(new CompletionTestParams("python-function-without-parameter-project", completionItem -> Objects.equals(completionItem.getLabel(), "foo"),
         new MarkupContent(MarkupKind.MARKDOWN,
             """
-                /src/python-function-without-parameter-project/src/test.py\s\s
-                def **foo**() -> None"""), null));
+                  `/src/python-function-without-parameter-project/src/test.py`
+
+                 def foo() -> None"""), null));
   }
 
   @Test

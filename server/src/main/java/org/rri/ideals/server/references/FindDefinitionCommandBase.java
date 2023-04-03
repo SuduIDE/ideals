@@ -2,13 +2,11 @@ package org.rri.ideals.server.references;
 
 import com.intellij.openapi.editor.Document;
 import com.intellij.openapi.editor.Editor;
-import com.intellij.openapi.fileEditor.FileEditor;
-import com.intellij.openapi.fileEditor.ex.FileEditorManagerEx;
+import com.intellij.openapi.extensions.ExtensionPointName;
 import com.intellij.openapi.fileEditor.ex.FileEditorProviderManager;
 import com.intellij.openapi.fileEditor.ex.FileEditorWithProvider;
 import com.intellij.openapi.fileEditor.impl.EditorComposite;
 import com.intellij.openapi.fileEditor.impl.EditorFileSwapper;
-import com.intellij.openapi.fileEditor.impl.EditorWithProviderComposite;
 import com.intellij.openapi.project.Project;
 import com.intellij.openapi.util.Disposer;
 import com.intellij.openapi.vfs.VirtualFile;
@@ -33,6 +31,9 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 
 abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extends Location>, List<? extends LocationLink>>> {
+  private static final ExtensionPointName<EditorFileSwapper> EDITOR_FILE_SWAPPER_EP_NAME =
+      new ExtensionPointName<>("com.intellij.editorFileSwapper");
+
   @NotNull
   protected final Position pos;
 
@@ -108,22 +109,23 @@ abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extend
       }
       Disposer.register(disposable, editor);
 
-      final var psiAwareEditor = EditorFileSwapper.findSinglePsiAwareEditor(editor.getAllEditors().toArray(new FileEditor[0]));
+      final var psiAwareEditor = EditorFileSwapper.findSinglePsiAwareEditor(editor.getAllEditors());
       if (psiAwareEditor == null) {
         return location;
       }
       psiAwareEditor.getEditor().getCaretModel().moveToOffset(MiscUtil.positionToOffset(doc, location.getRange().getStart()));
 
-      final var newFilePair = EditorFileSwapper.EP_NAME.getExtensionList().stream()
+      final var newFilePair = EDITOR_FILE_SWAPPER_EP_NAME.getExtensionList().stream()
               .map(fileSwapper -> fileSwapper.getFileToSwapTo(project, editor))
               .filter(Objects::nonNull)
               .findFirst();
 
-      if (newFilePair.isEmpty() || newFilePair.get().first == null) {
+      if (newFilePair.isEmpty() || newFilePair.get().getFirst() == null) {
         return location;
       }
 
-      final var sourcePsiFile = MiscUtil.resolvePsiFile(project, LspPath.fromVirtualFile(newFilePair.get().first));
+      final var sourcePsiFile = MiscUtil.resolvePsiFile(project,
+          LspPath.fromVirtualFile(newFilePair.get().getFirst()));
       if (sourcePsiFile == null) {
         return location;
       }
@@ -131,8 +133,9 @@ abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extend
       if (sourceDoc == null) {
         return location;
       }
-      final var virtualFile = newFilePair.get().first;
-      final var offset = newFilePair.get().first != null ? newFilePair.get().second : 0;
+      final var virtualFile = newFilePair.get().getFirst();
+      final var offset = newFilePair.get().getFirst() != null ? newFilePair.get().getSecond() : 0;
+      assert virtualFile != null;
       return new Location(LspPath.fromVirtualFile(virtualFile).toLspUri(),
               new Range(MiscUtil.offsetToPosition(sourceDoc, offset), MiscUtil.offsetToPosition(sourceDoc, offset)));
     } finally {
@@ -157,19 +160,9 @@ abstract class FindDefinitionCommandBase extends LspCommand<Either<List<? extend
           assert editor.isValid();
           return new FileEditorWithProvider(editor, provider);
         }).toList();
-    final var fileEditorManager = (FileEditorManagerEx) FileEditorManagerEx.getInstance(project);
-
-    return new MyEditorComposite(file, editorsWithProviders, fileEditorManager);
+    return new EditorComposite(file, editorsWithProviders, project);
   }
 
-  @SuppressWarnings("deprecation")
-  private static class MyEditorComposite extends EditorWithProviderComposite {
-    public MyEditorComposite(@NotNull VirtualFile file,
-                             @NotNull List<FileEditorWithProvider> editorsWithProviders,
-                             @NotNull FileEditorManagerEx fileEditorManager) {
-      super(file, editorsWithProviders, fileEditorManager);
-    }
-  }
 
   @NotNull
   protected abstract Stream<PsiElement> findDefinitions(@NotNull Editor editor, int offset);

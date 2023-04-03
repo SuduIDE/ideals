@@ -110,9 +110,7 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
 
 //      it.setHoverProvider(true);
       it.setCompletionProvider(defaultCompletionOptions());
-      it.setSignatureHelpProvider(MiscUtil.with(new SignatureHelpOptions(), signatureHelpOptions -> {
-        signatureHelpOptions.setTriggerCharacters(List.of("(", "["));
-      }));
+      it.setSignatureHelpProvider(MiscUtil.with(new SignatureHelpOptions(), signatureHelpOptions -> signatureHelpOptions.setTriggerCharacters(List.of("(", "["))));
       it.setDefinitionProvider(true);
       it.setTypeDefinitionProvider(true);
       it.setImplementationProvider(true);
@@ -241,7 +239,7 @@ public class LspServer implements LanguageServer, LanguageClientAware, LspSessio
 
     @Override
     public void afterTaskFinished(@NotNull Task task) {
-      if(!task.getProject().equals(project))
+      if(task.getProject() != null && !task.getProject().equals(project))
         return;
 
       var client = LspServer.this.client;

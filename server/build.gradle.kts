@@ -3,7 +3,7 @@ import org.jetbrains.intellij.tasks.RunIdeTask
 plugins {
   id("java")
   // id("org.jetbrains.kotlin.jvm") version "1.7.0"
-  id("org.jetbrains.intellij") version "1.10.0"
+  id("org.jetbrains.intellij") version "1.13.3"
 }
 
 group = "org.rri.ideals.server"
@@ -20,12 +20,12 @@ dependencies {
 
 // Configure Gradle IntelliJ Plugin - read more: https://github.com/JetBrains/gradle-intellij-plugin
 intellij {
-  version.set("2022.3.2")
+  version.set("2023.1")
   type.set("IC") // Target IDE Platform
   pluginsRepositories {
     marketplace()
   }
-  plugins.set(listOf("Kotlin", "java", "PythonCore:223.7571.123"))
+  plugins.set(listOf("Kotlin", "java", "PythonCore:231.8109.144"))
 }
 
 tasks.register<RunIdeTask>("plainIdea") {
@@ -86,8 +86,8 @@ tasks {
 
   patchPluginXml {
     version.set(System.getenv("IDEALS_VERSION"))
-    sinceBuild.set("223")
-    untilBuild.set("223.*")
+    sinceBuild.set("231")
+    untilBuild.set("231.*")
   }
 
   signPlugin {
