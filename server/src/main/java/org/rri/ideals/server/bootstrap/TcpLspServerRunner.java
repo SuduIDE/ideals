@@ -7,15 +7,17 @@ import org.rri.ideals.server.util.MiscUtil;
 
 import java.io.IOException;
 import java.net.InetAddress;
-import java.net.ServerSocket;
+import java.net.InetSocketAddress;
+import java.nio.channels.AsynchronousServerSocketChannel;
+import java.nio.channels.Channels;
 
 class TcpLspServerRunner extends LspServerRunnerBase {
   private final static Logger LOG = Logger.getInstance(TcpLspServerRunner.class);
 
-  private int port = 8989;  // default port
-
   @Nullable
-  private ServerSocket serverSocket = null;
+  private AsynchronousServerSocketChannel serverSocket;
+
+  private int port = 8989;  // default port
 
   TcpLspServerRunner() {
     super(true);
@@ -30,7 +32,7 @@ class TcpLspServerRunner extends LspServerRunnerBase {
   protected void prepareForListening() {
     LOG.info("Starting the LSP server on port: " + port);
     try {
-      serverSocket = new ServerSocket(port, 50, InetAddress.getByName("127.0.0.1"));
+      serverSocket = AsynchronousServerSocketChannel.open().bind(new InetSocketAddress(InetAddress.getByName("127.0.0.1"), port));
     } catch (IOException e) {
       throw new RuntimeException(e);
     }
@@ -41,8 +43,8 @@ class TcpLspServerRunner extends LspServerRunnerBase {
   protected Connection waitForConnection() {
     assert serverSocket != null;
     try {
-      var clientSocket = serverSocket.accept();
-      return new Connection(clientSocket.getInputStream(), clientSocket.getOutputStream());
+      var socketChannel = serverSocket.accept().get();
+      return new Connection(Channels.newInputStream(socketChannel), Channels.newOutputStream(socketChannel));
     } catch (Exception e) {
       LOG.error("Socket connection error: " + e);
       closeServerSocket();
@@ -53,7 +55,7 @@ class TcpLspServerRunner extends LspServerRunnerBase {
   private void closeServerSocket() {
     if (serverSocket != null) {
       try {
-        LOG.info("Close language server socket port " + serverSocket.getLocalPort());
+        LOG.info("Close language server socket port " + ((InetSocketAddress) serverSocket.getLocalAddress()).getPort());
         serverSocket.close();
       } catch (IOException e) {
         LOG.error("Close ServerSocket exception: " + e);

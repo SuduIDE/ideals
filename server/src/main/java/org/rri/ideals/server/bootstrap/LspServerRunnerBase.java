@@ -6,6 +6,7 @@ import com.intellij.ui.CoreIconManager;
 import com.intellij.ui.IconManager;
 import com.intellij.util.concurrency.AppExecutorUtil;
 import org.eclipse.lsp4j.jsonrpc.Launcher;
+import org.eclipse.lsp4j.jsonrpc.MessageConsumer;
 import org.jetbrains.annotations.NotNull;
 import org.rri.ideals.server.LspServer;
 import org.rri.ideals.server.MyLanguageClient;
@@ -13,7 +14,11 @@ import org.rri.ideals.server.util.MiscUtil;
 
 import java.io.InputStream;
 import java.io.OutputStream;
+import java.nio.channels.Channels;
 import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutorService;
+import java.util.concurrent.Executors;
+import java.util.function.Function;
 
 public abstract class LspServerRunnerBase {
   private final static Logger LOG = Logger.getInstance(LspServerRunnerBase.class);
@@ -31,6 +36,10 @@ public abstract class LspServerRunnerBase {
 
   protected record Connection(@NotNull InputStream input, @NotNull OutputStream output) {}
 
+  private ExecutorService createServerThreads() {
+    return Executors.newCachedThreadPool();
+  }
+
   public CompletableFuture<Void> launch() {
     prepareForListening();
     try {
@@ -42,7 +51,7 @@ public abstract class LspServerRunnerBase {
     return CompletableFuture.runAsync(() -> {
       while (true) {
         var serverFuture = connectServer(waitForConnection());
-        if(!isMultiConnection) {
+        if (!isMultiConnection) {
           serverFuture.join();
           break;
         }
@@ -51,11 +60,12 @@ public abstract class LspServerRunnerBase {
   }
 
   private CompletableFuture<Void> connectServer(@NotNull Connection connection) {
+    Function<MessageConsumer, MessageConsumer> wrapper = consumer -> consumer;
+
     var languageServer = new LspServer();
-    LogPrintWriter trace = new LogPrintWriter(Logger.getInstance("org.eclipse.lsp4j"), LogLevel.TRACE);
-    var launcher = Launcher.createLauncher(
+    var launcher = Launcher.createIoLauncher(
         languageServer, MyLanguageClient.class,
-        connection.input, connection.output, false, trace
+        connection.input, connection.output, createServerThreads(), wrapper
     );
     var client = launcher.getRemoteProxy();
     languageServer.connect(client);
