@@ -1,6 +1,5 @@
 package org.rri.ideals.server.bootstrap;
 
-import com.intellij.openapi.diagnostic.LogLevel;
 import com.intellij.openapi.diagnostic.Logger;
 import com.intellij.ui.CoreIconManager;
 import com.intellij.ui.IconManager;
@@ -14,7 +13,6 @@ import org.rri.ideals.server.util.MiscUtil;
 
 import java.io.InputStream;
 import java.io.OutputStream;
-import java.nio.channels.Channels;
 import java.util.concurrent.CompletableFuture;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
