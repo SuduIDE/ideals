@@ -15,11 +15,10 @@ import org.jetbrains.annotations.NotNull;
 import org.rri.ideals.server.util.MiscUtil;
 import org.rri.ideals.server.util.TextUtil;
 
-import java.util.Comparator;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Consumer;
-import java.util.stream.Collectors;
 
 @Service(Service.Level.PROJECT)
 final public class ManagedDocuments {
@@ -36,7 +35,7 @@ final public class ManagedDocuments {
   public void startManaging(@NotNull TextDocumentItem textDocument) {
     String uri = textDocument.getUri();
 
-    if(!canAccept(uri)) {
+    if (!canAccept(uri)) {
       return;
     }
 
@@ -79,7 +78,10 @@ final public class ManagedDocuments {
 */
       });
 
-      docs.put(path, new VersionedTextDocumentIdentifier(uri, textDocument.getVersion()));
+      var docVersion = Optional.ofNullable(textDocument.getVersion())
+          .filter(version -> version != 0)
+          .orElse(null);
+      docs.put(path, new VersionedTextDocumentIdentifier(uri, docVersion));
 
     }));
   }
@@ -90,7 +92,7 @@ final public class ManagedDocuments {
     var contentChanges = params.getContentChanges();
 
     String uri = textDocument.getUri();
-    if(!canAccept(uri))
+    if (!canAccept(uri))
       return;
 
     final var path = LspPath.fromLspUri(uri);
@@ -99,9 +101,9 @@ final public class ManagedDocuments {
     if (managedTextDocId == null)
       throw new IllegalArgumentException("document isn't being managed: " + uri);
 
-    // Version number of our document should be (theirs - 1)
-    // If stored version is null, this means the document has been just saved
-    if (managedTextDocId.getVersion() != null && managedTextDocId.getVersion() != (textDocument.getVersion() - 1)) {
+    // Version number of our document should be (theirs - number of content changes)
+    // If stored version is null, this means the document has been just saved or opened
+    if (managedTextDocId.getVersion() != null && managedTextDocId.getVersion() != (textDocument.getVersion() - contentChanges.size())) {
       LOG.warn(String.format("Version mismatch on document change - " +
           "ours: %d, theirs: %d", managedTextDocId.getVersion(), textDocument.getVersion()));
       return;
@@ -139,7 +141,7 @@ final public class ManagedDocuments {
       }
 
       try {
-        applyContentChangeEventChanges(doc, sortContentChangeEventChanges(contentChanges));
+        applyContentChangeEventChanges(doc, contentChanges);
       } catch (Exception e) {
         LOG.error("Error on documentChange", e);
       }
@@ -156,7 +158,7 @@ final public class ManagedDocuments {
   public void syncDocument(@NotNull TextDocumentIdentifier textDocument) {
     String uri = textDocument.getUri();
 
-    if(!canAccept(uri))
+    if (!canAccept(uri))
       return;
 
     var path = LspPath.fromLspUri(uri);
@@ -183,13 +185,13 @@ final public class ManagedDocuments {
 
   public void stopManaging(@NotNull TextDocumentIdentifier textDocument) {
     String uri = textDocument.getUri();
-    if(!canAccept(uri))
+    if (!canAccept(uri))
       return;
 
     var path = LspPath.fromLspUri(uri);
 
     final var virtualFile = path.findVirtualFile();
-    if(virtualFile != null) {
+    if (virtualFile != null) {
       FileDocumentManager.getInstance().reloadFiles();
     }
 
@@ -209,17 +211,6 @@ final public class ManagedDocuments {
 
   private void applyContentChangeEventChanges(@NotNull Document doc, @NotNull List<TextDocumentContentChangeEvent> contentChanges) {
     contentChanges.forEach((it) -> applyChange(doc, it));
-  }
-
-  @NotNull
-  private static List<TextDocumentContentChangeEvent> sortContentChangeEventChanges(@NotNull List<TextDocumentContentChangeEvent> edits) {
-    return edits.stream()
-        .sorted(
-            Comparator.comparingInt((TextDocumentContentChangeEvent o) -> o.getRange().getStart().getLine())
-                .thenComparingInt(o -> o.getRange().getStart().getCharacter())
-                .reversed()
-        )
-        .collect(Collectors.toList());
   }
 
   private static void applyChange(@NotNull Document doc, TextDocumentContentChangeEvent change) {
