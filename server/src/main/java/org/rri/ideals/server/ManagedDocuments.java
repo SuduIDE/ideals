@@ -78,7 +78,7 @@ final public class ManagedDocuments {
 */
       });
 
-      var docVersion = Optional.ofNullable(textDocument.getVersion())
+      var docVersion = Optional.of(textDocument.getVersion())
           .filter(version -> version != 0)
           .orElse(null);
       docs.put(path, new VersionedTextDocumentIdentifier(uri, docVersion));
